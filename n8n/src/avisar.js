@@ -3,7 +3,7 @@ const C = $('Config').first().json;
 const { evaluated = [], log = [], found = 0 } = $input.first().json;
 const tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
-const icon = { etsy: '🟠 Etsy', tiktok: '⚫ TikTok', instagram: '🟣 Instagram', hotmart: '🔥 Hotmart' };
+const icon = { youtube: '🔴 YouTube', web: '🌐 Web', etsy: '🟠 Etsy', tiktok: '⚫ TikTok', instagram: '🟣 Instagram', hotmart: '🔥 Hotmart' };
 const num = (n) => Number(n || 0).toLocaleString('es');
 
 const winners = evaluated
@@ -14,6 +14,7 @@ const winners = evaluated
 for (const c of winners) {
   const m = c.metrics || {}, ai = c.ai;
   const stats = c.source === 'etsy' ? `❤️ ${num(m.favoritos)} favoritos · publicado hace ${m.dias} días`
+    : c.source === 'web' ? `${m.plataforma || ''} · ${m.evidencia || ''}`
     : c.source === 'hotmart' ? `🔥 temperatura ${num(m.hot_score)} · ${num(m.reseñas)} reseñas`
     : `${m.vistas ? `👁 ${num(m.vistas)} vistas · ` : ''}❤️ ${num(m.likes)} · hace ${m.dias} días`;
   const text = `📡 <b>${ai.nota}/10 · ${esc(ai.titulo)}</b>

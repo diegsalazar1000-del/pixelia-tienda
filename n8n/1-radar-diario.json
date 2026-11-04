@@ -19,11 +19,11 @@
         0,
         300
       ],
-      "id": "156ada13-73d8-46cd-976d-f51c38dfc65f"
+      "id": "185c71d0-e5fe-4377-876a-ed27c88c0a5a"
     },
     {
       "parameters": {
-        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
+        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n  YOUTUBE_API_KEY: 'AIza...',                    // gratis: console.cloud.google.com → YouTube Data API v3 → Credenciales\n  EXPLORADOR_WEB: true,                          // Claude busca tendencias en internet (usa tu saldo de la API de Claude)\n  MODELO_EXPLORADOR: 'claude-haiku-5-5',\n  BUSQUEDAS_WEB_MAX: 6,                          // búsquedas por día (0,01 $ cada una)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  YOUTUBE_BUSQUEDAS: [\n    'productos digitales para vender', 'plantillas canva para vender', 'planner digital', 'plantilla notion', 'ebook para vender',\n    'digital products to sell', 'digital products that sell', 'etsy digital products', 'canva templates to sell', 'notion templates',\n    'faceless digital products', 'what digital products are trending', 'goodnotes digital planner', 'printables to sell',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { youtube: 8, tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  MIN_VISTAS_YOUTUBE: 10000,\n  TOP_POR_FUENTE: { youtube: 10, web: 15, tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
       },
       "name": "Config",
       "type": "n8n-nodes-base.code",
@@ -32,7 +32,7 @@
         220,
         300
       ],
-      "id": "7640a649-7b2a-4ca2-bd67-75275fc58386"
+      "id": "d2201609-3602-4951-974f-327f02b5a342"
     },
     {
       "parameters": {
@@ -45,7 +45,33 @@
         440,
         300
       ],
-      "id": "36728d37-a80c-4f2d-917b-5378b26f1b05"
+      "id": "22c63c96-0e71-46fa-984d-743359db1457"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🔴 YOUTUBE — vídeos y Shorts recientes que están explotando sobre productos digitales (API oficial, gratis).\nconst C = $('Config').first().json;\nconst prev = $input.first().json; const items = prev.items || [], log = prev.log || [];\nconst day = Math.floor(Date.now() / 86400000);\nconst pick = (list, n) => { if (!list?.length) return []; const s = (day * n) % list.length; return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[(s + i) % list.length]); };\n\nif (!C.YOUTUBE_API_KEY || C.YOUTUBE_API_KEY.startsWith('AIza...')) {\n  log.push('YouTube: sin API key, se omite');\n} else {\n  const since = new Date(Date.now() - C.MAX_DIAS_POST * 86400000).toISOString();\n  const ids = new Map();\n  for (const q of pick(C.YOUTUBE_BUSQUEDAS, C.POR_DIA.youtube)) {\n    try {\n      const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://www.googleapis.com/youtube/v3/search', json: true, timeout: 30000,\n        qs: { key: C.YOUTUBE_API_KEY, part: 'snippet', q, type: 'video', order: 'viewCount', publishedAfter: since, maxResults: 25 } });\n      for (const v of r.items || []) if (v.id?.videoId) ids.set(v.id.videoId, q);\n    } catch (e) { log.push(`YouTube \"${q}\": error ${e.message}`); }\n  }\n  // Estadísticas en bloques de 50 (cuesta 1 unidad por bloque)\n  const all = [...ids.keys()];\n  let n = 0;\n  for (let i = 0; i < all.length; i += 50) {\n    try {\n      const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://www.googleapis.com/youtube/v3/videos', json: true, timeout: 30000,\n        qs: { key: C.YOUTUBE_API_KEY, part: 'snippet,statistics', id: all.slice(i, i + 50).join(',') } });\n      for (const v of r.items || []) {\n        const views = Number(v.statistics?.viewCount || 0), likes = Number(v.statistics?.likeCount || 0), comments = Number(v.statistics?.commentCount || 0);\n        const age = Math.max(1, (Date.now() - new Date(v.snippet.publishedAt)) / 86400000);\n        if (views < C.MIN_VISTAS_YOUTUBE) continue;\n        n++;\n        items.push({\n          source: 'youtube', external_id: v.id, url: `https://www.youtube.com/watch?v=${v.id}`, keyword: ids.get(v.id) || '',\n          title: v.snippet.title, snippet: `${v.snippet.title}\\n${String(v.snippet.description || '').slice(0, 600)}`,\n          published_at: v.snippet.publishedAt, image: v.snippet.thumbnails?.high?.url || '',\n          metrics: { vistas: views, likes, comentarios: comments, canal: v.snippet.channelTitle, dias: Math.round(age) },\n          trend_score: Math.round((views + likes * 20 + comments * 30) / age),\n        });\n      }\n    } catch (e) { log.push(`YouTube estadísticas: error ${e.message}`); }\n  }\n  log.push(`YouTube: ${all.length} vídeos recientes revisados, ${n} con tracción`);\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "YouTube",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "id": "76fc7378-dd4d-4fde-8015-c2918db22327"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🌐 EXPLORADOR WEB CON IA — Claude busca en internet productos digitales en tendencia (TikTok, Etsy, Hotmart, Instagram…).\n// Usa el saldo de la API de Claude: unas 6 búsquedas al día (~0,06 $ + texto).\nconst C = $('Config').first().json;\nconst prev = $input.first().json; const items = prev.items || [], log = prev.log || [];\nconst hash = (s) => { let h = 0; for (const ch of String(s)) h = (Math.imul(31, h) + ch.charCodeAt(0)) | 0; return 'w' + (h >>> 0).toString(36); };\n\nif (!C.EXPLORADOR_WEB || !C.ANTHROPIC_API_KEY || C.ANTHROPIC_API_KEY.startsWith('sk-ant-...')) {\n  log.push('Explorador web: desactivado');\n} else {\n  const hoy = new Date().toISOString().slice(0, 10);\n  const prompt = `Hoy es ${hoy}. Investiga en internet qué PRODUCTOS DIGITALES (plantillas, planners, ebooks, prompts, presets, imprimibles, hojas de cálculo, packs, mini cursos, etc.)\nse están volviendo tendencia AHORA (lanzados o virales en los últimos 1-3 meses, no clásicos de hace años) en TikTok, Etsy, Hotmart, Instagram, Pinterest o Gumroad.\nPrioriza lo que puede venderse a público hispanohablante por 3-10 USD. Usa varias búsquedas distintas (en español e inglés). Evita marcas registradas y \"cursos para ganar dinero\".\nDevuelve SOLO un JSON (sin texto antes ni después) con esta forma:\n[{\"titulo\":\"nombre del producto o tipo de producto\",\"url\":\"enlace donde lo viste (listado, vídeo o artículo)\",\"plataforma\":\"tiktok|etsy|hotmart|instagram|pinterest|gumroad|otro\",\n\"evidencia\":\"qué indica que es tendencia: cifras, ranking, fecha\",\"fecha_aprox\":\"AAAA-MM o vacío\",\"precio\":número o 0,\"publico\":\"para quién es\"}]\nEntre 8 y 15 elementos, sin repetir.`;\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 240000,\n      headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },\n      body: { model: C.MODELO_EXPLORADOR || C.MODELO_RAPIDO, max_tokens: 4000,\n        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: C.BUSQUEDAS_WEB_MAX || 6 }],\n        messages: [{ role: 'user', content: prompt }] },\n    });\n    const text = (r.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');\n    const list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1));\n    for (const p of list) {\n      if (!p?.titulo) continue;\n      items.push({\n        source: 'web', external_id: hash((p.url || '') + '|' + p.titulo.toLowerCase()), url: p.url || '', keyword: p.plataforma || '',\n        title: p.titulo, snippet: `${p.evidencia || ''}\\nPúblico: ${p.publico || ''}`, price: Number(p.precio) || 0, currency: 'USD',\n        published_at: p.fecha_aprox || '', metrics: { plataforma: p.plataforma || '', evidencia: String(p.evidencia || '').slice(0, 200) },\n        trend_score: 100,\n      });\n    }\n    const searches = r.usage?.server_tool_use?.web_search_requests ?? '?';\n    log.push(`Explorador web: ${list.length} tendencias encontradas (${searches} búsquedas)`);\n  } catch (e) { log.push(`Explorador web: error ${e.message}`); }\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "Explorador web",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "id": "19b1a25b-db8f-4cee-b031-81cc38fbd572"
     },
     {
       "parameters": {
@@ -55,10 +81,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        660,
+        1100,
         300
       ],
-      "id": "0ef3fe59-05dc-42be-ab73-4bf129443979"
+      "id": "eb214281-a621-43e6-9fc5-a0c4fa199244"
     },
     {
       "parameters": {
@@ -68,10 +94,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
+        1320,
         300
       ],
-      "id": "d63d3742-ec93-45d5-bc8d-e47ba54cf3c4"
+      "id": "2b73a9b3-4297-46d4-867e-7f649ae9bfcd"
     },
     {
       "parameters": {
@@ -81,10 +107,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
+        1540,
         300
       ],
-      "id": "2cd4da98-2a09-443c-920e-218b9ada6a1f"
+      "id": "4ce6e625-2cda-4e95-8b7a-04dde3b1a183"
     },
     {
       "parameters": {
@@ -94,10 +120,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1320,
+        1760,
         300
       ],
-      "id": "1e5719c0-8a5b-459e-baea-87398984203b"
+      "id": "ea20fa75-9b23-4cad-a748-fa7b32f98e51"
     },
     {
       "parameters": {
@@ -107,23 +133,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
+        1980,
         300
       ],
-      "id": "1d8363eb-fec0-4f26-a47b-3dbcd1c1cc76"
+      "id": "efadb6a9-dc8f-4731-9934-57c1af56dd0b"
     },
     {
       "parameters": {
-        "jsCode": "// 📲 AVISAR POR TELEGRAM — te manda los mejores con botones para decidir.\nconst C = $('Config').first().json;\nconst { evaluated = [], log = [], found = 0 } = $input.first().json;\nconst tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));\nconst icon = { etsy: '🟠 Etsy', tiktok: '⚫ TikTok', instagram: '🟣 Instagram', hotmart: '🔥 Hotmart' };\nconst num = (n) => Number(n || 0).toLocaleString('es');\n\nconst winners = evaluated\n  .filter((c) => c.ai_score >= C.NOTA_MINIMA_AVISO && c.ai?.es_producto_digital && c.ai?.decision !== 'descartar')\n  .sort((a, b) => b.ai_score - a.ai_score || b.trend_score - a.trend_score)\n  .slice(0, 10);\n\nfor (const c of winners) {\n  const m = c.metrics || {}, ai = c.ai;\n  const stats = c.source === 'etsy' ? `❤️ ${num(m.favoritos)} favoritos · publicado hace ${m.dias} días`\n    : c.source === 'hotmart' ? `🔥 temperatura ${num(m.hot_score)} · ${num(m.reseñas)} reseñas`\n    : `${m.vistas ? `👁 ${num(m.vistas)} vistas · ` : ''}❤️ ${num(m.likes)} · hace ${m.dias} días`;\n  const text = `📡 <b>${ai.nota}/10 · ${esc(ai.titulo)}</b>\n${icon[c.source] || c.source} · ${stats}\n\n📦 ${esc(ai.producto)}\n📈 ${esc(ai.por_que)}\n🔑 ${esc(ai.derechos)}\n⚠️ Riesgos: ${esc(ai.riesgos)}\n💲 Precio sugerido: <b>$${ai.precio_sugerido}</b>\n👉 Sugerencia: <b>${ai.decision === 'comprar_reventa' ? 'Comprar y revender' : 'Recrear versión propia'}</b>`;\n  try {\n    await tg('sendMessage', {\n      chat_id: C.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true },\n      reply_markup: { inline_keyboard: [\n        [{ text: '🛒 Comprar y revender', callback_data: `buy:${c.id}` }, { text: '🛠️ Recrear', callback_data: `rec:${c.id}` }],\n        [{ text: '❌ Descartar', callback_data: `no:${c.id}` }, ...(c.url ? [{ text: '🔗 Ver original', url: c.url }] : [])],\n      ] },\n    });\n    await this.helpers.httpRequest({ method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, body: { status: 'notified' }, json: true });\n  } catch (e) { log.push(`Telegram #${c.id}: ${e.message}`); }\n}\n\nawait tg('sendMessage', {\n  chat_id: C.TELEGRAM_CHAT_ID, parse_mode: 'HTML',\n  text: `🗞️ <b>Radar de hoy</b>\\nRevisados: ${found} · Evaluados: ${evaluated.length} · Te avisé: ${winners.length}\\n\\n<code>${esc(log.join('\\n')).slice(0, 3000)}</code>`,\n});\nreturn [{ json: { avisados: winners.length, log } }];\n"
+        "jsCode": "// 📲 AVISAR POR TELEGRAM — te manda los mejores con botones para decidir.\nconst C = $('Config').first().json;\nconst { evaluated = [], log = [], found = 0 } = $input.first().json;\nconst tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));\nconst icon = { youtube: '🔴 YouTube', web: '🌐 Web', etsy: '🟠 Etsy', tiktok: '⚫ TikTok', instagram: '🟣 Instagram', hotmart: '🔥 Hotmart' };\nconst num = (n) => Number(n || 0).toLocaleString('es');\n\nconst winners = evaluated\n  .filter((c) => c.ai_score >= C.NOTA_MINIMA_AVISO && c.ai?.es_producto_digital && c.ai?.decision !== 'descartar')\n  .sort((a, b) => b.ai_score - a.ai_score || b.trend_score - a.trend_score)\n  .slice(0, 10);\n\nfor (const c of winners) {\n  const m = c.metrics || {}, ai = c.ai;\n  const stats = c.source === 'etsy' ? `❤️ ${num(m.favoritos)} favoritos · publicado hace ${m.dias} días`\n    : c.source === 'web' ? `${m.plataforma || ''} · ${m.evidencia || ''}`\n    : c.source === 'hotmart' ? `🔥 temperatura ${num(m.hot_score)} · ${num(m.reseñas)} reseñas`\n    : `${m.vistas ? `👁 ${num(m.vistas)} vistas · ` : ''}❤️ ${num(m.likes)} · hace ${m.dias} días`;\n  const text = `📡 <b>${ai.nota}/10 · ${esc(ai.titulo)}</b>\n${icon[c.source] || c.source} · ${stats}\n\n📦 ${esc(ai.producto)}\n📈 ${esc(ai.por_que)}\n🔑 ${esc(ai.derechos)}\n⚠️ Riesgos: ${esc(ai.riesgos)}\n💲 Precio sugerido: <b>$${ai.precio_sugerido}</b>\n👉 Sugerencia: <b>${ai.decision === 'comprar_reventa' ? 'Comprar y revender' : 'Recrear versión propia'}</b>`;\n  try {\n    await tg('sendMessage', {\n      chat_id: C.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true },\n      reply_markup: { inline_keyboard: [\n        [{ text: '🛒 Comprar y revender', callback_data: `buy:${c.id}` }, { text: '🛠️ Recrear', callback_data: `rec:${c.id}` }],\n        [{ text: '❌ Descartar', callback_data: `no:${c.id}` }, ...(c.url ? [{ text: '🔗 Ver original', url: c.url }] : [])],\n      ] },\n    });\n    await this.helpers.httpRequest({ method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, body: { status: 'notified' }, json: true });\n  } catch (e) { log.push(`Telegram #${c.id}: ${e.message}`); }\n}\n\nawait tg('sendMessage', {\n  chat_id: C.TELEGRAM_CHAT_ID, parse_mode: 'HTML',\n  text: `🗞️ <b>Radar de hoy</b>\\nRevisados: ${found} · Evaluados: ${evaluated.length} · Te avisé: ${winners.length}\\n\\n<code>${esc(log.join('\\n')).slice(0, 3000)}</code>`,\n});\nreturn [{ json: { avisados: winners.length, log } }];\n"
       },
       "name": "Avisar por Telegram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
+        2200,
         300
       ],
-      "id": "0e681022-43d9-4894-aa41-4870c50b53bb"
+      "id": "2cd72d7e-81cc-459d-8570-bf38c8321273"
     },
     {
       "parameters": {
@@ -131,14 +157,14 @@
         "width": 420,
         "height": 300
       },
-      "name": "Nota fe12",
+      "name": "Nota 7a28",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "a5c8dbd3-64e4-49d0-8dce-e4c465dd1e82"
+      "id": "d1be1a23-b1c3-4b8a-93f2-26912469a8cb"
     }
   ],
   "connections": {
@@ -165,6 +191,28 @@
       ]
     },
     "Etsy": {
+      "main": [
+        [
+          {
+            "node": "YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube": {
+      "main": [
+        [
+          {
+            "node": "Explorador web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explorador web": {
       "main": [
         [
           {

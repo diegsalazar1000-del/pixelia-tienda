@@ -31,12 +31,14 @@ radar_nodes = [
     schedule("Cada día 8:00", 8, 0, 300),
     code("Config", "config.js", 220, 300),
     code("Etsy", "etsy.js", 440, 300),
-    code("TikTok", "tiktok.js", 660, 300),
-    code("Instagram", "instagram.js", 880, 300),
-    code("Hotmart", "hotmart.js", 1100, 300),
-    code("Filtrar y guardar", "guardar.js", 1320, 300),
-    code("Evaluar con IA", "evaluar.js", 1540, 300),
-    code("Avisar por Telegram", "avisar.js", 1760, 300),
+    code("YouTube", "youtube.js", 660, 300),
+    code("Explorador web", "web.js", 880, 300),
+    code("TikTok", "tiktok.js", 1100, 300),
+    code("Instagram", "instagram.js", 1320, 300),
+    code("Hotmart", "hotmart.js", 1540, 300),
+    code("Filtrar y guardar", "guardar.js", 1760, 300),
+    code("Evaluar con IA", "evaluar.js", 1980, 300),
+    code("Avisar por Telegram", "avisar.js", 2200, 300),
 ]
 radar = workflow("1 · Radar diario de tendencias", radar_nodes)
 radar["nodes"].append(note("## 📡 Radar diario\n1. Rellena el nodo **Config**.\n2. Pulsa **Test workflow** para probar.\n3. Actívalo (arriba a la derecha).\n\nCada fuente sin clave se salta sola, así puedes empezar solo con Etsy.", 0, 0))

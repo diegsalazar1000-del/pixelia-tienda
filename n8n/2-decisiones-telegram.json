@@ -15,8 +15,8 @@
         0,
         300
       ],
-      "id": "4ed553f8-1264-41bf-b948-f9b484ee6125",
-      "webhookId": "7b42bf74-26fc-435b-8877-e8f82b81d090",
+      "id": "37deb7ce-29ce-4de8-a730-9497bc703cb2",
+      "webhookId": "a31e039e-75d4-445a-8827-6512508840eb",
       "credentials": {
         "telegramApi": {
           "id": "",
@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
+        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n  YOUTUBE_API_KEY: 'AIza...',                    // gratis: console.cloud.google.com → YouTube Data API v3 → Credenciales\n  EXPLORADOR_WEB: true,                          // Claude busca tendencias en internet (usa tu saldo de la API de Claude)\n  MODELO_EXPLORADOR: 'claude-haiku-5-5',\n  BUSQUEDAS_WEB_MAX: 6,                          // búsquedas por día (0,01 $ cada una)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  YOUTUBE_BUSQUEDAS: [\n    'productos digitales para vender', 'plantillas canva para vender', 'planner digital', 'plantilla notion', 'ebook para vender',\n    'digital products to sell', 'digital products that sell', 'etsy digital products', 'canva templates to sell', 'notion templates',\n    'faceless digital products', 'what digital products are trending', 'goodnotes digital planner', 'printables to sell',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { youtube: 8, tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  MIN_VISTAS_YOUTUBE: 10000,\n  TOP_POR_FUENTE: { youtube: 10, web: 15, tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
       },
       "name": "Config",
       "type": "n8n-nodes-base.code",
@@ -35,7 +35,7 @@
         220,
         300
       ],
-      "id": "4f86a1eb-0fc0-499c-bfd1-bfe6fbb55457"
+      "id": "b703aa57-d20e-4de1-b891-4376b7054870"
     },
     {
       "parameters": {
@@ -48,7 +48,7 @@
         440,
         300
       ],
-      "id": "04552cfa-bf7a-4876-bab3-42df69ee8932"
+      "id": "bed02829-186e-4497-8491-db36f258ff26"
     },
     {
       "parameters": {
@@ -56,14 +56,14 @@
         "width": 420,
         "height": 300
       },
-      "name": "Nota d982",
+      "name": "Nota 9971",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "67cd856b-0de5-4c6c-bf7e-138aca3c7b68"
+      "id": "165c1991-3d84-4a4d-ad1f-fa585b2e62fd"
     }
   ],
   "connections": {

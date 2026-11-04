@@ -16,6 +16,10 @@ return [{ json: {
   // Fuentes de datos
   APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations
   ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)
+  YOUTUBE_API_KEY: 'AIza...',                    // gratis: console.cloud.google.com → YouTube Data API v3 → Credenciales
+  EXPLORADOR_WEB: true,                          // Claude busca tendencias en internet (usa tu saldo de la API de Claude)
+  MODELO_EXPLORADOR: 'claude-haiku-5-5',
+  BUSQUEDAS_WEB_MAX: 6,                          // búsquedas por día (0,01 $ cada una)
 
   // Meta Ads (para el flujo de rendimiento)
   META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management
@@ -37,6 +41,11 @@ return [{ json: {
     'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',
     'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',
   ],
+  YOUTUBE_BUSQUEDAS: [
+    'productos digitales para vender', 'plantillas canva para vender', 'planner digital', 'plantilla notion', 'ebook para vender',
+    'digital products to sell', 'digital products that sell', 'etsy digital products', 'canva templates to sell', 'notion templates',
+    'faceless digital products', 'what digital products are trending', 'goodnotes digital planner', 'printables to sell',
+  ],
   ETSY_BUSQUEDAS: [
     'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',
     'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',
@@ -48,7 +57,7 @@ return [{ json: {
   ],
 
   // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra
-  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },
+  POR_DIA: { youtube: 8, tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },
   RESULTADOS_POR_BUSQUEDA: 20,
 
   // Filtros de "nuevo y en tendencia"
@@ -56,7 +65,8 @@ return [{ json: {
   MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses
   MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance
   MIN_FAVORITOS_ETSY: 15,
-  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA
+  MIN_VISTAS_YOUTUBE: 10000,
+  TOP_POR_FUENTE: { youtube: 10, web: 15, tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA
   NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más
 
   // Reglas del flujo de rendimiento (Meta Ads)
