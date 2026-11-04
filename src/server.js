@@ -308,7 +308,9 @@ server.listen(config.port, () => console.log(`🛍️  ${config.storeName} en ${
 
 // Verificación automática de pagos Binance cada minuto (si hay API key).
 if (binanceAutoVerify()) setInterval(async () => {
-  for (const o of Orders.byStatus('review')) {
+  // Revisa también los pedidos Binance que el cliente pagó pero no avisó (se reconocen por el importe único).
+  const recent = (o) => o.method === 'binance' && new Date(o.created_at + 'Z') > Date.now() - 48 * 3600e3;
+  for (const o of [...Orders.byStatus('review'), ...Orders.byStatus('pending').filter(recent)]) {
     const tx = await findBinancePayment(o).catch(() => '');
     if (tx && Orders.markPaid(o.id, tx)) deliver(o.id).catch(console.error);
   }
