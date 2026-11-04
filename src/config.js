@@ -49,6 +49,13 @@ export const config = {
     template: e('WHATSAPP_TEMPLATE', 'entrega_pedido'),
     templateLang: e('WHATSAPP_TEMPLATE_LANG', 'es'),
   },
+  // Clave que usa n8n para hablar con la tienda (cabecera x-api-key)
+  n8nKey: e('N8N_API_KEY'),
+  meta: {
+    pixelId: e('META_PIXEL_ID'),
+    capiToken: e('META_CAPI_TOKEN'),
+    testCode: e('META_TEST_EVENT_CODE'),
+  },
   paths: {
     db: path.join(ROOT, 'data', 'tienda.db'),
     files: path.join(ROOT, 'storage', 'products'),

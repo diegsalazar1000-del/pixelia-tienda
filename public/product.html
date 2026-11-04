@@ -10,6 +10,7 @@
 <meta property="og:description" content="{{DESC}}">
 <meta property="og:image" content="{{IMAGE}}">
 <meta name="theme-color" content="#07060f">
+{{PIXEL}}
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/css/styles.css">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -92,6 +93,7 @@ function contact() {
 async function createOrder(method) {
   $('#err').textContent = '';
   ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact() } });
+  fbq('track', 'InitiateCheckout', { content_ids: [P.slug], value: P.price, currency: 'USD' });
   return ORDER;
 }
 
@@ -154,6 +156,7 @@ function binanceSteps(o) {
 }
 
 view();
+fbq('track', 'ViewContent', { content_ids: [P.slug], content_type: 'product', value: P.price, currency: 'USD' });
 if (inTelegram) checkoutTelegram();
 else api('/api/config').then((c) => { CFG = c; checkoutWeb(); });
 </script>

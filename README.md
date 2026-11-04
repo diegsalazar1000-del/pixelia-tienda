@@ -105,9 +105,16 @@ src/delivery/            correo, whatsapp y enlaces firmados
 public/                  web app (index, producto, pedido, legal, admin)
 ```
 
+## Radar de tendencias y Meta Ads (n8n)
+
+La carpeta `n8n/` trae los tres flujos listos para importar: el radar diario, las decisiones por Telegram y el rendimiento con Meta Ads. Los pasos de montaje y la lista de palabras clave están en **`n8n/GUIA-N8N.md`**.
+
+En el panel `/admin`, la pestaña **📡 Radar** muestra todo lo que ha encontrado el radar, y **Productos** muestra las visitas, los intentos de compra y las ventas de los últimos 7 días.
+
+WhatsApp queda **apagado** si dejas vacías sus variables. Las compras se hacen en la web y el producto llega por correo y por Telegram.
+
 ## Próximas fases
 
-- **Buscador de tendencias**: un módulo que revise Google Trends, YouTube, Etsy, TikTok Creative Center y Hotmart para detectar nichos digitales en auge y sugerir qué productos PLR/MRR conseguir y cómo adaptarlos.
-- **Contenido para Instagram**: generar textos, portadas y anuncios de cada producto.
+- **Crear anuncios de Meta automáticamente** desde n8n, con plantillas de creativos.
 - **Traducción al inglés**: la interfaz ya trae ES/EN. Los productos admiten traducción en el campo `i18n`; falta añadir los textos en inglés en el panel.
 - **Carrito y packs**: comprar varios productos en un solo pago.

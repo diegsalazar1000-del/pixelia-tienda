@@ -1,0 +1,99 @@
+{
+  "name": "2 · Decisiones del radar (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "id": "4ed553f8-1264-41bf-b948-f9b484ee6125",
+      "webhookId": "7b42bf74-26fc-435b-8877-e8f82b81d090",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Bot del radar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "4f86a1eb-0fc0-499c-bfd1-bfe6fbb55457"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🧠 PROCESAR DECISIÓN — qué hacer cuando pulsas un botón del radar.\nconst C = $('Config').first().json;\nconst u = $('Telegram Trigger').first().json;\nconst q = u.callback_query;\nif (!q || !q.data) return [{ json: { ignorado: true } }];\n\nconst tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });\nconst store = (method, path, body) => this.helpers.httpRequest({ method, url: `${C.TIENDA_URL}${path}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, body, json: true, timeout: 60000 });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));\nconst send = async (text) => { for (let i = 0; i < text.length; i += 3900) await tg('sendMessage', { chat_id: C.TELEGRAM_CHAT_ID, text: text.slice(i, i + 3900), parse_mode: 'HTML', link_preview_options: { is_disabled: true } }); };\n\n// Solo tú puedes decidir\nif (String(q.from?.id) !== String(C.TELEGRAM_CHAT_ID)) { await tg('answerCallbackQuery', { callback_query_id: q.id, text: 'No autorizado' }); return [{ json: { ignorado: true } }]; }\n\nconst [action, id] = q.data.split(':');\nawait tg('answerCallbackQuery', { callback_query_id: q.id, text: 'Procesando…' }).catch(() => {});\nconst c = await store('GET', `/api/n8n/candidates/${id}`);\nconst ai = c.ai || {};\nconst mark = (label) => tg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id,\n  reply_markup: { inline_keyboard: [[{ text: label, callback_data: 'x:0' }]] } }).catch(() => {});\n\nif (action === 'no') {\n  await store('POST', `/api/n8n/candidates/${id}`, { status: 'discarded' });\n  await mark('❌ Descartado');\n  return [{ json: { action, id } }];\n}\n\nif (action === 'buy') {\n  await store('POST', `/api/n8n/candidates/${id}`, { status: 'buy' });\n  const { product } = await store('POST', `/api/n8n/candidates/${id}/draft`, { decision: 'buy' });\n  await mark('🛒 Comprar · borrador creado');\n  await send(`🛒 <b>Comprar para revender: ${esc(product.title)}</b>\n\n1️⃣ Cómpralo aquí: ${esc(c.url)}\n2️⃣ <b>Antes de pagar</b>, confirma que la licencia diga PLR, MRR o \"Resell Rights\" y guarda el comprobante.\n3️⃣ Entra en ${esc(C.TIENDA_URL)}/admin → Productos → <b>${esc(product.title)}</b> → Editar → sube el archivo → Guardar. Al guardar se publica.\n\nYa dejé escritos el título, la descripción y el precio ($${(product.price_cents / 100).toFixed(2)}). Cámbiales la portada y el nombre para que se vean propios.\n\n📣 <b>Anuncio sugerido</b>\nGancho: ${esc(ai.anuncio?.gancho)}\nTexto: ${esc(ai.anuncio?.texto)}\nTitular: ${esc(ai.anuncio?.titular)}\nNombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);\n  return [{ json: { action, id, product: product.slug } }];\n}\n\nif (action === 'rec') {\n  await store('POST', `/api/n8n/candidates/${id}`, { status: 'recreate' });\n  await mark('🛠️ Recreando…');\n  const prompt = `Quiero crear mi PROPIA versión (original, no una copia) de este producto digital que está en tendencia, para venderla en español.\nDatos: ${JSON.stringify({ fuente: c.source, titulo: c.title, texto: c.snippet, url: c.url, analisis: ai })}\n\nDame un plan práctico en español, en texto plano con viñetas (sin markdown con #), con estas partes:\n1. CONCEPTO: nombre final, para quién es, qué problema resuelve, qué lo hace mejor que el original.\n2. CONTENIDO EXACTO: lista de páginas/secciones/plantillas con lo que va en cada una (lo suficientemente detallado para producirlo).\n3. CÓMO HACERLO: herramienta (Canva, Notion, Google Sheets, Word/PDF…), formato de entrega y tiempo estimado.\n4. PORTADA: descripción de la portada y 3 mockups para las fotos de producto.\n5. PRECIO y BONOS: precio, precio tachado y 1-2 bonos baratos de producir.\n6. 3 ANUNCIOS para Meta: gancho de vídeo de 3 segundos, texto principal, titular.\nNo copies textos ni diseños del original; todo debe ser contenido nuevo.`;\n  const r = await this.helpers.httpRequest({\n    method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 180000,\n    headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },\n    body: { model: C.MODELO_POTENTE, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] },\n  });\n  const plan = (r.content || []).map((b) => b.text || '').join('');\n  const { product } = await store('POST', `/api/n8n/candidates/${id}/draft`, { decision: 'recreate' });\n  await store('POST', `/api/n8n/candidates/${id}`, { status: 'drafted', ai: { ...ai, plan_recreacion: plan } });\n  await mark('🛠️ Recrear · plan enviado');\n  await send(`🛠️ <b>Plan para recrear: ${esc(product.title)}</b>\\n\\n${esc(plan)}\\n\\n✅ Borrador creado en la tienda. Cuando tengas el archivo: ${esc(C.TIENDA_URL)}/admin → Productos → Editar → subir archivo → Guardar.\\nNombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);\n  return [{ json: { action, id, product: product.slug } }];\n}\n\nreturn [{ json: { ignorado: true, action } }];\n"
+      },
+      "name": "Procesar decisión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "04552cfa-bf7a-4876-bab3-42df69ee8932"
+    },
+    {
+      "parameters": {
+        "content": "## 🧠 Decisiones\nEscucha los botones del radar.\nEn **Telegram Trigger** crea la credencial con el token del **bot del radar** (no el de la tienda).\nCopia el mismo **Config** del flujo 1.\nDebe estar **activo** siempre.",
+        "width": 420,
+        "height": 300
+      },
+      "name": "Nota d982",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "67cd856b-0de5-4c6c-bf7e-138aca3c7b68"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Procesar decisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Caracas"
+  },
+  "pinData": {}
+}

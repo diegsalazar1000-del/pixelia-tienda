@@ -1,0 +1,96 @@
+{
+  "name": "3 · Rendimiento diario y Meta Ads",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "name": "Cada día 21:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "4a9a530c-513b-48e7-87de-2ce3305295aa"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "2fa43a6b-e2c9-42af-961a-613c55f20ae7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 📊 RENDIMIENTO DIARIO — cruza ventas de la tienda con Meta Ads, pausa lo que pierde y propone reemplazos.\n// Regla para enlazar anuncio ↔ producto: el NOMBRE del anuncio en Meta empieza con [slug-del-producto], ej. \"[planner-de-bodas] v1\".\nconst C = $('Config').first().json;\nconst tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });\nconst store = (method, path, body) => this.helpers.httpRequest({ method, url: `${C.TIENDA_URL}${path}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, body, json: true, timeout: 60000 });\nconst graph = (method, path, qs = {}) => this.helpers.httpRequest({ method, url: `https://graph.facebook.com/v21.0/${path}`, qs: { access_token: C.META_TOKEN, ...qs }, json: true, timeout: 60000 });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));\nconst usd = (n) => '$' + Number(n || 0).toFixed(2);\nconst log = [];\n\n// 1) Ventas de la tienda (últimos 7 días)\nconst perf = await store('GET', '/api/n8n/performance?days=7');\n\n// 2) Anuncios de Meta (últimos 7 días)\nconst ads = {};\nconst metaOn = C.META_TOKEN && !C.META_TOKEN.startsWith('EAAG...');\nif (metaOn) {\n  try {\n    const list = await graph('GET', `${C.META_AD_ACCOUNT}/ads`, { fields: 'id,name,effective_status', limit: 500 });\n    for (const a of list.data || []) ads[a.id] = { id: a.id, name: a.name, status: a.effective_status, spend: 0, purchases: 0, value: 0, clicks: 0, impressions: 0 };\n    const ins = await graph('GET', `${C.META_AD_ACCOUNT}/insights`, { level: 'ad', date_preset: 'last_7d', limit: 500,\n      fields: 'ad_id,ad_name,spend,impressions,clicks,ctr,actions,action_values' });\n    for (const r of ins.data || []) {\n      const a = ads[r.ad_id] ||= { id: r.ad_id, name: r.ad_name, status: 'UNKNOWN' };\n      const pick = (arr) => Number((arr || []).find((x) => ['offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase'].includes(x.action_type))?.value || 0);\n      Object.assign(a, { spend: Number(r.spend || 0), impressions: Number(r.impressions || 0), clicks: Number(r.clicks || 0),\n        purchases: pick(r.actions), value: pick(r.action_values) });\n    }\n  } catch (e) { log.push('Meta: ' + (e.message || e)); }\n}\nconst adsOf = (slug) => Object.values(ads).filter((a) => (a.name || '').toLowerCase().startsWith(`[${slug}]`));\n\n// 3) Decisiones por producto\nconst lines = [], retired = [], paused = [];\nlet activeCount = perf.products.length;\nconst retire = async (p) => {\n  if (!C.AUTO_RETIRAR_PRODUCTOS || retired.length >= C.MAX_RETIROS_POR_DIA || activeCount <= C.MIN_PRODUCTOS_ACTIVOS) return false;\n  await store('POST', `/api/n8n/products/${p.id}/retire`, {}); retired.push(p); activeCount--; return true;\n};\nfor (const p of perf.products) {\n  const price = p.price_cents / 100, revenue = p.revenue_cents / 100;\n  const mine = adsOf(p.slug), active = mine.filter((a) => a.status === 'ACTIVE');\n  const spend = mine.reduce((s, a) => s + (a.spend || 0), 0);\n  const roas = spend ? revenue / spend : null;\n  const clicks = mine.reduce((s, a) => s + (a.clicks || 0), 0), impr = mine.reduce((s, a) => s + (a.impressions || 0), 0);\n  const ctr = impr ? (clicks / impr) * 100 : null;\n  let verdict = '', why = '';\n\n  if (p.days_live < C.DIAS_PRUEBA) { verdict = '🧪 En prueba'; why = `día ${p.days_live} de ${C.DIAS_PRUEBA}`; }\n  else if (spend >= C.GASTO_MAX_SIN_VENTA && p.sales === 0) {\n    verdict = '🛑 Pierde'; why = `gastó ${usd(spend)} sin ventas`;\n    if (C.AUTO_PAUSAR_ANUNCIOS) for (const a of active) { try { await graph('POST', a.id, { status: 'PAUSED' }); paused.push(a.name); } catch (e) { log.push(`No pude pausar ${a.name}: ${e.message}`); } }\n    if (!(await retire(p))) why += ' (no lo retiré: límite diario o mínimo de productos)';\n  } else if (!mine.length && p.days_live >= C.DIAS_PRUEBA * 2 && p.sales === 0) {\n    verdict = '💤 Sin ventas ni anuncios'; why = `${p.days_live} días publicado, ${p.views} visitas`;\n    if (!(await retire(p))) why += ' → ponle anuncios o retíralo';\n  } else if (roas !== null && roas >= C.ROAS_ESCALAR) { verdict = '🚀 Ganador'; why = `ROAS ${roas.toFixed(1)} → sube el presupuesto un 20%`; }\n  else if (roas !== null && roas < C.ROAS_MINIMO) {\n    verdict = '🔧 Ajustar';\n    why = ctr !== null && ctr < 0.8 ? `CTR ${ctr.toFixed(2)}%: el anuncio no llama la atención → prueba otro gancho/creativo`\n      : p.views && p.checkouts / p.views < 0.05 ? `muchas visitas (${p.views}) y pocos intentos de compra → mejora portada, precio o descripción`\n      : p.checkouts > p.sales * 3 ? `${p.checkouts} intentos y ${p.sales} ventas → revisa el pago` : `ROAS ${roas.toFixed(1)}`;\n  } else { verdict = '✅ Bien'; why = roas !== null ? `ROAS ${roas.toFixed(1)}` : `${p.sales} ventas sin anuncios`; }\n\n  lines.push(`${verdict} <b>${esc(p.title)}</b>\\n   👁 ${p.views} · 🛒 ${p.checkouts} · 💰 ${p.sales} (${usd(revenue)})${spend ? ` · 📣 ${usd(spend)}` : ''}\\n   ${esc(why)}`);\n}\n\n// 4) Reemplazos: los mejores candidatos del radar que aún no usaste\nlet best = [];\nif (retired.length) best = (await store('GET', `/api/n8n/candidates/best?limit=${Math.min(3, retired.length + 1)}`)).items || [];\n\nconst t = perf.totals;\nlet text = `📊 <b>Rendimiento (7 días)</b>\\nTotal histórico: ${t.orders} ventas · ${usd(t.usd_cents / 100)} · ${t.stars} ⭐\\n\\n${lines.join('\\n\\n') || 'No hay productos activos.'}`;\nif (paused.length) text += `\\n\\n⏸️ Anuncios pausados: ${paused.map(esc).join(', ')}`;\nif (retired.length) text += `\\n\\n🗑️ Retirados de la tienda: ${retired.map((p) => esc(p.title)).join(', ')}`;\nif (!metaOn) text += '\\n\\nℹ️ Meta Ads no está conectado (falta META_TOKEN): solo uso las ventas de la tienda.';\nif (log.length) text += `\\n\\n<code>${esc(log.join('\\n'))}</code>`;\nfor (let i = 0; i < text.length; i += 3900) await tg('sendMessage', { chat_id: C.TELEGRAM_CHAT_ID, text: text.slice(i, i + 3900), parse_mode: 'HTML' });\n\nfor (const c of best) {\n  await tg('sendMessage', { chat_id: C.TELEGRAM_CHAT_ID, parse_mode: 'HTML',\n    text: `♻️ <b>Reemplazo sugerido · ${c.ai_score}/10</b>\\n${esc(c.ai?.titulo || c.title)}\\n📈 ${esc(c.ai?.por_que || '')}\\n💲 $${c.ai?.precio_sugerido || ''}`,\n    reply_markup: { inline_keyboard: [[{ text: '🛒 Comprar y revender', callback_data: `buy:${c.id}` }, { text: '🛠️ Recrear', callback_data: `rec:${c.id}` }],\n      [{ text: '❌ Descartar', callback_data: `no:${c.id}` }, ...(c.url ? [{ text: '🔗 Ver', url: c.url }] : [])]] } });\n}\nreturn [{ json: { productos: perf.products.length, pausados: paused.length, retirados: retired.length } }];\n"
+      },
+      "name": "Revisar ventas y anuncios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "7a6d755e-f980-4121-93a7-71e17fc693af"
+    },
+    {
+      "parameters": {
+        "content": "## 📊 Rendimiento\nCruza las ventas de la tienda con Meta Ads.\n**Importante:** el nombre de cada anuncio en Meta debe empezar con **[slug-del-producto]**, ej. `[planner-de-bodas] v1`.\nAjusta las reglas en **Config** (DIAS_PRUEBA, GASTO_MAX_SIN_VENTA…).",
+        "width": 420,
+        "height": 300
+      },
+      "name": "Nota 4e5c",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3ab877f5-f388-47f0-b0b1-8310b33effc1"
+    }
+  ],
+  "connections": {
+    "Cada día 21:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Revisar ventas y anuncios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Caracas"
+  },
+  "pinData": {}
+}

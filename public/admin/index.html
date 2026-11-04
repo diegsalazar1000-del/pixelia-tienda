@@ -52,10 +52,24 @@ function render() {
   <div class="tabs">
     <button class="chip ${TAB === 'orders' ? 'on' : ''}" data-tab="orders">Pedidos</button>
     <button class="chip ${TAB === 'products' ? 'on' : ''}" data-tab="products">Productos</button>
+    <button class="chip ${TAB === 'radar' ? 'on' : ''}" data-tab="radar">📡 Radar</button>
     <button class="chip ${TAB === 'new' ? 'on' : ''}" data-tab="new">+ Nuevo producto</button>
   </div><div id="tab"></div>`;
   $('.tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) { TAB = b.dataset.tab; render(); } };
-  if (TAB === 'orders') orders(); else if (TAB === 'products') products(); else form({});
+  if (TAB === 'orders') orders(); else if (TAB === 'products') products(); else if (TAB === 'radar') radar(); else form({});
+}
+
+async function radar() {
+  $('#tab').innerHTML = '<div class="spinner"></div>';
+  const { items } = await A('/api/admin/radar');
+  const lbl = { new: 'nuevo', notified: 'avisado', buy: 'comprar', recreate: 'recrear', discarded: 'descartado', drafted: 'borrador', retired: 'retirado' };
+  $('#tab').innerHTML = items.length ? `<div class="scroll"><table><tr><th>Nota</th><th>Fuente</th><th>Producto encontrado</th><th>Idea / derechos</th><th>Publicado</th><th>Estado</th></tr>
+  ${items.map((c) => `<tr><td><b style="font-size:1.2rem;color:${c.ai_score >= 8 ? 'var(--ok)' : c.ai_score >= 6 ? 'var(--warn)' : 'var(--dim)'}">${c.ai_score || '–'}</b></td>
+    <td>${escH(c.source)}<br><small style="color:var(--dim)">${escH(c.keyword)}</small></td>
+    <td><a href="${escH(c.url)}" target="_blank"><b>${escH(c.ai.titulo || c.title).slice(0, 90)}</b></a><br><small style="color:var(--dim)">${c.price ? c.price + ' ' + escH(c.currency) : ''} · tendencia ${Math.round(c.trend_score)}</small></td>
+    <td><small>${escH(c.ai.por_que || '').slice(0, 140)}<br>${c.ai.derechos ? '🔑 ' + escH(c.ai.derechos) : ''}</small></td>
+    <td><small>${escH((c.published_at || '').slice(0, 10))}</small></td><td><span class="st ${c.status === 'drafted' ? 'paid' : c.status === 'discarded' ? 'rejected' : 'review'}">${lbl[c.status] || c.status}</span></td></tr>`).join('')}
+  </table></div>` : '<div class="empty">El radar aún no ha encontrado nada. Se llena cuando corre el flujo diario de n8n.</div>';
 }
 
 function orders() {
@@ -76,10 +90,11 @@ function orders() {
 }
 
 function products() {
-  $('#tab').innerHTML = `<div class="scroll"><table><tr><th></th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stars</th><th>Licencia</th><th>Archivo</th><th>Ventas</th><th></th></tr>
+  $('#tab').innerHTML = `<div class="scroll"><table><tr><th></th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stars</th><th>Licencia</th><th>Archivo</th><th>Últimos 7 días</th><th>Ventas</th><th></th></tr>
   ${DATA.products.map((p) => `<tr style="${p.active ? '' : 'opacity:.4'}"><td style="font-size:1.4rem">${p.emoji}</td><td><b>${escH(p.title)}</b><br><a href="/p/${p.slug}" target="_blank" style="color:var(--dim)">/p/${p.slug}</a></td>
     <td>${escH(p.category)}</td><td>${money(p.price_cents / 100)}</td><td>${p.stars}</td><td>${escH(p.license_type)}</td>
-    <td>${p.file_name ? '✅' : p.external_url ? '🔗' : '<span style="color:var(--bad)">falta</span>'}</td><td>${p.sales}</td>
+    <td>${p.file_name ? '✅' : p.external_url ? '🔗' : '<span style="color:var(--bad)">falta</span>'}</td>
+    <td><small>${DATA.perf[p.id] ? `👁 ${DATA.perf[p.id].views} · 🛒 ${DATA.perf[p.id].checkouts} · 💰 ${DATA.perf[p.id].sales}` : p.active ? '' : 'borrador/oculto'}</small></td><td>${p.sales}</td>
     <td><button class="mini" data-e="${p.id}">Editar</button>${p.active ? `<button class="mini" data-d="${p.id}">Ocultar</button>` : ''}</td></tr>`).join('')}</table></div>`;
   $('#tab').onclick = async (e) => {
     const ed = e.target.closest('[data-e]'), del = e.target.closest('[data-d]');

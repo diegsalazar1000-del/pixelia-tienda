@@ -7,6 +7,7 @@ import { Orders } from '../db.js';
 import { tg, tgSendFile, tgEnabled, notifyAdmin, esc } from '../telegram/api.js';
 import { sendEmail } from './email.js';
 import { sendWhatsApp } from './whatsapp.js';
+import { metaPurchase } from '../meta.js';
 
 const sign = (data) => crypto.createHmac('sha256', config.secret).update(data).digest('base64url').slice(0, 32);
 
@@ -54,6 +55,7 @@ export async function deliver(orderId) {
     catch (e) { console.error('[entrega whatsapp]', e.message); }
   }
   Orders.update(o.id, { delivered_via: via.join(',') });
+  metaPurchase(o).catch((e) => console.error('[meta]', e.message));
   notifyAdmin(`💰 <b>Venta</b> ${esc(o.title)}\nPedido <code>${o.id}</code> · ${o.method} · ${o.currency === 'XTR' ? o.amount_cents + ' ⭐' : '$' + (o.amount_cents / 100).toFixed(2)}\nEntregado por: ${via.join(', ') || '⚠️ ningún canal (el cliente puede descargar desde la web)'}`);
   return via;
 }

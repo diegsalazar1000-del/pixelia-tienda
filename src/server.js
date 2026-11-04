@@ -11,6 +11,8 @@ import { paypalEnabled, createPaypalOrder, capturePaypalOrder } from './payments
 import { binanceEnabled, binanceAutoVerify, uniqueAmount, findBinancePayment } from './payments/binance.js';
 import { tg, tgEnabled, verifyInitData, notifyAdmin, esc } from './telegram/api.js';
 import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
+import { Candidates } from './db.js';
+import { pixelSnippet } from './meta.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
@@ -56,7 +58,7 @@ function coverSvg(p) {
 
 function renderPage(name, vars = {}) {
   let html = fs.readFileSync(path.join(config.paths.public, name), 'utf8');
-  const all = { STORE: esc(config.storeName), BASE: config.baseUrl, TITLE: esc(config.storeName), DESC: 'Productos digitales con entrega inmediata.', IMAGE: '', DATA: 'null', ...vars };
+  const all = { STORE: esc(config.storeName), BASE: config.baseUrl, TITLE: esc(config.storeName), DESC: 'Productos digitales con entrega inmediata.', IMAGE: '', DATA: 'null', PIXEL: pixelSnippet(), ...vars };
   return html.replace(/\{\{(\w+)\}\}/g, (_, k) => all[k] ?? '');
 }
 
@@ -69,6 +71,7 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
   const p = Products.bySlug(slug);
   if (!p || !p.active) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }
   const pp = publicProduct(p);
+  if (!/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '')) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
@@ -189,7 +192,8 @@ const adminOk = (req) => config.adminPassword && req.headers['x-admin-key'] &&
   crypto.timingSafeEqual(crypto.createHash('sha256').update(req.headers['x-admin-key']).digest(), crypto.createHash('sha256').update(config.adminPassword).digest());
 
 on('GET', '/api/admin/summary', (req, res) => adminOk(req) ? json(res, 200, {
-  stats: Orders.stats(), products: Products.list({ all: true }), orders: Orders.recent(100) }) : fail(res, 401, 'Clave incorrecta'));
+  stats: Orders.stats(), products: Products.list({ all: true }), orders: Orders.recent(100),
+  perf: Object.fromEntries(Products.performance(7).map((p) => [p.id, p])) }) : fail(res, 401, 'Clave incorrecta'));
 
 on('POST', '/api/admin/products', async (req, res) => {
   if (!adminOk(req)) return fail(res, 401, 'Clave incorrecta');
@@ -219,6 +223,66 @@ on('POST', '/api/admin/orders/:id/:action', async (req, res, { id, action }) => 
   if (action === 'resend') return json(res, 200, { via: await deliver(o.id) });
   fail(res, 400, 'Acción no válida');
 });
+
+// ===== API para n8n (cabecera x-api-key = N8N_API_KEY) =====
+const n8nOk = (req) => config.n8nKey && req.headers['x-api-key'] &&
+  crypto.timingSafeEqual(crypto.createHash('sha256').update(req.headers['x-api-key']).digest(), crypto.createHash('sha256').update(config.n8nKey).digest());
+const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
+
+// Guarda lo encontrado hoy y devuelve solo lo nuevo (lo ya visto se ignora).
+on('POST', '/api/n8n/candidates', async (req, res) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const b = await body(req, 20e6);
+  const fresh = Candidates.addMany(Array.isArray(b.items) ? b.items : []);
+  json(res, 200, { received: (b.items || []).length, new: fresh.length, items: fresh.map(parseC) });
+});
+on('GET', '/api/n8n/candidates', (req, res, _, url) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  json(res, 200, { items: Candidates.list(url.searchParams.get('status') || '', Number(url.searchParams.get('limit')) || 100).map(parseC) });
+});
+on('GET', '/api/n8n/candidates/best', (req, res, _, url) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  json(res, 200, { items: Candidates.best(Number(url.searchParams.get('limit')) || 3).map(parseC) });
+});
+on('GET', '/api/n8n/candidates/:id', (req, res, { id }) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const c = Candidates.get(id); return c ? json(res, 200, parseC(c)) : fail(res, 404, 'No existe');
+});
+on('POST', '/api/n8n/candidates/:id', async (req, res, { id }) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  if (!Candidates.get(id)) return fail(res, 404, 'No existe');
+  json(res, 200, parseC(Candidates.update(id, await body(req, 1e6))));
+});
+// Crea un producto en borrador (oculto) a partir de un candidato. Se activa al subir el archivo en /admin.
+on('POST', '/api/n8n/candidates/:id/draft', async (req, res, { id }) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const c = parseC(Candidates.get(id)); if (!c) return fail(res, 404, 'No existe');
+  if (c.product_id && Products.byId(c.product_id)) return json(res, 200, { product: Products.byId(c.product_id), existed: true });
+  const b = await body(req, 1e6); const ai = { ...c.ai, ...b };
+  const title = String(ai.titulo || c.title).slice(0, 120);
+  const base = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'producto';
+  let slug = base; for (let i = 2; Products.bySlug(slug); i++) slug = `${base}-${i}`;
+  const price = Number(ai.precio_sugerido) > 0 ? Number(ai.precio_sugerido) : 9.99;
+  const product = Products.upsert({ slug, title, short: String(ai.frase_corta || '').slice(0, 200), description: String(ai.descripcion || c.snippet || ''),
+    category: String(ai.categoria || 'General'), price_cents: Math.round(price * 100), compare_cents: Math.round(price * 2 * 100),
+    stars: Math.ceil(price / 0.013), emoji: String(ai.emoji || '✨').slice(0, 4), color: '#7c5cff',
+    license_type: ai.decision === 'buy' ? 'MRR' : 'Propio', license_note: `Radar #${c.id} · ${c.source} · ${c.url}`, active: 0, candidate_id: c.id });
+  Candidates.update(c.id, { status: 'drafted', product_id: product.id });
+  json(res, 200, { product, edit_url: `${config.baseUrl}/admin` });
+});
+on('GET', '/api/n8n/performance', (req, res, _, url) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  json(res, 200, { days: Number(url.searchParams.get('days')) || 7, products: Products.performance(url.searchParams.get('days')), totals: Orders.stats() });
+});
+on('POST', '/api/n8n/products/:id/retire', (req, res, { id }) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const p = Products.byId(Number(id)); if (!p) return fail(res, 404, 'No existe');
+  Products.remove(p.id);
+  if (p.candidate_id) Candidates.update(p.candidate_id, { status: 'retired' });
+  json(res, 200, { ok: true, retired: p.slug });
+});
+
+on('GET', '/api/admin/radar', (req, res) => adminOk(req) ? json(res, 200, { items: Candidates.list('', 150).map(parseC) }) : fail(res, 401, 'Clave incorrecta'));
 
 // ===== Servidor =====
 const server = http.createServer(async (req, res) => {

@@ -1,0 +1,240 @@
+{
+  "name": "1 · Radar diario de tendencias",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "name": "Cada día 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "156ada13-73d8-46cd-976d-f51c38dfc65f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚙️ CONFIGURACIÓN — rellena esto una vez (es igual en los 3 flujos).\nreturn [{ json: {\n  // Tu tienda\n  TIENDA_URL: 'https://tudominio.com',          // sin barra al final\n  TIENDA_API_KEY: 'pon-aqui-N8N_API_KEY',        // el mismo valor que N8N_API_KEY en el .env de la tienda\n\n  // Bot del RADAR (un bot distinto al de la tienda; créalo con @BotFather)\n  TELEGRAM_RADAR_TOKEN: '123456:ABC...',\n  TELEGRAM_CHAT_ID: '123456789',                 // tu chat id (el mismo que TELEGRAM_ADMIN_CHAT_ID)\n\n  // IA (console.anthropic.com → API Keys)\n  ANTHROPIC_API_KEY: 'sk-ant-...',\n  MODELO_RAPIDO: 'claude-haiku-5-5',             // para puntuar muchos productos (barato)\n  MODELO_POTENTE: 'claude-sonnet-5-5',           // para guías de recreación y anuncios\n\n  // Fuentes de datos\n  APIFY_TOKEN: 'apify_api_...',                  // apify.com → Settings → API & Integrations\n  ETSY_API_KEY: 'keystring:shared_secret',       // etsy.com/developers → Your Apps (se pega tal cual, con los dos puntos)\n\n  // Meta Ads (para el flujo de rendimiento)\n  META_TOKEN: 'EAAG...',                         // token de usuario del sistema con permiso ads_management\n  META_AD_ACCOUNT: 'act_1234567890',\n\n  // ===== Qué buscar =====\n  // Cada día se usa una parte de cada lista (rotando) para controlar el gasto.\n  TIKTOK_BUSQUEDAS: [\n    'producto digital', 'plantilla canva', 'planner digital', 'plantilla notion', 'ebook que vendo', 'plantilla excel',\n    'prompts chatgpt', 'presets lightroom', 'imprimibles para vender', 'cuaderno digital goodnotes', 'derechos de reventa',\n    'digital products to sell', 'canva template', 'notion template', 'digital planner', 'goodnotes planner', 'printable',\n    'etsy digital download', 'ai prompts pack', 'spreadsheet template', 'faceless digital products', 'plr ebook',\n  ],\n  TIKTOK_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'digitaldownload', 'canvatemplate',\n    'notiontemplate', 'digitalplanner', 'goodnotesplanner', 'printables', 'etsydigitalproducts', 'plrproducts', 'resellrights',\n  ],\n  INSTAGRAM_HASHTAGS: [\n    'productosdigitales', 'plantillascanva', 'plantillasdigitales', 'digitalproducts', 'canvatemplates', 'notiontemplates',\n    'digitalplanner', 'plannerdigital', 'emprendedoradigital', 'ebookdigital',\n  ],\n  ETSY_BUSQUEDAS: [\n    'digital planner 2027', 'canva template', 'notion template', 'printable planner', 'spreadsheet template', 'budget template',\n    'instagram templates', 'ebook template', 'wedding planner printable', 'kids printable activities', 'resume template',\n    'lightroom presets', 'ai prompts', 'goodnotes stickers', 'small business template', 'meal planner printable',\n  ],\n  HOTMART_BUSQUEDAS: [\n    'plantillas', 'canva', 'notion', 'ebook', 'excel', 'inteligencia artificial', 'productividad', 'finanzas personales',\n    'recetas', 'manualidades', 'idiomas', 'emprendimiento',\n  ],\n\n  // Cuántas palabras de cada lista usar por día y cuántos resultados por palabra\n  POR_DIA: { tiktok: 6, tiktok_hashtags: 3, instagram: 4, etsy: 6, hotmart: 4 },\n  RESULTADOS_POR_BUSQUEDA: 20,\n\n  // Filtros de \"nuevo y en tendencia\"\n  MAX_DIAS_POST: 21,          // TikTok / Instagram: publicaciones de las últimas 3 semanas\n  MAX_DIAS_ETSY: 120,         // Etsy: productos publicados hace menos de 4 meses\n  MIN_VISTAS_TIKTOK: 20000,   // descarta vídeos con poco alcance\n  MIN_FAVORITOS_ETSY: 15,\n  TOP_POR_FUENTE: { tiktok: 12, instagram: 8, etsy: 15, hotmart: 8 },   // los mejores de cada fuente pasan a la IA\n  NOTA_MINIMA_AVISO: 7,       // solo te avisa por Telegram si la IA le pone 7/10 o más\n\n  // Reglas del flujo de rendimiento (Meta Ads)\n  DIAS_PRUEBA: 5,             // días que un producto tiene para demostrar que vende\n  GASTO_MAX_SIN_VENTA: 15,    // USD gastados en anuncios sin ninguna venta → se pausa y se retira\n  ROAS_MINIMO: 1.3,           // ingresos / gasto por debajo de esto → aviso para ajustar\n  ROAS_ESCALAR: 2.5,          // por encima → sugerencia de subir presupuesto\n  AUTO_PAUSAR_ANUNCIOS: true, // pausa sola los anuncios perdedores\n  AUTO_RETIRAR_PRODUCTOS: true,\n  MAX_RETIROS_POR_DIA: 2,     // como mucho retira 2 productos al día\n  MIN_PRODUCTOS_ACTIVOS: 6,   // nunca deja la tienda con menos de 6 productos\n} }];\n"
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "7640a649-7b2a-4ca2-bd67-75275fc58386"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🟠 ETSY — listados digitales populares y publicados hace poco (API oficial, gratis).\nconst C = $('Config').first().json;\nconst items = [], log = [];\nconst day = Math.floor(Date.now() / 86400000);\nconst pick = (list, n) => { if (!list?.length) return []; const s = (day * n) % list.length; return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[(s + i) % list.length]); };\nconst ageDays = (ts) => Math.max(1, (Date.now() / 1000 - ts) / 86400);\n\nif (!C.ETSY_API_KEY || C.ETSY_API_KEY.startsWith('keystring')) {\n  log.push('Etsy: sin API key, se omite');\n} else {\n  for (const kw of pick(C.ETSY_BUSQUEDAS, C.POR_DIA.etsy)) {\n    try {\n      const r = await this.helpers.httpRequest({\n        method: 'GET', url: 'https://openapi.etsy.com/v3/application/listings/active',\n        qs: { keywords: kw, sort_on: 'score', limit: 100 }, headers: { 'x-api-key': C.ETSY_API_KEY }, json: true, timeout: 60000,\n      });\n      let n = 0;\n      for (const l of r.results || []) {\n        const digital = l.listing_type === 'download' || (l.tags || []).some((t) => /digital|printable|download|template/i.test(t));\n        const age = ageDays(l.original_creation_timestamp || l.created_timestamp);\n        const favs = l.num_favorers || 0;\n        if (!digital || age > C.MAX_DIAS_ETSY || favs < C.MIN_FAVORITOS_ETSY) continue;\n        n++;\n        items.push({\n          source: 'etsy', external_id: String(l.listing_id), url: l.url, title: l.title, keyword: kw,\n          snippet: String(l.description || '').slice(0, 700),\n          price: l.price ? l.price.amount / l.price.divisor : 0, currency: l.price?.currency_code || '',\n          published_at: new Date((l.original_creation_timestamp || l.created_timestamp) * 1000).toISOString(),\n          metrics: { favoritos: favs, vistas: l.views || 0, dias: Math.round(age), tags: (l.tags || []).slice(0, 8) },\n          trend_score: Math.round((favs * 10 + (l.views || 0)) / age),\n        });\n      }\n      log.push(`Etsy \"${kw}\": ${n} recientes`);\n    } catch (e) { log.push(`Etsy \"${kw}\": error ${e.message}`); }\n  }\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "Etsy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "36728d37-a80c-4f2d-917b-5378b26f1b05"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚫ TIKTOK — vídeos recientes con mucho alcance sobre productos digitales (Apify).\nconst C = $('Config').first().json;\nconst prev = $input.first().json; const items = prev.items || [], log = prev.log || [];\nconst day = Math.floor(Date.now() / 86400000);\nconst pick = (list, n) => { if (!list?.length) return []; const s = (day * n) % list.length; return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[(s + i) % list.length]); };\n\nif (!C.APIFY_TOKEN || C.APIFY_TOKEN.startsWith('apify_api_...')) {\n  log.push('TikTok: sin token de Apify, se omite');\n} else {\n  try {\n    const input = {\n      searchQueries: pick(C.TIKTOK_BUSQUEDAS, C.POR_DIA.tiktok), hashtags: pick(C.TIKTOK_HASHTAGS, C.POR_DIA.tiktok_hashtags),\n      resultsPerPage: C.RESULTADOS_POR_BUSQUEDA, searchSection: '/video',\n      shouldDownloadVideos: false, shouldDownloadCovers: false, shouldDownloadSubtitles: false, shouldDownloadSlideshowImages: false,\n    };\n    const res = await this.helpers.httpRequest({\n      method: 'POST', url: `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${C.APIFY_TOKEN}&timeout=280`,\n      body: input, json: true, timeout: 300000,\n    });\n    let n = 0;\n    for (const v of res || []) {\n      const created = v.createTimeISO ? new Date(v.createTimeISO) : v.createTime ? new Date(v.createTime * 1000) : null;\n      if (!created || !v.id) continue;\n      const age = Math.max(1, (Date.now() - created) / 86400000);\n      const plays = v.playCount || 0;\n      if (age > C.MAX_DIAS_POST || plays < C.MIN_VISTAS_TIKTOK) continue;\n      n++;\n      items.push({\n        source: 'tiktok', external_id: String(v.id), url: v.webVideoUrl || '', keyword: v.searchQuery || v.input || '',\n        title: String(v.text || '').slice(0, 160), snippet: String(v.text || '').slice(0, 700),\n        published_at: created.toISOString(), image: v.videoMeta?.coverUrl || '',\n        metrics: { vistas: plays, likes: v.diggCount || 0, compartidos: v.shareCount || 0, guardados: v.collectCount || 0,\n          comentarios: v.commentCount || 0, autor: v.authorMeta?.name || '', seguidores: v.authorMeta?.fans || 0, dias: Math.round(age) },\n        trend_score: Math.round((plays + 20 * (v.shareCount || 0) + 10 * (v.collectCount || 0)) / age),\n      });\n    }\n    log.push(`TikTok: ${(res || []).length} vídeos revisados, ${n} recientes y virales`);\n  } catch (e) { log.push(`TikTok: error ${e.message}`); }\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "TikTok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "id": "0ef3fe59-05dc-42be-ab73-4bf129443979"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🟣 INSTAGRAM — publicaciones/reels recientes de hashtags de productos digitales (Apify).\nconst C = $('Config').first().json;\nconst prev = $input.first().json; const items = prev.items || [], log = prev.log || [];\nconst day = Math.floor(Date.now() / 86400000);\nconst pick = (list, n) => { if (!list?.length) return []; const s = (day * n) % list.length; return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[(s + i) % list.length]); };\n\nif (!C.APIFY_TOKEN || C.APIFY_TOKEN.startsWith('apify_api_...')) {\n  log.push('Instagram: sin token de Apify, se omite');\n} else {\n  try {\n    const res = await this.helpers.httpRequest({\n      method: 'POST', url: `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items?token=${C.APIFY_TOKEN}&timeout=280`,\n      body: { hashtags: pick(C.INSTAGRAM_HASHTAGS, C.POR_DIA.instagram), resultsLimit: C.RESULTADOS_POR_BUSQUEDA }, json: true, timeout: 300000,\n    });\n    let n = 0;\n    for (const p of res || []) {\n      const created = p.timestamp ? new Date(p.timestamp) : null;\n      if (!created || !(p.id || p.shortCode)) continue;\n      const age = Math.max(1, (Date.now() - created) / 86400000);\n      if (age > C.MAX_DIAS_POST) continue;\n      const likes = p.likesCount > 0 ? p.likesCount : 0, comments = p.commentsCount || 0, views = p.videoViewCount || p.videoPlayCount || 0;\n      if (likes + comments * 3 + views / 10 < 300) continue;\n      n++;\n      items.push({\n        source: 'instagram', external_id: String(p.id || p.shortCode), url: p.url || `https://www.instagram.com/p/${p.shortCode}/`,\n        keyword: (p.inputUrl || '').split('/tags/')[1]?.replace(/\\/$/, '') || '',\n        title: String(p.caption || '').slice(0, 160), snippet: String(p.caption || '').slice(0, 700),\n        published_at: created.toISOString(), image: p.displayUrl || '',\n        metrics: { likes, comentarios: comments, vistas: views, autor: p.ownerUsername || '', dias: Math.round(age) },\n        trend_score: Math.round((likes + 3 * comments + views / 10) / age),\n      });\n    }\n    log.push(`Instagram: ${(res || []).length} publicaciones revisadas, ${n} recientes con tracción`);\n  } catch (e) { log.push(`Instagram: error ${e.message}`); }\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "Instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "id": "d63d3742-ec93-45d5-bc8d-e47ba54cf3c4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🔥 HOTMART — productos \"calientes\" del marketplace por palabra clave (Apify).\nconst C = $('Config').first().json;\nconst prev = $input.first().json; const items = prev.items || [], log = prev.log || [];\nconst day = Math.floor(Date.now() / 86400000);\nconst pick = (list, n) => { if (!list?.length) return []; const s = (day * n) % list.length; return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[(s + i) % list.length]); };\n\nif (!C.APIFY_TOKEN || C.APIFY_TOKEN.startsWith('apify_api_...')) {\n  log.push('Hotmart: sin token de Apify, se omite');\n} else {\n  try {\n    const kws = pick(C.HOTMART_BUSQUEDAS, C.POR_DIA.hotmart);\n    const res = await this.helpers.httpRequest({\n      method: 'POST',\n      url: `https://api.apify.com/v2/acts/jungle_synthesizer~hotmart-marketplace-product-catalog-scraper/run-sync-get-dataset-items?token=${C.APIFY_TOKEN}&timeout=280`,\n      body: { keywords: kws, maxItems: kws.length * 24 }, json: true, timeout: 300000,\n    });\n    for (const p of res || []) {\n      const url = p.product_url || p.url || p.marketplace_url || '';\n      const id = p.product_id || p.id || p.ucode || url;\n      if (!id) continue;\n      // Hotmart no da fecha de publicación: priorizamos \"hot_score\" alto con pocas reseñas (señal de producto nuevo que despega).\n      const reviews = p.rating_count || 0, hot = p.hot_score || 0;\n      items.push({\n        source: 'hotmart', external_id: String(id), url, keyword: p.search_keyword || '',\n        title: p.name || p.product_name || p.title || '', snippet: String(p.description_short || p.description || '').slice(0, 700),\n        price: p.price || p.price_brl || 0, currency: p.currency || (p.price_brl ? 'BRL' : ''), image: p.thumbnail_url || '',\n        published_at: '', metrics: { hot_score: hot, reseñas: reviews, nota: p.rating_avg || 0, formato: p.format || '', autor: p.producer_name || '' },\n        trend_score: Math.round(hot / Math.log10(reviews + 10)),\n      });\n    }\n    log.push(`Hotmart: ${(res || []).length} productos revisados`);\n  } catch (e) { log.push(`Hotmart: error ${e.message}`); }\n}\nreturn [{ json: { items, log } }];\n"
+      },
+      "name": "Hotmart",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "2cd4da98-2a09-443c-920e-218b9ada6a1f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🧮 FILTRAR Y GUARDAR — se queda con lo mejor de cada fuente y lo guarda en la tienda.\n// La tienda devuelve solo lo NUEVO (lo que ya vimos otro día no se repite).\nconst C = $('Config').first().json;\nconst { items = [], log = [] } = $input.first().json;\n\nconst bySource = {};\nfor (const it of items) (bySource[it.source] ||= []).push(it);\nconst top = [];\nfor (const [src, list] of Object.entries(bySource)) {\n  const seen = new Set();\n  const uniq = list.filter((i) => !seen.has(i.external_id) && seen.add(i.external_id));\n  uniq.sort((a, b) => b.trend_score - a.trend_score);\n  top.push(...uniq.slice(0, C.TOP_POR_FUENTE[src] || 10));\n}\n\nlet fresh = [];\nif (top.length) {\n  const r = await this.helpers.httpRequest({\n    method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates`, headers: { 'x-api-key': C.TIENDA_API_KEY },\n    body: { items: top }, json: true, timeout: 60000,\n  });\n  fresh = r.items || [];\n}\nlog.push(`Total encontrado: ${items.length} · mejores: ${top.length} · nuevos hoy: ${fresh.length}`);\nreturn [{ json: { fresh, log, found: items.length } }];\n"
+      },
+      "name": "Filtrar y guardar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "id": "1e5719c0-8a5b-459e-baea-87398984203b"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🤖 EVALUAR CON IA — Claude analiza cada hallazgo nuevo y decide si vale la pena.\nconst C = $('Config').first().json;\nconst { fresh = [], log = [], found = 0 } = $input.first().json;\n\nconst SYSTEM = `Eres analista de productos digitales para una tienda online en español (Latinoamérica y España) que vende con anuncios de Meta.\nRecibes un hallazgo (un listado de Etsy/Hotmart o una publicación de TikTok/Instagram) y devuelves SOLO un JSON válido, sin texto extra:\n{\n \"es_producto_digital\": true|false,\n \"producto\": \"qué se vende exactamente, en una frase\",\n \"titulo\": \"título atractivo en español para nuestra tienda (máx. 70 caracteres)\",\n \"frase_corta\": \"beneficio principal en una frase (máx. 110 caracteres)\",\n \"descripcion\": \"descripción de venta en español, 90-160 palabras: para quién es, qué incluye, formato, cómo se usa\",\n \"categoria\": \"Plantillas|Productividad|Ebooks|IA|Fotografía|Educación|Finanzas|Negocios|Hogar|Infantil|Otros\",\n \"emoji\": \"un emoji\",\n \"precio_sugerido\": número en USD entre 3 y 29,\n \"decision\": \"comprar_reventa\" | \"recrear\" | \"descartar\",\n \"derechos\": \"si el original menciona PLR/MRR/derechos de reventa, dilo; si no, 'sin derechos de reventa: recrear con contenido propio'\",\n \"por_que\": \"por qué está en tendencia ahora (máx. 160 caracteres)\",\n \"como_recrear\": [\"3 a 5 ideas concretas para hacer una versión propia MEJOR y distinta\"],\n \"riesgos\": \"marcas registradas, copyright, promesas de dinero/salud que Meta rechaza, o 'ninguno'\",\n \"anuncio\": {\"gancho\": \"primera frase de un vídeo/reel\", \"texto\": \"texto principal del anuncio (máx. 300 caracteres)\", \"titular\": \"máx. 40 caracteres\"},\n \"nota\": número 1-10\n}\nCriterios de la nota: demanda real y reciente (no productos de hace años), que se pueda vender a hispanohablantes, que se pueda recrear o revender legalmente,\nmargen con precio bajo (impulso), facilidad para anunciar en Meta. Pon nota ≤4 y decision \"descartar\" si: no es un producto digital, usa marcas/personajes\ncon copyright, promete dinero fácil o resultados de salud, es un \"curso MRR de marketing digital\" tipo esquema, o es contenido personal sin producto.\nSolo pon \"comprar_reventa\" si hay señales claras de licencia PLR/MRR/reventa.`;\n\nconst out = [];\nfor (const c of fresh.slice(0, 45)) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 120000,\n      headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },\n      body: {\n        model: C.MODELO_RAPIDO, max_tokens: 1500, system: SYSTEM,\n        messages: [{ role: 'user', content: JSON.stringify({ fuente: c.source, palabra_clave: c.keyword, titulo: c.title, texto: c.snippet,\n          precio: c.price, moneda: c.currency, publicado: c.published_at, metricas: c.metrics, url: c.url }) }],\n      },\n    });\n    const text = (r.content || []).map((b) => b.text || '').join('');\n    const ai = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));\n    const nota = Number(ai.nota) || 0;\n    await this.helpers.httpRequest({\n      method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, json: true,\n      body: { ai_score: nota, ai, status: ai.decision === 'descartar' || !ai.es_producto_digital ? 'discarded' : 'new' },\n    });\n    out.push({ ...c, ai, ai_score: nota });\n  } catch (e) { log.push(`IA #${c.id}: error ${e.message}`); }\n}\nlog.push(`Evaluados por la IA: ${out.length}`);\nreturn [{ json: { evaluated: out, log, found } }];\n"
+      },
+      "name": "Evaluar con IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "id": "1d8363eb-fec0-4f26-a47b-3dbcd1c1cc76"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 📲 AVISAR POR TELEGRAM — te manda los mejores con botones para decidir.\nconst C = $('Config').first().json;\nconst { evaluated = [], log = [], found = 0 } = $input.first().json;\nconst tg = (method, body) => this.helpers.httpRequest({ method: 'POST', url: `https://api.telegram.org/bot${C.TELEGRAM_RADAR_TOKEN}/${method}`, body, json: true });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));\nconst icon = { etsy: '🟠 Etsy', tiktok: '⚫ TikTok', instagram: '🟣 Instagram', hotmart: '🔥 Hotmart' };\nconst num = (n) => Number(n || 0).toLocaleString('es');\n\nconst winners = evaluated\n  .filter((c) => c.ai_score >= C.NOTA_MINIMA_AVISO && c.ai?.es_producto_digital && c.ai?.decision !== 'descartar')\n  .sort((a, b) => b.ai_score - a.ai_score || b.trend_score - a.trend_score)\n  .slice(0, 10);\n\nfor (const c of winners) {\n  const m = c.metrics || {}, ai = c.ai;\n  const stats = c.source === 'etsy' ? `❤️ ${num(m.favoritos)} favoritos · publicado hace ${m.dias} días`\n    : c.source === 'hotmart' ? `🔥 temperatura ${num(m.hot_score)} · ${num(m.reseñas)} reseñas`\n    : `${m.vistas ? `👁 ${num(m.vistas)} vistas · ` : ''}❤️ ${num(m.likes)} · hace ${m.dias} días`;\n  const text = `📡 <b>${ai.nota}/10 · ${esc(ai.titulo)}</b>\n${icon[c.source] || c.source} · ${stats}\n\n📦 ${esc(ai.producto)}\n📈 ${esc(ai.por_que)}\n🔑 ${esc(ai.derechos)}\n⚠️ Riesgos: ${esc(ai.riesgos)}\n💲 Precio sugerido: <b>$${ai.precio_sugerido}</b>\n👉 Sugerencia: <b>${ai.decision === 'comprar_reventa' ? 'Comprar y revender' : 'Recrear versión propia'}</b>`;\n  try {\n    await tg('sendMessage', {\n      chat_id: C.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true },\n      reply_markup: { inline_keyboard: [\n        [{ text: '🛒 Comprar y revender', callback_data: `buy:${c.id}` }, { text: '🛠️ Recrear', callback_data: `rec:${c.id}` }],\n        [{ text: '❌ Descartar', callback_data: `no:${c.id}` }, ...(c.url ? [{ text: '🔗 Ver original', url: c.url }] : [])],\n      ] },\n    });\n    await this.helpers.httpRequest({ method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, body: { status: 'notified' }, json: true });\n  } catch (e) { log.push(`Telegram #${c.id}: ${e.message}`); }\n}\n\nawait tg('sendMessage', {\n  chat_id: C.TELEGRAM_CHAT_ID, parse_mode: 'HTML',\n  text: `🗞️ <b>Radar de hoy</b>\\nRevisados: ${found} · Evaluados: ${evaluated.length} · Te avisé: ${winners.length}\\n\\n<code>${esc(log.join('\\n')).slice(0, 3000)}</code>`,\n});\nreturn [{ json: { avisados: winners.length, log } }];\n"
+      },
+      "name": "Avisar por Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "id": "0e681022-43d9-4894-aa41-4870c50b53bb"
+    },
+    {
+      "parameters": {
+        "content": "## 📡 Radar diario\n1. Rellena el nodo **Config**.\n2. Pulsa **Test workflow** para probar.\n3. Actívalo (arriba a la derecha).\n\nCada fuente sin clave se salta sola, así puedes empezar solo con Etsy.",
+        "width": 420,
+        "height": 300
+      },
+      "name": "Nota fe12",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a5c8dbd3-64e4-49d0-8dce-e4c465dd1e82"
+    }
+  ],
+  "connections": {
+    "Cada día 8:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Etsy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etsy": {
+      "main": [
+        [
+          {
+            "node": "TikTok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TikTok": {
+      "main": [
+        [
+          {
+            "node": "Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram": {
+      "main": [
+        [
+          {
+            "node": "Hotmart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hotmart": {
+      "main": [
+        [
+          {
+            "node": "Filtrar y guardar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar y guardar": {
+      "main": [
+        [
+          {
+            "node": "Evaluar con IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar con IA": {
+      "main": [
+        [
+          {
+            "node": "Avisar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Caracas"
+  },
+  "pinData": {}
+}

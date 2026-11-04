@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tu pedido · {{STORE}}</title>
 <meta name="robots" content="noindex">
+{{PIXEL}}
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/css/styles.css">
 </head>
@@ -30,6 +31,9 @@ async function load() {
     const tgBtn = o.telegram ? `<a class="btn btn-ghost" href="${o.telegram}" target="_blank">📲 ${t('getTelegram')}</a>` : '';
     if (o.status === 'paid') {
       clearInterval(timer);
+      try { if (o.currency !== 'XTR' && !localStorage.getItem('px_' + o.id)) {
+        fbq('track', 'Purchase', { value: Number(o.amount), currency: 'USD', content_ids: [o.slug], content_type: 'product' }, { eventID: o.id });
+        localStorage.setItem('px_' + o.id, '1'); } } catch {}
       return show('<div class="icon">🎉</div>', t('orderPaid'),
         `${escH(o.emoji)} <b>${escH(o.title)}</b><br>Pedido ${o.id}. También te lo enviamos por los canales que indicaste.`,
         `<a class="btn btn-main" href="${o.download}">⬇️ ${t('download')}</a>${tgBtn}<a class="btn btn-ghost" href="/">${t('back')}</a>`);
