@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tu pedido · {{STORE}}</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+<header class="top"><div class="wrap"><a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a><nav class="nav"><button class="lang">EN</button></nav></div></header>
+<main class="wrap"><div class="status-card" id="card"><div class="spinner"></div></div></main>
+<script src="/js/common.js"></script>
+<script>
+const PRESET = {{DATA}};
+const id = location.pathname.split('/')[2];
+const key = new URLSearchParams(location.search).get('k');
+let timer;
+
+function show(icon, title, text, actions = '') {
+  $('#card').innerHTML = `${icon}<h1>${title}</h1><p>${text}</p><div class="actions">${actions}</div>`;
+}
+
+async function load() {
+  if (PRESET && PRESET.error) return show('<div class="icon">⚠️</div>', 'Ups', escH(PRESET.error), `<a class="btn btn-ghost" href="/">${t('back')}</a>`);
+  try {
+    const o = await api(`/api/orders/${encodeURIComponent(id)}?k=${encodeURIComponent(key || '')}`);
+    const tgBtn = o.telegram ? `<a class="btn btn-ghost" href="${o.telegram}" target="_blank">📲 ${t('getTelegram')}</a>` : '';
+    if (o.status === 'paid') {
+      clearInterval(timer);
+      return show('<div class="icon">🎉</div>', t('orderPaid'),
+        `${escH(o.emoji)} <b>${escH(o.title)}</b><br>Pedido ${o.id}. También te lo enviamos por los canales que indicaste.`,
+        `<a class="btn btn-main" href="${o.download}">⬇️ ${t('download')}</a>${tgBtn}<a class="btn btn-ghost" href="/">${t('back')}</a>`);
+    }
+    if (o.status === 'review') return show('<div class="spinner"></div>', t('orderReview'),
+      `Pedido <b>${o.id}</b> · ${o.amount} ${o.currency}. Esta página se actualiza sola; también te avisaremos cuando esté listo.`, tgBtn);
+    if (o.status === 'rejected') { clearInterval(timer); return show('<div class="icon">❌</div>', t('orderRejected'),
+      `Pedido ${o.id}. Si ya pagaste, escríbenos con el comprobante.`, `${tgBtn}<a class="btn btn-ghost" href="/">${t('back')}</a>`); }
+    show('<div class="icon">⏳</div>', t('orderPending'), `Pedido ${o.id} · ${o.amount} ${o.currency}`,
+      `<a class="btn btn-ghost" href="/p/${encodeURIComponent(o.slug)}">Volver al producto</a>`);
+  } catch (e) { clearInterval(timer); show('<div class="icon">🔍</div>', 'Pedido no encontrado', 'Revisa el enlace que recibiste.', `<a class="btn btn-ghost" href="/">${t('back')}</a>`); }
+}
+load(); if (!PRESET) timer = setInterval(load, 8000);
+</script>
+</body>
+</html>

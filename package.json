@@ -1,0 +1,15 @@
+{
+  "name": "tienda-digital",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tienda de productos digitales: web app + bot de Telegram. Sin dependencias externas.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "seed": "node --no-warnings src/seed.js"
+  }
+}

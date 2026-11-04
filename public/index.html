@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESC}}">
+<meta name="theme-color" content="#07060f">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a>
+  <nav class="nav">
+    <a href="#catalogo" data-t="catalog">Catálogo</a>
+    <a href="#como" class="hide-sm hide-tg" data-t="how">Cómo funciona</a>
+    <button class="lang">EN</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <span class="badge"><b>NUEVO</b> Productos digitales con entrega inmediata</span>
+      <h1>Lo que necesitas,<br><span class="grad">listo para descargar.</span></h1>
+      <p class="lead">Plantillas, guías, packs y recursos digitales seleccionados. Pagas, y en segundos lo tienes en tu correo, Telegram o WhatsApp.</p>
+      <div class="ctas">
+        <a class="btn btn-main" href="#catalogo">Ver productos →</a>
+        <a class="btn btn-ghost hide-tg" href="#como">Cómo funciona</a>
+      </div>
+      <div class="trust"><span>⚡ Entrega al instante</span><span>🔒 Pago seguro</span><span>💬 Soporte por Telegram</span></div>
+    </div>
+    <div class="stack" id="stack"></div>
+  </section>
+
+  <section id="catalogo">
+    <div class="sec-head reveal"><div><h2>Catálogo</h2><p>Lo más buscado ahora mismo.</p></div></div>
+    <div class="tools">
+      <label class="search"><span>🔎</span><input id="q" data-tp="search" placeholder="Buscar productos…" autocomplete="off"></label>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="grid" id="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+  </section>
+
+  <section id="como" class="hide-tg">
+    <div class="sec-head reveal"><div><h2>Así de fácil</h2><p>Tres pasos y listo.</p></div></div>
+    <div class="steps">
+      <div class="step reveal"><div class="n">🛒</div><h3>Elige</h3><p>Encuentra el producto que necesitas y revisa qué incluye.</p></div>
+      <div class="step reveal"><div class="n">💳</div><h3>Paga</h3><p>Con PayPal, Binance (USDT) o Telegram Stars desde nuestro bot.</p></div>
+      <div class="step reveal"><div class="n">📩</div><h3>Recibe</h3><p>Te llega el enlace de descarga por correo, Telegram o WhatsApp.</p></div>
+    </div>
+    <div class="pay-logos reveal"><span>PayPal</span><span>Binance Pay</span><span>⭐ Telegram Stars</span></div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>© <span id="y"></span> {{STORE}}</span><span><a href="/legal">Términos y privacidad</a></span></div></footer>
+
+<script src="/js/common.js"></script>
+<script>
+let ALL = [], CAT = '', Q = '';
+$('#y').textContent = new Date().getFullYear();
+
+function render() {
+  const q = Q.toLowerCase();
+  const list = ALL.filter((p) => (!CAT || p.category === CAT) && (!q || (p.title + ' ' + p.short + ' ' + p.category).toLowerCase().includes(q)));
+  $('#grid').innerHTML = list.length ? list.map(productCard).join('') : `<div class="empty" style="grid-column:1/-1">${t('empty')}</div>`;
+  enhance($('#grid'));
+}
+
+api('/api/products?lang=' + LANG).then(({ products, categories }) => {
+  ALL = products;
+  $('#chips').innerHTML = [`<button class="chip on" data-c="">${t('all')}</button>`]
+    .concat(categories.map((c) => `<button class="chip" data-c="${escH(c.category)}">${escH(c.category)}</button>`)).join('');
+  $('#chips').onclick = (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    $$('.chip').forEach((c) => c.classList.toggle('on', c === b)); CAT = b.dataset.c; render();
+  };
+  $('#stack').innerHTML = products.slice(0, 3).map(productCard).join('');
+  $$('#stack .card').forEach((c) => { c.classList.remove('reveal'); c.removeAttribute('data-tilt'); });
+  render(); enhance();
+});
+$('#q').addEventListener('input', (e) => { Q = e.target.value; render(); });
+enhance();
+</script>
+</body>
+</html>

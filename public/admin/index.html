@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel · Tienda</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+.adm{padding:30px 0 80px}.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.kpi{padding:18px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.kpi small{color:var(--mut)}.kpi b{display:block;font-size:1.7rem;margin-top:4px}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}th{color:var(--mut);font-weight:500}
+.st{padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700}.st.paid{background:rgba(52,211,153,.15);color:var(--ok)}.st.review{background:rgba(251,191,36,.15);color:var(--warn)}.st.pending{background:var(--card2);color:var(--mut)}.st.rejected{background:rgba(248,113,113,.15);color:var(--bad)}
+.mini{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card2);cursor:pointer;font-size:.8rem;margin-right:4px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:22px;border-radius:20px;background:var(--card);border:1px solid var(--line)}.form .full{grid-column:1/-1}
+.scroll{overflow-x:auto}
+@media(max-width:700px){.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div>
+<header class="top"><div class="wrap"><a class="logo" href="/"><i>✦</i><span>Panel</span></a><nav class="nav"><a href="/" target="_blank">Ver tienda ↗</a></nav></div></header>
+<main class="wrap adm" id="app">
+  <div class="status-card" id="login"><div class="icon">🔐</div><h1>Panel de la tienda</h1>
+    <div class="field" style="margin-top:18px"><input id="pw" type="password" placeholder="Contraseña (ADMIN_PASSWORD)"></div>
+    <button class="btn btn-main btn-block" id="go">Entrar</button><div class="err" id="lerr"></div></div>
+</main>
+<script src="/js/common.js"></script>
+<script>
+let KEY = sessionStorage.getItem('adm') || '', DATA = null, TAB = 'orders';
+const A = (p, o = {}) => api(p, { ...o, headers: { 'x-admin-key': KEY } });
+
+async function load() {
+  try { DATA = await A('/api/admin/summary'); sessionStorage.setItem('adm', KEY); render(); }
+  catch (e) { $('#lerr') && ($('#lerr').textContent = e.message); }
+}
+$('#go').onclick = () => { KEY = $('#pw').value; load(); };
+$('#pw').onkeydown = (e) => e.key === 'Enter' && $('#go').click();
+if (KEY) load();
+
+function render() {
+  const s = DATA.stats, review = DATA.orders.filter((o) => o.status === 'review').length;
+  $('#app').innerHTML = `
+  <div class="row">
+    <div class="kpi"><small>Ventas pagadas</small><b>${s.orders}</b></div>
+    <div class="kpi"><small>Ingresos USD</small><b>${money(s.usd_cents / 100)}</b></div>
+    <div class="kpi"><small>Ingresos Stars</small><b>${s.stars} ⭐</b></div>
+    <div class="kpi"><small>Por revisar (Binance)</small><b style="color:var(--warn)">${review}</b></div>
+  </div>
+  <div class="tabs">
+    <button class="chip ${TAB === 'orders' ? 'on' : ''}" data-tab="orders">Pedidos</button>
+    <button class="chip ${TAB === 'products' ? 'on' : ''}" data-tab="products">Productos</button>
+    <button class="chip ${TAB === 'new' ? 'on' : ''}" data-tab="new">+ Nuevo producto</button>
+  </div><div id="tab"></div>`;
+  $('.tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) { TAB = b.dataset.tab; render(); } };
+  if (TAB === 'orders') orders(); else if (TAB === 'products') products(); else form({});
+}
+
+function orders() {
+  $('#tab').innerHTML = `<div class="scroll"><table><tr><th>Pedido</th><th>Producto</th><th>Método</th><th>Importe</th><th>Cliente</th><th>Ref.</th><th>Estado</th><th></th></tr>
+  ${DATA.orders.map((o) => `<tr><td><b>${o.id}</b><br><small style="color:var(--dim)">${o.created_at}</small></td><td>${escH(o.title)}</td><td>${o.method}</td>
+    <td>${o.currency === 'XTR' ? o.amount_cents + ' ⭐' : (o.amount_cents / 100).toFixed(2) + ' ' + o.currency}</td>
+    <td>${escH(o.email || '')}<br>${escH(o.whatsapp || '')}${o.telegram_chat_id ? '<br>TG ' + o.telegram_chat_id : ''}</td>
+    <td><small>${escH(o.provider_ref || '')}</small></td><td><span class="st ${o.status}">${o.status}</span></td>
+    <td>${['review', 'pending'].includes(o.status) && o.method === 'binance' ? `<button class="mini" data-a="confirm" data-id="${o.id}">✅ Confirmar</button><button class="mini" data-a="reject" data-id="${o.id}">❌</button>` : ''}
+      ${o.status === 'paid' ? `<button class="mini" data-a="resend" data-id="${o.id}">↻ Reenviar</button>` : ''}</td></tr>`).join('')}
+  </table></div>`;
+  $('#tab').onclick = async (e) => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    if (b.dataset.a !== 'resend' && !confirm(`¿${b.dataset.a === 'confirm' ? 'Confirmar' : 'Rechazar'} el pedido ${b.dataset.id}?`)) return;
+    const r = await A(`/api/admin/orders/${b.dataset.id}/${b.dataset.a}`, { method: 'POST' }).catch((x) => ({ error: x.message }));
+    toast(r.error || (r.via ? 'Entregado por: ' + (r.via.join(', ') || 'ningún canal') : 'Hecho')); load();
+  };
+}
+
+function products() {
+  $('#tab').innerHTML = `<div class="scroll"><table><tr><th></th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stars</th><th>Licencia</th><th>Archivo</th><th>Ventas</th><th></th></tr>
+  ${DATA.products.map((p) => `<tr style="${p.active ? '' : 'opacity:.4'}"><td style="font-size:1.4rem">${p.emoji}</td><td><b>${escH(p.title)}</b><br><a href="/p/${p.slug}" target="_blank" style="color:var(--dim)">/p/${p.slug}</a></td>
+    <td>${escH(p.category)}</td><td>${money(p.price_cents / 100)}</td><td>${p.stars}</td><td>${escH(p.license_type)}</td>
+    <td>${p.file_name ? '✅' : p.external_url ? '🔗' : '<span style="color:var(--bad)">falta</span>'}</td><td>${p.sales}</td>
+    <td><button class="mini" data-e="${p.id}">Editar</button>${p.active ? `<button class="mini" data-d="${p.id}">Ocultar</button>` : ''}</td></tr>`).join('')}</table></div>`;
+  $('#tab').onclick = async (e) => {
+    const ed = e.target.closest('[data-e]'), del = e.target.closest('[data-d]');
+    if (ed) { TAB = 'new'; render(); form(DATA.products.find((p) => p.id == ed.dataset.e)); }
+    if (del && confirm('¿Ocultar este producto de la tienda?')) { await A(`/api/admin/products/${del.dataset.d}/delete`, { method: 'POST' }); load(); }
+  };
+}
+
+function form(p) {
+  const v = (k, d = '') => escH(p[k] ?? d);
+  $('#tab').innerHTML = `<div class="form">
+    <h3 class="full" style="margin-bottom:14px">${p.id ? 'Editar' : 'Nuevo'} producto</h3>
+    <div class="field full"><label>Título</label><input id="f_title" value="${v('title')}"></div>
+    <div class="field full"><label>Frase corta (aparece en la tarjeta)</label><input id="f_short" value="${v('short')}"></div>
+    <div class="field full"><label>Descripción (qué incluye, formato, para quién es)</label><textarea id="f_description" rows="6">${v('description')}</textarea></div>
+    <div class="field"><label>Categoría</label><input id="f_category" value="${v('category', 'General')}"></div>
+    <div class="field"><label>Emoji y color</label><div style="display:flex;gap:8px"><input id="f_emoji" value="${v('emoji', '✨')}" style="width:80px"><input id="f_color" type="color" value="${v('color', '#7c5cff')}" style="height:48px"></div></div>
+    <div class="field"><label>Precio USD</label><input id="f_price" type="number" step="0.01" value="${p.price_cents ? p.price_cents / 100 : ''}"></div>
+    <div class="field"><label>Precio tachado USD (opcional)</label><input id="f_compare" type="number" step="0.01" value="${p.compare_cents ? p.compare_cents / 100 : ''}"></div>
+    <div class="field"><label>Precio en Stars (vacío = automático)</label><input id="f_stars" type="number" value="${v('stars')}"></div>
+    <div class="field"><label>Licencia</label><select id="f_license_type">${['PLR', 'MRR', 'RR', 'Propio'].map((l) => `<option ${p.license_type === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="field full"><label>Nota de licencia (dónde la compraste, condiciones). Solo la ves tú.</label><input id="f_license_note" value="${v('license_note')}"></div>
+    <div class="field full"><label>Imagen de portada (URL, opcional; si no, se genera una)</label><input id="f_cover_url" value="${v('cover_url')}"></div>
+    <div class="field"><label>Archivo del producto (PDF, ZIP…) ${p.file_name ? '· actual: ' + escH(p.file_name) : ''}</label><input id="f_file" type="file"></div>
+    <div class="field"><label>…o enlace de entrega (Drive, Notion…)</label><input id="f_external_url" value="${v('external_url')}"></div>
+    <label class="full" style="display:flex;gap:8px;align-items:center;margin:6px 0 16px"><input id="f_featured" type="checkbox" ${p.featured ? 'checked' : ''}> Destacar (🔥 Top)</label>
+    <button class="btn btn-main full" id="save">Guardar producto</button><div class="err full" id="ferr"></div></div>`;
+  $('#save').onclick = async () => {
+    const b = { id: p.id, slug: p.slug };
+    ['title', 'short', 'description', 'category', 'emoji', 'color', 'license_type', 'license_note', 'cover_url', 'external_url'].forEach((k) => (b[k] = $('#f_' + k).value.trim()));
+    b.price = parseFloat($('#f_price').value); b.compare = parseFloat($('#f_compare').value) || 0; b.stars = parseInt($('#f_stars').value) || 0;
+    b.featured = $('#f_featured').checked; b.active = true;
+    const f = $('#f_file').files[0];
+    $('#save').disabled = true; $('#save').textContent = f ? 'Subiendo archivo…' : 'Guardando…';
+    try {
+      if (f) { b.fileName = f.name; b.fileBase64 = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.readAsDataURL(f); }); }
+      await A('/api/admin/products', { method: 'POST', body: b }); toast('Guardado ✓'); TAB = 'products'; load();
+    } catch (e) { $('#ferr').textContent = e.message; $('#save').disabled = false; $('#save').textContent = 'Guardar producto'; }
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<meta property="og:type" content="product">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESC}}">
+<meta property="og:image" content="{{IMAGE}}">
+<meta name="theme-color" content="#07060f">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a>
+  <nav class="nav"><a href="/#catalogo" data-t="catalog">Catálogo</a><button class="lang">EN</button></nav>
+</div></header>
+
+<main class="wrap pdp" id="pdp"></main>
+
+<footer><div class="wrap"><span>{{STORE}}</span><span><a href="/legal">Términos y privacidad</a></span></div></footer>
+
+<script src="/js/common.js"></script>
+<script>
+const P = {{DATA}};
+let CFG = {}, METHOD = '', ORDER = null;
+
+function view() {
+  const off = P.compare > P.price ? Math.round((1 - P.price / P.compare) * 100) : 0;
+  $('#pdp').innerHTML = `
+  <div class="media reveal"><img src="${escH(P.cover)}" alt="${escH(P.title)}"></div>
+  <div>
+    <div class="crumbs reveal"><a href="/">Inicio</a> / <a href="/#catalogo">${escH(P.category)}</a></div>
+    <h1 class="reveal">${escH(P.emoji)} ${escH(P.title)}</h1>
+    <p class="short reveal">${escH(P.short)}</p>
+    <div class="big-price reveal"><b>${inTelegram ? P.stars + ' ⭐' : money(P.price)}</b>
+      ${off && !inTelegram ? `<s>${money(P.compare)}</s><span class="save">-${off}%</span>` : ''}</div>
+    <div class="checkout reveal" id="checkout"></div>
+    <div class="feats reveal"><div>⚡ ${t('instant')}</div><div>📩 Correo · Telegram · WhatsApp</div><div>🔁 Descarga hasta 5 veces</div><div>💬 Soporte por Telegram</div></div>
+    <div class="desc reveal">${escH(P.description)}</div>
+  </div>`;
+  enhance();
+}
+
+function checkoutTelegram() {
+  $('#checkout').innerHTML = `<h3>${t('stars')}</h3>
+    <button class="btn btn-main btn-block" id="starsBtn">Comprar por ${P.stars} ⭐</button>
+    <p class="hint">Recibirás el archivo en este chat al instante.</p><div class="err" id="err"></div>`;
+  $('#starsBtn').onclick = async () => {
+    $('#starsBtn').disabled = true; $('#err').textContent = '';
+    try {
+      const { link } = await api('/api/stars/invoice', { method: 'POST', body: { slug: P.slug, initData: TG.initData } });
+      TG.openInvoice(link, (status) => {
+        $('#starsBtn').disabled = false;
+        if (status === 'paid') { TG.HapticFeedback?.notificationOccurred('success');
+          $('#checkout').innerHTML = `<h3>🎉 ¡Pago completado!</h3><p class="hint">Te enviamos el producto al chat del bot.</p>
+            <button class="btn btn-ghost btn-block" onclick="TG.close()">Ir al chat</button>`; }
+      });
+    } catch (e) { $('#err').textContent = e.message; $('#starsBtn').disabled = false; }
+  };
+}
+
+function checkoutWeb() {
+  const methods = [];
+  if (CFG.paypal) methods.push(['paypal', 'PayPal', 'Tarjeta o saldo']);
+  if (CFG.binance) methods.push(['binance', 'Binance', 'USDT · Pay']);
+  if (CFG.bot && P.stars) methods.push(['stars', '⭐ Stars', 'en Telegram']);
+  if (!methods.length) { $('#checkout').innerHTML = '<p class="hint">Los pagos aún no están configurados.</p>'; return; }
+  $('#checkout').innerHTML = `
+    <h3>${t('sendTo')}</h3>
+    <div class="field"><label>${t('email')}</label><input id="email" type="email" placeholder="tu@correo.com" autocomplete="email"></div>
+    ${CFG.whatsapp ? `<div class="field"><label>${t('whatsapp')}</label><input id="wa" type="tel" placeholder="+58 412 1234567" autocomplete="tel"></div>` : ''}
+    <h3 style="margin-top:18px">${t('payWith')}</h3>
+    <div class="methods">${methods.map(([k, n, s]) => `<button class="method" data-m="${k}">${n}<small>${s}</small></button>`).join('')}</div>
+    <div id="pay"></div><div class="err" id="err"></div>`;
+  $('.methods').onclick = (e) => { const b = e.target.closest('.method'); if (b) pick(b.dataset.m); };
+  pick(methods[0][0]);
+}
+
+function contact() {
+  const email = $('#email').value.trim(), whatsapp = $('#wa')?.value.trim() || '';
+  if (!email && !whatsapp) throw new Error('Escribe tu correo para enviarte el producto.');
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Revisa tu correo.');
+  return { email, whatsapp };
+}
+
+async function createOrder(method) {
+  $('#err').textContent = '';
+  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact() } });
+  return ORDER;
+}
+
+function pick(m) {
+  METHOD = m; $$('.method').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); $('#err').textContent = '';
+  const pay = $('#pay');
+  if (m === 'paypal') { pay.innerHTML = '<div id="paypal-buttons"></div>'; loadPaypal(); }
+  if (m === 'binance') {
+    pay.innerHTML = `<button class="btn btn-main btn-block" id="bnBtn">${t('continue')} con Binance</button>`;
+    $('#bnBtn').onclick = async () => {
+      try { $('#bnBtn').disabled = true; const o = await createOrder('binance'); binanceSteps(o); }
+      catch (e) { $('#err').textContent = e.message; $('#bnBtn').disabled = false; }
+    };
+  }
+  if (m === 'stars') pay.innerHTML = `<a class="btn btn-main btn-block" href="https://t.me/${CFG.bot}?start=p_${encodeURIComponent(P.slug)}" target="_blank">Abrir en Telegram · ${P.stars} ⭐</a>
+    <p class="hint">Pagas con Telegram Stars dentro del bot y recibes el archivo en el chat.</p>`;
+}
+
+function loadPaypal() {
+  const render = () => paypal.Buttons({
+    style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'pay' },
+    onClick: (_, actions) => { try { contact(); return actions.resolve(); } catch (e) { $('#err').textContent = e.message; return actions.reject(); } },
+    createOrder: async () => (await createOrder('paypal')).paypalId,
+    onApprove: async () => {
+      $('#pay').innerHTML = '<div class="spinner"></div>';
+      try { await api('/api/paypal/capture', { method: 'POST', body: { id: ORDER.id, key: ORDER.key } }); }
+      catch (e) { $('#err').textContent = e.message; }
+      location.href = `/pedido/${ORDER.id}?k=${ORDER.key}`;
+    },
+    onError: () => { $('#err').textContent = 'PayPal no pudo procesar el pago. Inténtalo de nuevo.'; },
+  }).render('#paypal-buttons');
+  if (window.paypal) return render();
+  const s = document.createElement('script');
+  s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(CFG.paypal.clientId)}&currency=USD&intent=capture`;
+  s.onload = render; s.onerror = () => { $('#err').textContent = 'No se pudo cargar PayPal.'; };
+  document.head.appendChild(s);
+}
+
+function binanceSteps(o) {
+  $('.methods').style.display = 'none';
+  $('#pay').innerHTML = `
+    <div class="box"><ol class="binance">
+      <li>Abre Binance → <b>Pay</b> → <b>Enviar</b>.</li>
+      <li>Envía <b>exactamente</b> este importe en USDT (los céntimos identifican tu pedido):
+        <div class="copy"><b>${o.amount} USDT</b><button data-c="${o.amount}">${t('copy')}</button></div></li>
+      <li>Al Binance Pay ID:<div class="copy"><b>${escH(o.payId)}</b><button data-c="${escH(o.payId)}">${t('copy')}</button></div></li>
+      <li>Copia el <b>ID de orden</b> que te muestra Binance y pégalo aquí:</li>
+    </ol>
+    <div class="field" style="margin-top:10px"><input id="ref" placeholder="ID de orden de Binance" inputmode="numeric"></div>
+    <button class="btn btn-main btn-block" id="sendRef">Ya pagué</button>
+    <p class="hint">Pedido <b>${o.id}</b>. Normalmente lo confirmamos en pocos minutos.</p></div>`;
+  $$('.copy button').forEach((b) => (b.onclick = () => copyText(b.dataset.c)));
+  $('#sendRef').onclick = async () => {
+    $('#sendRef').disabled = true; $('#err').textContent = '';
+    try {
+      await api('/api/binance/submit', { method: 'POST', body: { id: o.id, key: o.key, ref: $('#ref').value } });
+      location.href = `/pedido/${o.id}?k=${o.key}`;
+    } catch (e) { $('#err').textContent = e.message; $('#sendRef').disabled = false; }
+  };
+}
+
+view();
+if (inTelegram) checkoutTelegram();
+else api('/api/config').then((c) => { CFG = c; checkoutWeb(); });
+</script>
+</body>
+</html>

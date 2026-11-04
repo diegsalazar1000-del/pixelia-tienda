@@ -1,0 +1,6 @@
+.env
+data/*.db
+data/*.db-*
+storage/products/*
+!storage/products/.gitkeep
+node_modules/
