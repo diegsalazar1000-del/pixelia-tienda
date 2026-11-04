@@ -19,21 +19,28 @@ if [ -f .env ]; then
 fi
 
 echo
-echo "1/3  Pega el TOKEN del bot de Telegram (no se verá al pegarlo) y pulsa Enter:"
-read -rs TOKEN; TOKEN=$(clean "$TOKEN")
+# Descarta lo que haya quedado "colgado" en la terminal tras pegar el comando
+read -r -t 1 -n 10000 _basura 2>/dev/null || true
+
+for i in 1 2 3; do
+  echo "1/3  Pega el TOKEN del bot de Telegram y pulsa Enter (no se verá al pegarlo):"
+  read -rs TOKEN; TOKEN=$(clean "$TOKEN"); echo
+  if [[ "$TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]]; then echo "   ✔ Token recibido (${TOKEN:0:4}…${TOKEN: -3})"; break; fi
+  echo "   ✖ Eso no parece un token: recibí ${#TOKEN} caracteres que empiezan por \"${TOKEN:0:4}\"."
+  echo "     Debe verse así: 7123456789:AAH... (números, dos puntos y unas 35 letras). Inténtalo otra vez."
+  [ "$i" = 3 ] && { echo "Vuelve a ejecutar: bash setup.sh"; exit 1; }
+done
 echo
 echo "2/3  Escribe el USUARIO del bot, sin @ (ej: PixeliaStoreBot) y pulsa Enter:"
 read -r BOTUSER; BOTUSER=$(clean "$BOTUSER"); BOTUSER=${BOTUSER#@}
 echo
-echo "3/3  Inventa una CONTRASEÑA para el panel /admin (no se verá) y pulsa Enter:"
-read -rs ADMINPW; ADMINPW=$(clean "$ADMINPW")
-echo
-
-if ! [[ "$TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]]; then
-  echo "⚠️  El token no tiene el formato esperado (números:letras). Revísalo en @BotFather y vuelve a ejecutar: bash setup.sh"
-  exit 1
-fi
-if [ ${#ADMINPW} -lt 8 ]; then echo "⚠️  La contraseña debe tener al menos 8 caracteres. Vuelve a ejecutar: bash setup.sh"; exit 1; fi
+for i in 1 2 3; do
+  echo "3/3  Inventa una CONTRASEÑA para el panel /admin (mín. 8, sin espacios; no se verá) y pulsa Enter:"
+  read -rs ADMINPW; ADMINPW=$(clean "$ADMINPW"); echo
+  [ ${#ADMINPW} -ge 8 ] && { echo "   ✔ Contraseña guardada"; break; }
+  echo "   ✖ Muy corta (${#ADMINPW} caracteres). Inténtalo otra vez."
+  [ "$i" = 3 ] && { echo "Vuelve a ejecutar: bash setup.sh"; exit 1; }
+done
 
 PUBLIC_IP=$(ip)
 cat > .env <<EOF
