@@ -1,5 +1,5 @@
 {
-  "name": "tienda-digital",
+  "name": "pixelia-tienda",
   "version": "0.1.0",
   "private": true,
   "description": "Tienda de productos digitales: web app + bot de Telegram. Sin dependencias externas.",

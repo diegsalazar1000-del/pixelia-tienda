@@ -21,7 +21,7 @@ const e = (k, d = '') => process.env[k] ?? d;
 export const config = {
   port: Number(e('PORT', '3000')),
   baseUrl: e('BASE_URL', 'http://localhost:3000').replace(/\/$/, ''),
-  storeName: e('STORE_NAME', 'Tienda Digital'),
+  storeName: e('STORE_NAME', 'Pixelia'),
   defaultLang: e('DEFAULT_LANG', 'es'),
   secret: e('APP_SECRET', 'dev-secret'),
   adminPassword: e('ADMIN_PASSWORD', ''),

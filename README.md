@@ -1,4 +1,4 @@
-# Tienda Digital: web app + bot de Telegram
+# Pixelia: tienda digital (web app + bot de Telegram)
 
 Tienda de productos digitales con entrega automática.
 
