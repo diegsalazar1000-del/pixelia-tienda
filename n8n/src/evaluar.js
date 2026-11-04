@@ -24,7 +24,18 @@ Recibes un hallazgo (un listado de Etsy/Hotmart o una publicación de TikTok/Ins
 Criterios de la nota: demanda real y reciente (no productos de hace años), que se pueda vender a hispanohablantes, que se pueda recrear o revender legalmente,
 margen con precio bajo (impulso), facilidad para anunciar en Meta. Pon nota ≤4 y decision "descartar" si: no es un producto digital, usa marcas/personajes
 con copyright, promete dinero fácil o resultados de salud, es un "curso MRR de marketing digital" tipo esquema, o es contenido personal sin producto.
-Solo pon "comprar_reventa" si hay señales claras de licencia PLR/MRR/reventa.`;
+Solo pon "comprar_reventa" si hay señales claras de licencia PLR/MRR/reventa.
+Si el hallazgo es un VÍDEO o PUBLICACIÓN (YouTube, TikTok, Instagram) que habla de vender productos digitales, NO lo descartes por ser un vídeo:
+extrae el producto concreto que muestra o recomienda (ej. "plantillas Canva para bodas", "planner de lectura") y evalúa ESE producto.
+Solo descarta si el vídeo no menciona ningún producto concreto. Sé conciso: la descripcion máximo 120 palabras. Responde únicamente con el JSON.`;
+
+// Saca el JSON de la respuesta aunque venga con ```json o texto alrededor
+const parseJson = (text) => {
+  const t = String(text || '').replace(/```json|```/g, '');
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('la IA no devolvió JSON: ' + t.slice(0, 80));
+  return JSON.parse(t.slice(a, b + 1));
+};
 
 const out = [];
 for (const c of fresh.slice(0, 45)) {
@@ -33,13 +44,14 @@ for (const c of fresh.slice(0, 45)) {
       method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 120000,
       headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
       body: {
-        model: C.MODELO_RAPIDO, max_tokens: 1500, system: SYSTEM,
+        model: C.MODELO_RAPIDO, max_tokens: 3000, system: SYSTEM,
         messages: [{ role: 'user', content: JSON.stringify({ fuente: c.source, palabra_clave: c.keyword, titulo: c.title, texto: c.snippet,
           precio: c.price, moneda: c.currency, publicado: c.published_at, metricas: c.metrics, url: c.url }) }],
       },
     });
     const text = (r.content || []).map((b) => b.text || '').join('');
-    const ai = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    if (r.stop_reason === 'max_tokens') throw new Error('respuesta cortada (max_tokens)');
+    const ai = parseJson(text);
     const nota = Number(ai.nota) || 0;
     await this.helpers.httpRequest({
       method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, json: true,

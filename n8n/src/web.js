@@ -16,15 +16,22 @@ Devuelve SOLO un JSON (sin texto antes ni después) con esta forma:
 "evidencia":"qué indica que es tendencia: cifras, ranking, fecha","fecha_aprox":"AAAA-MM o vacío","precio":número o 0,"publico":"para quién es"}]
 Entre 8 y 15 elementos, sin repetir.`;
   try {
-    const r = await this.helpers.httpRequest({
-      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 240000,
-      headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: { model: C.MODELO_EXPLORADOR || C.MODELO_RAPIDO, max_tokens: 4000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: C.BUSQUEDAS_WEB_MAX || 6 }],
-        messages: [{ role: 'user', content: prompt }] },
-    });
-    const text = (r.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
-    const list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1));
+    const body = { model: C.MODELO_EXPLORADOR || C.MODELO_RAPIDO, max_tokens: 8000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: C.BUSQUEDAS_WEB_MAX || 6 }],
+      messages: [{ role: 'user', content: prompt }] };
+    let r, searches = 0, text = '';
+    // Las búsquedas largas pueden "pausarse": se continúa hasta 4 veces
+    for (let turn = 0; turn < 4; turn++) {
+      r = await this.helpers.httpRequest({ method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 240000,
+        headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, body });
+      searches += r.usage?.server_tool_use?.web_search_requests || 0;
+      text += (r.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+      if (r.stop_reason !== 'pause_turn') break;
+      body.messages = [...body.messages, { role: 'assistant', content: r.content }];
+    }
+    const t = text.replace(/```json|```/g, '');
+    if (t.indexOf('[') < 0) throw new Error(`sin lista (stop: ${r.stop_reason}) ${t.slice(0, 80)}`);
+    const list = JSON.parse(t.slice(t.indexOf('['), t.lastIndexOf(']') + 1));
     for (const p of list) {
       if (!p?.titulo) continue;
       items.push({
@@ -34,7 +41,6 @@ Entre 8 y 15 elementos, sin repetir.`;
         trend_score: 100,
       });
     }
-    const searches = r.usage?.server_tool_use?.web_search_requests ?? '?';
     log.push(`Explorador web: ${list.length} tendencias encontradas (${searches} búsquedas)`);
   } catch (e) { log.push(`Explorador web: error ${e.message}`); }
 }
