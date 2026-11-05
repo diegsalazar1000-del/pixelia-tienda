@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta
+# Uso: bash configurar.sh paypal | binance | correo | meta | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -36,6 +36,16 @@ case "$1" in
   meta)
     ask META_PIXEL_ID "Escribe el ID del píxel de Meta y pulsa Enter:" 0
     ask META_CAPI_TOKEN "Pega el token de la API de Conversiones (no se verá) y pulsa Enter:" 1;;
+  probar-correo)
+    echo; echo "Escribe tu correo personal para enviarte un correo de prueba y pulsa Enter:"
+    read -r TO; TO=$(clean "$TO" | tr -d ' ')
+    docker exec pixelia node --no-warnings --input-type=module -e "
+      const { sendEmail } = await import('/app/src/delivery/email.js');
+      try { await sendEmail('$TO', '✅ Prueba de Pixelia', 'Si lees esto, los correos de la tienda funcionan.',
+        '<div style=\"font-family:sans-serif;padding:24px\"><h2>✅ ¡Funciona!</h2><p>Los correos de <b>Pixelia</b> ya salen solos.</p></div>');
+        console.log('✅ Enviado a $TO. Revisa tu bandeja (y la carpeta de spam).'); }
+      catch (e) { console.log('✖ Error: ' + e.message); }"
+    exit 0;;
   *) echo "Uso: bash configurar.sh paypal | binance | correo | meta"; exit 1;;
 esac
 
