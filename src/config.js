@@ -51,6 +51,8 @@ export const config = {
   },
   // Clave que usa n8n para hablar con la tienda (cabecera x-api-key)
   n8nKey: e('N8N_API_KEY'),
+  radar: { token: e('RADAR_BOT_TOKEN') },
+  anthropic: { key: e('ANTHROPIC_API_KEY'), model: e('ANTHROPIC_MODEL', 'claude-sonnet-5-5') },
   meta: {
     pixelId: e('META_PIXEL_ID'),
     capiToken: e('META_CAPI_TOKEN'),

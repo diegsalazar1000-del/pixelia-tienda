@@ -13,6 +13,7 @@ import { tg, tgEnabled, verifyInitData, notifyAdmin, esc } from './telegram/api.
 import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
 import { Candidates } from './db.js';
 import { pixelSnippet } from './meta.js';
+import { startRadarBot, createDraft } from './telegram/radar.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
@@ -258,16 +259,7 @@ on('POST', '/api/n8n/candidates/:id/draft', async (req, res, { id }) => {
   if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
   const c = parseC(Candidates.get(id)); if (!c) return fail(res, 404, 'No existe');
   if (c.product_id && Products.byId(c.product_id)) return json(res, 200, { product: Products.byId(c.product_id), existed: true });
-  const b = await body(req, 1e6); const ai = { ...c.ai, ...b };
-  const title = String(ai.titulo || c.title).slice(0, 120);
-  const base = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'producto';
-  let slug = base; for (let i = 2; Products.bySlug(slug); i++) slug = `${base}-${i}`;
-  const price = Number(ai.precio_sugerido) > 0 ? Number(ai.precio_sugerido) : 9.99;
-  const product = Products.upsert({ slug, title, short: String(ai.frase_corta || '').slice(0, 200), description: String(ai.descripcion || c.snippet || ''),
-    category: String(ai.categoria || 'General'), price_cents: Math.round(price * 100), compare_cents: Math.round(price * 2 * 100),
-    stars: Math.ceil(price / 0.013), emoji: String(ai.emoji || '✨').slice(0, 4), color: '#7c5cff',
-    license_type: ai.decision === 'buy' ? 'MRR' : 'Propio', license_note: `Radar #${c.id} · ${c.source} · ${c.url}`, active: 0, candidate_id: c.id });
-  Candidates.update(c.id, { status: 'drafted', product_id: product.id });
+  const product = createDraft(Candidates.get(id), await body(req, 1e6));
   json(res, 200, { product, edit_url: `${config.baseUrl}/admin` });
 });
 on('GET', '/api/n8n/performance', (req, res, _, url) => {
@@ -316,4 +308,4 @@ if (binanceAutoVerify()) setInterval(async () => {
   }
 }, 60_000);
 
-if (process.env.NO_BOT !== '1') startBot();
+if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); }
