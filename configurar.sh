@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | probar-correo
+# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | probar-admin | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -42,6 +42,16 @@ case "$1" in
     read -r PW; PW=$(clean "$PW" | tr -d ' ')
     if [ ${#PW} -lt 8 ]; then echo "✖ Muy corta (${#PW}). Vuelve a ejecutar: bash configurar.sh admin"; exit 1; fi
     set_key ADMIN_PASSWORD "$PW"; echo "   ✔ Contraseña cambiada (${#PW} caracteres)";;
+  probar-admin)
+    echo; echo "Escribe la contraseña del panel tal como la pondrías en la web y pulsa Enter (se verá):"
+    read -r PW; PW=$(clean "$PW")
+    ENC=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$PW" 2>/dev/null || docker exec pixelia node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$PW")
+    CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "x-admin-key: $ENC" http://127.0.0.1:3000/api/admin/summary)
+    SAVED=$(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2-)
+    echo "   Guardada en el servidor: ${#SAVED} caracteres · la que escribiste: ${#PW} caracteres"
+    if [ "$CODE" = 200 ]; then echo "✅ La contraseña es correcta en el servidor. Si la web dice 'incorrecta', el navegador está rellenando otra: bórrala y escríbela a mano."
+    else echo "✖ No coincide (código $CODE). Cámbiala con: bash configurar.sh admin"; fi
+    exit 0;;
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1
     ask ANTHROPIC_API_KEY "Pega la clave de Claude sk-ant-... (no se verá) y pulsa Enter:" 1;;

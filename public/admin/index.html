@@ -30,13 +30,13 @@ table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;
 <script src="/js/common.js"></script>
 <script>
 let KEY = sessionStorage.getItem('adm') || '', DATA = null, TAB = 'orders';
-const A = (p, o = {}) => api(p, { ...o, headers: { 'x-admin-key': KEY } });
+const A = (p, o = {}) => api(p, { ...o, headers: { 'x-admin-key': encodeURIComponent(KEY.trim()) } });
 
 async function load() {
   try { DATA = await A('/api/admin/summary'); sessionStorage.setItem('adm', KEY); render(); }
   catch (e) { $('#lerr') && ($('#lerr').textContent = e.message); }
 }
-$('#go').onclick = () => { KEY = $('#pw').value; load(); };
+$('#go').onclick = () => { KEY = $('#pw').value; sessionStorage.removeItem('adm'); load(); };
 $('#pw').onkeydown = (e) => e.key === 'Enter' && $('#go').click();
 if (KEY) load();
 

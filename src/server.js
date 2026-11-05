@@ -189,8 +189,10 @@ on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }) => {
 });
 
 // ===== Admin =====
-const adminOk = (req) => config.adminPassword && req.headers['x-admin-key'] &&
-  crypto.timingSafeEqual(crypto.createHash('sha256').update(req.headers['x-admin-key']).digest(), crypto.createHash('sha256').update(config.adminPassword).digest());
+// La clave viaja codificada (encodeURIComponent) para admitir tildes, ñ y símbolos; se ignoran espacios al inicio/final.
+const adminKeyFrom = (req) => { const raw = String(req.headers['x-admin-key'] || ''); try { return decodeURIComponent(raw).trim(); } catch { return raw.trim(); } };
+const adminOk = (req) => { const k = adminKeyFrom(req), pw = String(config.adminPassword || '').trim();
+  return !!pw && !!k && crypto.timingSafeEqual(crypto.createHash('sha256').update(k).digest(), crypto.createHash('sha256').update(pw).digest()); };
 
 on('GET', '/api/admin/summary', (req, res) => adminOk(req) ? json(res, 200, {
   stats: Orders.stats(), products: Products.list({ all: true }), orders: Orders.recent(100),
