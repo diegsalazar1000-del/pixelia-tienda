@@ -48,10 +48,10 @@ Dame un plan práctico en español, en texto plano con viñetas (sin markdown co
 4. PORTADA: descripción de la portada y 3 mockups para las fotos de producto.
 5. PRECIO y BONOS: precio, precio tachado y 1-2 bonos baratos de producir.
 6. 3 ANUNCIOS para Meta: gancho de vídeo de 3 segundos, texto principal, titular.
-No copies textos ni diseños del original; todo debe ser contenido nuevo.`;
+No copies textos ni diseños del original; todo debe ser contenido nuevo. Sé concreto y completa las 6 partes (máximo unas 1.500 palabras).`;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: config.anthropic.model, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }) });
+    body: JSON.stringify({ model: config.anthropic.model, max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }) });
   const data = await res.json();
   if (!res.ok) throw new Error('IA: ' + (data.error?.message || res.status));
   return (data.content || []).map((b) => b.text || '').join('');
