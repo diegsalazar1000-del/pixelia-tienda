@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | probar-admin | probar-correo
+# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -36,6 +36,17 @@ case "$1" in
   meta)
     ask META_PIXEL_ID "Escribe el ID del píxel de Meta y pulsa Enter:" 0
     ask META_CAPI_TOKEN "Pega el token de la API de Conversiones (no se verá) y pulsa Enter:" 1;;
+  nueva-clave)
+    PW="Pixelia-$(tr -dc 'a-z0-9' </dev/urandom | head -c 8)"
+    set_key ADMIN_PASSWORD "$PW"
+    docker restart pixelia >/dev/null && sleep 4
+    CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "x-admin-key: $PW" http://127.0.0.1:3000/api/admin/summary)
+    echo; echo "=============================================="
+    echo "   TU CONTRASEÑA DEL PANEL ES:   $PW"
+    echo "=============================================="
+    [ "$CODE" = 200 ] && echo "✅ Comprobada: el servidor la acepta." || echo "✖ El servidor respondió $CODE. Mándale captura a Claude."
+    echo "Cópiala (selecciónala y clic derecho) y pégala en https://pixeliadigital.app/admin"
+    exit 0;;
   admin)
     echo; echo "Escribe la NUEVA contraseña del panel /admin (mín. 8, sin espacios) y pulsa Enter."
     echo "(Esta vez SÍ se verá mientras la escribes, para que no te equivoques. Apúntala.)"
