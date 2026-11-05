@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | probar-correo
+# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -36,6 +36,12 @@ case "$1" in
   meta)
     ask META_PIXEL_ID "Escribe el ID del píxel de Meta y pulsa Enter:" 0
     ask META_CAPI_TOKEN "Pega el token de la API de Conversiones (no se verá) y pulsa Enter:" 1;;
+  admin)
+    echo; echo "Escribe la NUEVA contraseña del panel /admin (mín. 8, sin espacios) y pulsa Enter."
+    echo "(Esta vez SÍ se verá mientras la escribes, para que no te equivoques. Apúntala.)"
+    read -r PW; PW=$(clean "$PW" | tr -d ' ')
+    if [ ${#PW} -lt 8 ]; then echo "✖ Muy corta (${#PW}). Vuelve a ejecutar: bash configurar.sh admin"; exit 1; fi
+    set_key ADMIN_PASSWORD "$PW"; echo "   ✔ Contraseña cambiada (${#PW} caracteres)";;
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1
     ask ANTHROPIC_API_KEY "Pega la clave de Claude sk-ant-... (no se verá) y pulsa Enter:" 1;;
