@@ -15,8 +15,8 @@
         0,
         300
       ],
-      "id": "7dec70f3-1ded-4941-a23e-712f427d216a",
-      "webhookId": "75cc6a4c-d52e-4382-a2f3-6b32c77448c3",
+      "id": "7e3cf370-a119-4512-bfb6-39991dd024e8",
+      "webhookId": "b54d34af-d25e-4f83-8d96-42be5af08ed1",
       "credentials": {
         "telegramApi": {
           "id": "",
@@ -35,7 +35,7 @@
         220,
         300
       ],
-      "id": "d30b0cdc-0de6-46f8-b0cc-1cea0c4c778b"
+      "id": "f9be7598-182d-4f2d-9905-f6b41cb57669"
     },
     {
       "parameters": {
@@ -48,7 +48,7 @@
         440,
         300
       ],
-      "id": "48765e1d-0772-43d0-bcc0-fff3822fd27f"
+      "id": "288fd63a-d136-45e7-9808-2ba86d41e67d"
     },
     {
       "parameters": {
@@ -56,14 +56,14 @@
         "width": 420,
         "height": 300
       },
-      "name": "Nota 3684",
+      "name": "Nota 87d5",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "30e8cf8d-85f5-4d83-8b14-751c36585e2f"
+      "id": "60995460-3980-4f8e-b5bc-4efffdb9dd5b"
     }
   ],
   "connections": {

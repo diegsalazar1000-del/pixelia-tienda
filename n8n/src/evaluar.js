@@ -38,10 +38,11 @@ const parseJson = (text) => {
 };
 
 const out = [];
-for (const c of fresh.slice(0, 45)) {
+// Analiza de 5 en 5 a la vez (y como máximo MAX_EVALUAR por día) para terminar rápido
+const evaluar = async (c) => {
   try {
     const r = await this.helpers.httpRequest({
-      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 120000,
+      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 90000,
       headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
       body: {
         model: C.MODELO_RAPIDO, max_tokens: 3000, system: SYSTEM,
@@ -59,6 +60,8 @@ for (const c of fresh.slice(0, 45)) {
     });
     out.push({ ...c, ai, ai_score: nota });
   } catch (e) { log.push(`IA #${c.id}: error ${e.message}`); }
-}
+};
+const todo = fresh.slice(0, C.MAX_EVALUAR || 20);
+for (let i = 0; i < todo.length; i += 5) await Promise.all(todo.slice(i, i + 5).map(evaluar));
 log.push(`Evaluados por la IA: ${out.length}`);
 return [{ json: { evaluated: out, log, found } }];

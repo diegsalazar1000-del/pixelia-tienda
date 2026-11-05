@@ -19,7 +19,7 @@
         0,
         300
       ],
-      "id": "0f77368f-effd-4a63-9a62-9cb582361eee"
+      "id": "0fdac557-f477-4ca4-a613-dea93de4656a"
     },
     {
       "parameters": {
@@ -32,7 +32,7 @@
         220,
         300
       ],
-      "id": "d45999f6-f8dd-422d-b5d0-8025cd896812"
+      "id": "ea66cd6a-d66c-46df-adc7-4c11f02be6a1"
     },
     {
       "parameters": {
@@ -45,7 +45,7 @@
         440,
         300
       ],
-      "id": "e4c9b16d-e09e-43c3-b416-9ad1e9bd5d86"
+      "id": "72db9592-47ab-41e3-8713-62e0addabe32"
     },
     {
       "parameters": {
@@ -53,14 +53,14 @@
         "width": 420,
         "height": 300
       },
-      "name": "Nota 9b5b",
+      "name": "Nota fc96",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "b3503459-4a2f-45e5-bb5b-d6d6d6ee4bcb"
+      "id": "aee2463f-b3a2-408b-8bb2-e689d012b019"
     }
   ],
   "connections": {

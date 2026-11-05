@@ -19,7 +19,7 @@
         0,
         300
       ],
-      "id": "0194e9fe-5f06-45ef-b39c-0a5e660d40cd"
+      "id": "51d14b4a-8602-4817-b1da-f04b27bb40d7"
     },
     {
       "parameters": {
@@ -32,7 +32,7 @@
         220,
         300
       ],
-      "id": "2be360ea-02ae-4e94-93c3-69bcf40f5e16"
+      "id": "02533340-958b-4a4b-ae69-292b28cedbf1"
     },
     {
       "parameters": {
@@ -45,7 +45,7 @@
         440,
         300
       ],
-      "id": "2ddcf7ca-61b8-48ab-9aaf-67870bc353e8"
+      "id": "fe99b603-fa25-459f-a33b-c4eedd7fe66c"
     },
     {
       "parameters": {
@@ -58,7 +58,7 @@
         660,
         300
       ],
-      "id": "e8ffc1b8-a0b7-4073-82e2-c57c131120c9"
+      "id": "bbf3ceee-aaf1-4fca-bdde-e1649d4dfc47"
     },
     {
       "parameters": {
@@ -71,7 +71,7 @@
         880,
         300
       ],
-      "id": "2171ea3f-1d4d-4550-ade7-812abef4513c"
+      "id": "7d2f98c5-3375-4826-aa95-499c2627f120"
     },
     {
       "parameters": {
@@ -84,7 +84,7 @@
         1100,
         300
       ],
-      "id": "1e8ca89b-a485-4822-80d5-15e202ad310a"
+      "id": "de0606de-6e6f-444c-bace-509064da72a7"
     },
     {
       "parameters": {
@@ -97,7 +97,7 @@
         1320,
         300
       ],
-      "id": "a89bd127-2e0c-443d-b3b1-471d04e6b297"
+      "id": "e5f4c5a8-7d8e-4e2b-b042-20f329ac52ed"
     },
     {
       "parameters": {
@@ -110,7 +110,7 @@
         1540,
         300
       ],
-      "id": "eef01d56-e9a4-47ec-adda-8206d3ae55db"
+      "id": "33517ed2-f2b6-4e1a-a216-48a2fa922691"
     },
     {
       "parameters": {
@@ -123,11 +123,11 @@
         1760,
         300
       ],
-      "id": "a0a2107e-88fa-4f87-9e5c-aec814e24a45"
+      "id": "0ff1683b-0d92-4312-9eba-52018c091082"
     },
     {
       "parameters": {
-        "jsCode": "// 🤖 EVALUAR CON IA — Claude analiza cada hallazgo nuevo y decide si vale la pena.\nconst C = $('Config').first().json;\nconst { fresh = [], log = [], found = 0 } = $input.first().json;\n\nconst SYSTEM = `Eres analista de productos digitales para una tienda online en español (Latinoamérica y España) que vende con anuncios de Meta.\nRecibes un hallazgo (un listado de Etsy/Hotmart o una publicación de TikTok/Instagram) y devuelves SOLO un JSON válido, sin texto extra:\n{\n \"es_producto_digital\": true|false,\n \"producto\": \"qué se vende exactamente, en una frase\",\n \"titulo\": \"título atractivo en español para nuestra tienda (máx. 70 caracteres)\",\n \"frase_corta\": \"beneficio principal en una frase (máx. 110 caracteres)\",\n \"descripcion\": \"descripción de venta en español, 90-160 palabras: para quién es, qué incluye, formato, cómo se usa\",\n \"categoria\": \"Plantillas|Productividad|Ebooks|IA|Fotografía|Educación|Finanzas|Negocios|Hogar|Infantil|Otros\",\n \"emoji\": \"un emoji\",\n \"precio_sugerido\": número en USD entre 3 y 29,\n \"decision\": \"comprar_reventa\" | \"recrear\" | \"descartar\",\n \"derechos\": \"si el original menciona PLR/MRR/derechos de reventa, dilo; si no, 'sin derechos de reventa: recrear con contenido propio'\",\n \"por_que\": \"por qué está en tendencia ahora (máx. 160 caracteres)\",\n \"como_recrear\": [\"3 a 5 ideas concretas para hacer una versión propia MEJOR y distinta\"],\n \"riesgos\": \"marcas registradas, copyright, promesas de dinero/salud que Meta rechaza, o 'ninguno'\",\n \"anuncio\": {\"gancho\": \"primera frase de un vídeo/reel\", \"texto\": \"texto principal del anuncio (máx. 300 caracteres)\", \"titular\": \"máx. 40 caracteres\"},\n \"nota\": número 1-10\n}\nCriterios de la nota: demanda real y reciente (no productos de hace años), que se pueda vender a hispanohablantes, que se pueda recrear o revender legalmente,\nmargen con precio bajo (impulso), facilidad para anunciar en Meta. Pon nota ≤4 y decision \"descartar\" si: no es un producto digital, usa marcas/personajes\ncon copyright, promete dinero fácil o resultados de salud, es un \"curso MRR de marketing digital\" tipo esquema, o es contenido personal sin producto.\nSolo pon \"comprar_reventa\" si hay señales claras de licencia PLR/MRR/reventa.\nSi el hallazgo es un VÍDEO o PUBLICACIÓN (YouTube, TikTok, Instagram) que habla de vender productos digitales, NO lo descartes por ser un vídeo:\nextrae el producto concreto que muestra o recomienda (ej. \"plantillas Canva para bodas\", \"planner de lectura\") y evalúa ESE producto.\nSolo descarta si el vídeo no menciona ningún producto concreto. Sé conciso: la descripcion máximo 120 palabras. Responde únicamente con el JSON.`;\n\n// Saca el JSON de la respuesta aunque venga con ```json o texto alrededor\nconst parseJson = (text) => {\n  const t = String(text || '').replace(/```json|```/g, '');\n  const a = t.indexOf('{'), b = t.lastIndexOf('}');\n  if (a < 0 || b <= a) throw new Error('la IA no devolvió JSON: ' + t.slice(0, 80));\n  return JSON.parse(t.slice(a, b + 1));\n};\n\nconst out = [];\nfor (const c of fresh.slice(0, 45)) {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 120000,\n      headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },\n      body: {\n        model: C.MODELO_RAPIDO, max_tokens: 3000, system: SYSTEM,\n        messages: [{ role: 'user', content: JSON.stringify({ fuente: c.source, palabra_clave: c.keyword, titulo: c.title, texto: c.snippet,\n          precio: c.price, moneda: c.currency, publicado: c.published_at, metricas: c.metrics, url: c.url }) }],\n      },\n    });\n    const text = (r.content || []).map((b) => b.text || '').join('');\n    if (r.stop_reason === 'max_tokens') throw new Error('respuesta cortada (max_tokens)');\n    const ai = parseJson(text);\n    const nota = Number(ai.nota) || 0;\n    await this.helpers.httpRequest({\n      method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, json: true,\n      body: { ai_score: nota, ai, status: ai.decision === 'descartar' || !ai.es_producto_digital ? 'discarded' : 'new' },\n    });\n    out.push({ ...c, ai, ai_score: nota });\n  } catch (e) { log.push(`IA #${c.id}: error ${e.message}`); }\n}\nlog.push(`Evaluados por la IA: ${out.length}`);\nreturn [{ json: { evaluated: out, log, found } }];\n"
+        "jsCode": "// 🤖 EVALUAR CON IA — Claude analiza cada hallazgo nuevo y decide si vale la pena.\nconst C = $('Config').first().json;\nconst { fresh = [], log = [], found = 0 } = $input.first().json;\n\nconst SYSTEM = `Eres analista de productos digitales para una tienda online en español (Latinoamérica y España) que vende con anuncios de Meta.\nRecibes un hallazgo (un listado de Etsy/Hotmart o una publicación de TikTok/Instagram) y devuelves SOLO un JSON válido, sin texto extra:\n{\n \"es_producto_digital\": true|false,\n \"producto\": \"qué se vende exactamente, en una frase\",\n \"titulo\": \"título atractivo en español para nuestra tienda (máx. 70 caracteres)\",\n \"frase_corta\": \"beneficio principal en una frase (máx. 110 caracteres)\",\n \"descripcion\": \"descripción de venta en español, 90-160 palabras: para quién es, qué incluye, formato, cómo se usa\",\n \"categoria\": \"Plantillas|Productividad|Ebooks|IA|Fotografía|Educación|Finanzas|Negocios|Hogar|Infantil|Otros\",\n \"emoji\": \"un emoji\",\n \"precio_sugerido\": número en USD entre 3 y 29,\n \"decision\": \"comprar_reventa\" | \"recrear\" | \"descartar\",\n \"derechos\": \"si el original menciona PLR/MRR/derechos de reventa, dilo; si no, 'sin derechos de reventa: recrear con contenido propio'\",\n \"por_que\": \"por qué está en tendencia ahora (máx. 160 caracteres)\",\n \"como_recrear\": [\"3 a 5 ideas concretas para hacer una versión propia MEJOR y distinta\"],\n \"riesgos\": \"marcas registradas, copyright, promesas de dinero/salud que Meta rechaza, o 'ninguno'\",\n \"anuncio\": {\"gancho\": \"primera frase de un vídeo/reel\", \"texto\": \"texto principal del anuncio (máx. 300 caracteres)\", \"titular\": \"máx. 40 caracteres\"},\n \"nota\": número 1-10\n}\nCriterios de la nota: demanda real y reciente (no productos de hace años), que se pueda vender a hispanohablantes, que se pueda recrear o revender legalmente,\nmargen con precio bajo (impulso), facilidad para anunciar en Meta. Pon nota ≤4 y decision \"descartar\" si: no es un producto digital, usa marcas/personajes\ncon copyright, promete dinero fácil o resultados de salud, es un \"curso MRR de marketing digital\" tipo esquema, o es contenido personal sin producto.\nSolo pon \"comprar_reventa\" si hay señales claras de licencia PLR/MRR/reventa.\nSi el hallazgo es un VÍDEO o PUBLICACIÓN (YouTube, TikTok, Instagram) que habla de vender productos digitales, NO lo descartes por ser un vídeo:\nextrae el producto concreto que muestra o recomienda (ej. \"plantillas Canva para bodas\", \"planner de lectura\") y evalúa ESE producto.\nSolo descarta si el vídeo no menciona ningún producto concreto. Sé conciso: la descripcion máximo 120 palabras. Responde únicamente con el JSON.`;\n\n// Saca el JSON de la respuesta aunque venga con ```json o texto alrededor\nconst parseJson = (text) => {\n  const t = String(text || '').replace(/```json|```/g, '');\n  const a = t.indexOf('{'), b = t.lastIndexOf('}');\n  if (a < 0 || b <= a) throw new Error('la IA no devolvió JSON: ' + t.slice(0, 80));\n  return JSON.parse(t.slice(a, b + 1));\n};\n\nconst out = [];\n// Analiza de 5 en 5 a la vez (y como máximo MAX_EVALUAR por día) para terminar rápido\nconst evaluar = async (c) => {\n  try {\n    const r = await this.helpers.httpRequest({\n      method: 'POST', url: 'https://api.anthropic.com/v1/messages', json: true, timeout: 90000,\n      headers: { 'x-api-key': C.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },\n      body: {\n        model: C.MODELO_RAPIDO, max_tokens: 3000, system: SYSTEM,\n        messages: [{ role: 'user', content: JSON.stringify({ fuente: c.source, palabra_clave: c.keyword, titulo: c.title, texto: c.snippet,\n          precio: c.price, moneda: c.currency, publicado: c.published_at, metricas: c.metrics, url: c.url }) }],\n      },\n    });\n    const text = (r.content || []).map((b) => b.text || '').join('');\n    if (r.stop_reason === 'max_tokens') throw new Error('respuesta cortada (max_tokens)');\n    const ai = parseJson(text);\n    const nota = Number(ai.nota) || 0;\n    await this.helpers.httpRequest({\n      method: 'POST', url: `${C.TIENDA_URL}/api/n8n/candidates/${c.id}`, headers: { 'x-api-key': C.TIENDA_API_KEY }, json: true,\n      body: { ai_score: nota, ai, status: ai.decision === 'descartar' || !ai.es_producto_digital ? 'discarded' : 'new' },\n    });\n    out.push({ ...c, ai, ai_score: nota });\n  } catch (e) { log.push(`IA #${c.id}: error ${e.message}`); }\n};\nconst todo = fresh.slice(0, C.MAX_EVALUAR || 20);\nfor (let i = 0; i < todo.length; i += 5) await Promise.all(todo.slice(i, i + 5).map(evaluar));\nlog.push(`Evaluados por la IA: ${out.length}`);\nreturn [{ json: { evaluated: out, log, found } }];\n"
       },
       "name": "Evaluar con IA",
       "type": "n8n-nodes-base.code",
@@ -136,7 +136,7 @@
         1980,
         300
       ],
-      "id": "5bda66ef-4d26-4132-aa01-59c78786182b"
+      "id": "c6726cdd-ba1b-4d1c-8fbf-6fbd06541f9e"
     },
     {
       "parameters": {
@@ -149,7 +149,7 @@
         2200,
         300
       ],
-      "id": "0b19b9fc-0a7f-455c-b2a3-23defa9f3b70"
+      "id": "dfc4fd6c-8683-496d-8e5f-be48d402ee6e"
     },
     {
       "parameters": {
@@ -157,14 +157,14 @@
         "width": 420,
         "height": 300
       },
-      "name": "Nota 012c",
+      "name": "Nota 1e95",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "17b484f0-981e-41c8-9f1d-81c207643880"
+      "id": "7cbe519c-f7a9-482a-8f0f-f48347e3a7b7"
     }
   ],
   "connections": {
