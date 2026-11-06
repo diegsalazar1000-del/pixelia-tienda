@@ -65,7 +65,7 @@ export async function offerAds(p) {
   if (!token()) return;
   return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
     text: `🚀 <b>Publicaste:</b> ${esc(p.title)}\n¿Creo los anuncios (imágenes + reel)?`,
-    reply_markup: { inline_keyboard: [[{ text: '🎬 Crear anuncios', callback_data: `ad:${p.id}:` }]] } });
+    reply_markup: { inline_keyboard: [[{ text: '🎬 Crear anuncios', callback_data: `ad:${p.id}:` }], [{ text: '🎥 Prompt para Gemini', callback_data: `gem:${p.id}:` }]] } });
 }
 
 // Opciones compactas del anuncio en callback_data: "ad:<id>:v=f,g=reggaeton,s=neon,n=1,x=4"
@@ -85,6 +85,7 @@ function pickerKb(pid, sel, sug = {}) {
   const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
+    [{ text: '🎬 Prompt para Gemini (clip realista gratis)', callback_data: `gem:${pid}:` }],
     [{ text: '🧠 Anuncio PRO: investiga + 3 guiones + revisión (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }],
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
     [{ text: '🎓 Video tutorial (cómo se usa, con ejemplo)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }],
@@ -253,6 +254,45 @@ function clipOptions(pid, cid) {
       [{ text: '🔇 Nada (solo el sonido del clip + efectos)', callback_data: o('0', '0') }]] } });
 }
 
+// 🎬 Prompts para Gemini (Veo): el clip realista que abre el anuncio. Diego lo pega en la app de Gemini y nos manda el video.
+const GEMINI_EJEMPLOS = `Vertical 9:16 video, realistic, handheld smartphone look. Night, small kitchen table lit by a warm lamp. A Latina woman in her early 30s, wearing a hoodie, is surrounded by crumpled receipts, bills and an open wallet with only a few coins. Her phone keeps buzzing with notifications. She drops her head on the table in comic frustration, then looks straight at the camera and says in neutral Latin American Spanish: "¿En qué se me fue el sueldo… otra vez?" Then she slowly turns a laptop toward the camera; the screen glows with a colorful dashboard of charts, out of focus. She raises an eyebrow and smiles, relieved. Natural sounds: phone buzzing, paper rustling, a soft sigh. No on-screen text, no logos, no brand names.
+
+Vertical 9:16 video, realistic, handheld party footage feel. A cheerful baby shower in a living room decorated with pastel pink, blue and beige balloons and a small cake. A group of women friends of different ages sit around a table holding printed game boards and using beans as markers, laughing. One woman reads a card aloud in a playful voice, everyone leans in with suspense. Suddenly the pregnant guest of honor jumps up, raises her board and shouts in neutral Latin American Spanish: "¡LOTERÍA!" Everyone screams and laughs, one friend throws beans in the air. Warm natural daylight, joyful atmosphere. Natural sounds: laughter, cheering, chairs moving. No on-screen text, no logos, no brand names.`;
+
+async function geminiPrompts(pid) {
+  const p = Products.byId(Number(pid));
+  if (!p) return send('Producto no encontrado.');
+  if (!config.anthropic.key) return send('Falta ANTHROPIC_API_KEY en la tienda.');
+  const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', p.slug); fs.mkdirSync(dir, { recursive: true });
+  let B = {}; try { B = JSON.parse(fs.readFileSync(path.join(dir, 'brief.json'), 'utf8')); } catch {}
+  const histF = path.join(dir, 'gemini-prompts.json'); let hist = []; try { hist = JSON.parse(fs.readFileSync(histF, 'utf8')); } catch {}
+  await send(`🎬 Escribiendo 2 prompts para Gemini de <b>${esc(p.title)}</b>…`);
+  const R = await askJson(`Eres director de anuncios virales de Reels/TikTok. Escribe 2 prompts para generar con Veo (app de Gemini) el CLIP REALISTA de 8-10 segundos que abrirá el anuncio de este producto digital.
+Producto: ${JSON.stringify({ titulo: p.title, frase: p.short, descripcion: String(p.description || '').slice(0, 1200), precio: p.price_cents / 100 })}
+Público: ${JSON.stringify(B.publico || '')} ${B.investigacion ? 'Investigación real: ' + JSON.stringify(B.investigacion.publico_real || {}).slice(0, 1500) : ''}
+Así de buenos tienen que ser (estos dos funcionaron perfecto, mismo nivel de detalle y estructura):
+${GEMINI_EJEMPLOS}
+Reglas:
+- Prompt en INGLÉS (Veo lo entiende mejor) pero lo que se dice va entre comillas en español NEUTRO latinoamericano, 1 frase corta y natural (sin modismos de un país).
+- Siempre "Vertical 9:16 video, realistic". Una sola escena continua, personas latinas reales y diversas, lugar y luz concretos, cámara (handheld, close-up…).
+- En los primeros 2 segundos pasa algo que frena el scroll (gesto exagerado, sorpresa, frustración cómica, grito de alegría).
+- Cuenta una mini historia: el problema o momento que vive ESTE público → reacción fuerte → termina en un momento que conecte con el producto (alivio, celebración, una pantalla o papel brillando DESENFOCADO).
+- Nunca muestres el producto en detalle ni texto legible (la IA de video escribe mal): pantallas y papeles desenfocados.
+- Termina siempre con "Natural sounds: …" y "No on-screen text, no logos, no brand names."
+- Los 2 prompts deben ser situaciones MUY distintas entre sí (lugar, personas, emoción; uno puede ser cómico).
+- No repitas ideas parecidas a estas anteriores: ${JSON.stringify(hist.slice(-8).map((h) => h.idea))}
+Devuelve SOLO JSON: {"prompts": [{"idea": "la situación en 6-10 palabras en español", "gancho": "texto corto (≤ 5 palabras) que pondremos encima", "prompt": "..."}]}`, 3000);
+  const ps = (R.prompts || []).filter((x) => x.prompt).slice(0, 2);
+  if (!ps.length) return send('⚠️ No salieron prompts, prueba otra vez.');
+  fs.writeFileSync(histF, JSON.stringify([...hist, ...ps.map((x) => ({ idea: x.idea }))].slice(-30)));
+  for (const [k, x] of ps.entries())
+    await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+      text: `🎬 <b>Prompt ${k + 1}: ${esc(x.idea || '')}</b>\nGancho sugerido: <i>${esc(x.gancho || '')}</i>\n(toca el texto para copiarlo)\n\n<code>${esc(x.prompt)}</code>` });
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `1️⃣ Pega uno en Gemini → crear video (formato vertical).\n2️⃣ Descarga el video y mándamelo aquí escribiendo en el mensaje: <code>${esc(p.title.split(' ').slice(0, 2).join(' ').toLowerCase())}</code>\n3️⃣ Yo armo el anuncio con el producto, la voz, la música y el precio.`,
+    reply_markup: { inline_keyboard: [[{ text: '🔄 Otros 2 prompts', callback_data: `gem:${p.id}:` }]] } });
+}
+
 async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
@@ -264,6 +304,11 @@ async function onMessage(m) {
   }
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  if (text.startsWith('/gemini')) {
+    const list = Products.list().filter((p) => !p.bundle_ids).slice(0, 20);
+    return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿Para qué producto escribo los prompts de Gemini?',
+      reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `gem:${p.id}:` }]) } });
+  }
   if (text.startsWith('/creditos') || text.startsWith('/créditos')) return creditos();
   if (text.startsWith('/ahorro')) {
     const f = path.join(path.dirname(MUSIC_DIR), 'ahorro'); const arg = text.split(/\s+/)[1];
@@ -291,7 +336,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -342,6 +387,10 @@ export async function onCallback(q) {
     const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
+  }
+  if (action === 'gem' && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Escribiendo prompts…' }).catch(() => {});
+    return geminiPrompts(id).catch((e) => send(`⚠️ Prompts para Gemini: ${esc(e.message)}`));
   }
   if (action === 'clp' && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
