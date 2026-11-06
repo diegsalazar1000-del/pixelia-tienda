@@ -12,3 +12,11 @@ for g in ("femenina", "masculina"):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), str(mp3)], check=True)
     estudio.tg("sendAudio", {"chat_id": estudio.CHAT, "caption": f"🎙️ Prueba de voz {g} · {motor_}", "title": f"Voz {g}"}, {"audio": mp3})
     print("✅ Enviada voz", g, "·", motor_)
+if os.environ.get("ELEVENLABS_API_KEY"):
+    try:
+        import voces
+        out = pathlib.Path(tmp) / "musica-prueba-reggaeton.mp3"; voces.compose_music("reggaeton", out, 10)
+        estudio.tg("sendAudio", {"chat_id": estudio.CHAT, "caption": "🎵 Prueba de música · Eleven Music · reggaetón (10 s)", "title": "Prueba reggaetón"}, {"audio": out})
+        print("✅ Música de prueba enviada")
+    except Exception as e:
+        print("ℹ️ La música de ElevenLabs no funcionó:", e, "\n   (la API de música solo funciona en planes de pago: Starter o superior)")

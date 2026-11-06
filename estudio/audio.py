@@ -221,6 +221,19 @@ def library_track(genre, T, seed=0):
     seg[:fi] *= np.linspace(0, 1, fi); seg[-fo:] *= np.linspace(1, 0, fo)
     return seg / (np.abs(seg).max() + 1e-9) * 0.6, path.name
 
+def ai_music(g, B, seed=0, per_genre=3):
+    """Con ElevenLabs: crea canciones del género hasta tener `per_genre` en la biblioteca (luego se reutilizan: ahorra créditos)."""
+    if not os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVENLABS_MUSIC", "1") == "0": return
+    have = library(g)
+    if len(have) >= per_genre and seed < len(have): return
+    if len(have) >= per_genre + 1: return
+    try:
+        import voces, time as _t
+        d = MUSIC_DIR / g; d.mkdir(parents=True, exist_ok=True)
+        voces.compose_music(g, d / f"ia-{g}-{int(_t.time())}.mp3", 30, str(B.get("publico", ""))[:150])
+    except Exception as e:
+        print("Eleven Music falló (sigo con lo que hay):", e)
+
 # ---------- voz (Piper) ----------
 def read_wav(path):
     with wave.open(str(path)) as w:
@@ -297,6 +310,7 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
     g = music_genre or "base"
     if g == "0": music = np.zeros(n)
     else:
+        ai_music(g, B, seed)
         music, name = library_track(g, T, seed)
         if music is None:
             music = genre_track(g, T, (B.get("musica") or {}).get("bpm") if g != "base" else None)

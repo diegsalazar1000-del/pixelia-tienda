@@ -271,7 +271,7 @@ def copy_text(prod, B):
 
 def auto_scout(g, force=False):
     """Si el género tiene menos de 3 canciones reales, busca y sugiere (máx. una vez al día por género)."""
-    if g in (None, "", "0"): return
+    if g in (None, "", "0") or (os.environ.get("ELEVENLABS_API_KEY") and not force): return  # con ElevenLabs la música se crea sola
     if not force and len(audio.library(g)) >= 3: return
     f = audio.MUSIC_DIR / "ultima_busqueda.json"; last = musica.load(f, {})
     if not force and time.time() - last.get(g, 0) < 86400: return

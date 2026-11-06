@@ -61,3 +61,24 @@ def tts_mp3(text, genero, out_path, speed=1.0):
     data = call("POST", f"/text-to-speech/{vid}?output_format=mp3_44100_128", body, raw=True, timeout=90)
     pathlib.Path(out_path).write_bytes(data)
     return out_path
+
+# ---------- música con Eleven Music (planes de pago; licencia comercial) ----------
+MUSIC_PROMPTS = {
+    "reggaeton": "Modern Latin reggaeton instrumental, classic dembow beat, 95 BPM, punchy kick, catchy plucked synth hook, bright and danceable",
+    "cumbia": "Modern Latin cumbia instrumental, accordion melody, guacharaca and congas, 98 BPM, festive and catchy",
+    "trap": "Latin trap instrumental, 140 BPM half-time groove, deep 808 bass, crisp hi-hat rolls, dark catchy melody",
+    "pop": "Upbeat Latin pop instrumental, 118 BPM, bright synths and guitar, feel-good and catchy, TikTok style",
+    "electronica": "Upbeat house / dance instrumental, 124 BPM, four-on-the-floor, energetic modern synth drop",
+    "lofi": "Lo-fi hip hop instrumental, 80 BPM, warm Rhodes chords, soft vinyl crackle, calm and cozy study vibe",
+    "acustica": "Upbeat acoustic instrumental, strummed guitar and claps, 100 BPM, warm, happy and homey",
+    "base": "Light upbeat background instrumental for a product ad, 115 BPM, positive, modern and clean",
+}
+
+def compose_music(genre, out_path, seconds=30, audience=""):
+    prompt = MUSIC_PROMPTS.get(genre, MUSIC_PROMPTS["base"]) + (f". Made for a short social media ad aimed at {audience}" if audience else "") + \
+             ". No vocals. Energetic from the very first second, no long intro."
+    body = {"prompt": prompt[:1900], "music_length_ms": int(seconds * 1000), "model_id": os.environ.get("ELEVENLABS_MUSIC_MODEL", "music_v1"),
+            "force_instrumental": True}
+    data = call("POST", "/music?output_format=mp3_44100_128", body, raw=True, timeout=240)
+    pathlib.Path(out_path).write_bytes(data)
+    return out_path
