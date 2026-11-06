@@ -273,7 +273,7 @@ class BrollReader:
         self.w, self.h = W // 2, H // 2; self.n = 0; self.last = None
         vf = f"scale={self.w}:{self.h}:force_original_aspect_ratio=increase,crop={self.w}:{self.h},fps={fps}"
         self.p = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-stream_loop", "-1", "-i", str(path), "-t", str(dur + 1), "-vf", vf,
-                                   "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+                                   "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.fps = fps
     def frame(self, u):
         want = int(u * self.fps)
@@ -285,6 +285,11 @@ class BrollReader:
 
 def sc_broll(cv, sc, u, d, X):
     rd = X.get("broll", {}).get(id(sc))
+    if rd is None and sc.get("busqueda") and "bgr_sc" not in X: X["bgr_sc"] = {}
+    if rd is None and sc.get("busqueda"):  # modo Pixabay: se abre al llegar a la escena
+        if id(sc) not in X["bgr_sc"]:
+            v = pexels_video(sc["busqueda"]); X["bgr_sc"][id(sc)] = BrollReader(v, X.get("fps", 30), d + 0.5) if v else None
+        rd = X["bgr_sc"][id(sc)]
     fr = rd.frame(u) if rd else None
     if fr is not None:
         bg = fr.resize((W, H), Image.BILINEAR).convert("RGBA")

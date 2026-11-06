@@ -152,7 +152,9 @@ Formatos de anuncio disponibles (elige UNO, el que más pegue con este público 
 Guiones anteriores (NO repitas su orden de escenas ni sus frases): {evitar}
 
 Devuelve SOLO JSON:
-{{"concepto": "idea del reel en 1 frase", "formato": "uno de los formatos", "subtitulos": true/false (true si hay voz y el público es de TikTok/Reels),
+{{"concepto": "idea del reel en 1 frase", "formato": "uno de los formatos",
+ "letra": "tipografía de los titulares: poppins (moderna redonda) | anton (impacto, condensada) | bebas (mayúsculas altas, tendencia) | archivo (gruesa, fuerte) | pacifico (manuscrita, femenina/cálida) | lora (elegante, serif)",
+ "animacion": "cómo entran las palabras: pop | subir | rebote | zoom | maquina (se escriben letra a letra)", "subtitulos": true/false (true si hay voz y el público es de TikTok/Reels),
  "estilo": "color|neon|minimal|tiktok (el que mejor encaje con este concepto y público)",
  "musica": "uno de: {generos}", "voz": "femenina|masculina (según quién compra)",
  "escenas": [
@@ -193,6 +195,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     if force_style: forzar.append(f"Usa el estilo \"{force_style}\".")
     if force_format in FORMATOS: forzar.append(f"Usa el formato \"{force_format}\" ({FORMATOS[force_format][0]}).")
     if stock:  # botón "Crear con fotos y videos de Pixabay"
+        forzar.append("Añade al JSON \"fondos\": 3-5 búsquedas EN INGLÉS de videos reales de fondo, una por escena, que encajen con el producto y el público (objetos, lugares, manos usando una tablet o un cuaderno; sin caras en primer plano), ej. [\"cozy desk coffee morning\", \"hands writing planner\"].")
         forzar.append("Este reel usa material REAL: incluye 1 o 2 escenas \"broll\" (video real de fondo) con búsquedas en inglés que encajen con el producto; el resto de escenas, las que mejor combinen.")
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
@@ -337,5 +340,11 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
     mus = S.get("musica") if S.get("musica") in GENEROS else B["musica"]["genero"]
     voz = S.get("voz") if S.get("voz") in ("femenina", "masculina") else B["voz"]["genero"]
     cp = S.get("copy") or (B.get("copy") or {}).get("A") or {}
+    letras = ("poppins", "anton", "bebas", "archivo", "pacifico", "lora"); anims = ("pop", "subir", "rebote", "zoom", "maquina")
+    import random as _r
+    fondos = [" ".join(str(q).split()[:6]) for q in (S.get("fondos") or []) if str(q).strip()][:5]
+    if stock and not fondos: fondos = [s.get("busqueda") for s in out if s.get("busqueda")] or ["cozy desk coffee notebook", "hands writing planner", "minimal workspace morning"]
     return {"concepto": str(S.get("concepto", ""))[:200], "formato": fmt or "clasico", "subtitulos": bool(S.get("subtitulos", True)),
+            "letra": S.get("letra") if S.get("letra") in letras else _r.choice(letras[:4]), "animacion": S.get("animacion") if S.get("animacion") in anims else _r.choice(anims),
+            "stock": bool(stock), "fondos": fondos,
             "estilo": est, "musica": mus, "voz": voz, "escenas": out, "copy": cp}

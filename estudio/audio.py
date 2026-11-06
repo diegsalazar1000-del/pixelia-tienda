@@ -235,15 +235,48 @@ def ai_music(g, B, seed=0, per_genre=3):
         print("Eleven Music falló (sigo con lo que hay):", e)
 
 # ---------- reels por escenas (guion de la IA) ----------
+def ding(pitch=1.0):
+    n = int(0.5 * SR); t = np.arange(n) / SR
+    return (np.sin(2 * np.pi * 1320 * pitch * t) + 0.5 * np.sin(2 * np.pi * 1980 * pitch * t)) * env(n, 0.002, 0.18) * 0.3
+def scratch():
+    n = int(0.06 * SR); s = rng.normal(0, 1, n); s = s - lowpass(s, 2)
+    return s * env(n, 0.002, 0.02) * 0.12
+
+def word_sfx(buf, words_lines, t0, anim, k0=0):
+    """Un sonido por cada palabra que aparece (pop, subida, rebote, zoom o tecleo)."""
+    for li, line in enumerate(words_lines):
+        for i, w in enumerate(line):
+            t = t0 + li * 0.35 + i * (0.18 if anim == "maquina" else 0.12)
+            if anim == "maquina":
+                for c in range(len(w)): add(buf, click(), t + c * 0.06, 0.35)
+            elif anim == "subir": add(buf, whoosh(0.18, 1.6), t, 0.35)
+            elif anim == "rebote": add(buf, pop(0.8 + 0.06 * i), t + 0.25, 0.8)
+            elif anim == "zoom": add(buf, whoosh(0.22, 1.8), t, 0.4); add(buf, pop(1.3), t + 0.2, 0.5)
+            else: add(buf, pop(1 + 0.08 * i + 0.1 * li), t, 0.8)
+
 def sfx_story(story, TL):
-    buf = np.zeros(int(TL["T"] * SR))
+    buf = np.zeros(int(TL["T"] * SR)); anim = story.get("animacion", "pop")
     for k, (sc, s) in enumerate(zip(story["escenas"], TL["scenes"])):
         t0, d, tp = s["start"], s["dur"], sc["tipo"]
         if k: add(buf, whoosh(0.4, 1.0 + 0.08 * k), max(0, t0 - 0.15), 0.85)
-        if tp == "gancho":
-            for li, line in enumerate(sc.get("lineas", [])):
-                for i, _ in enumerate(line.get("palabras", [])): add(buf, pop(1 + 0.08 * i + 0.1 * li), t0 + 0.15 + li * 0.35 + i * 0.12, 0.8)
-        elif tp == "pov": add(buf, pop(0.9), t0 + 0.1, 0.8); add(buf, sparkle(), t0 + 0.4, 0.6)
+        if sc.get("texto") and tp not in ("pov", "broll"): add(buf, pop(1.25), t0 + 0.15, 0.6)  # aparece el rótulo
+        if tp in ("gancho", "broll"):
+            word_sfx(buf, [l.get("palabras", []) for l in sc.get("lineas", [])], t0 + 0.15, anim)
+        elif tp == "pov":
+            add(buf, pop(0.9), t0 + 0.1, 0.8); word_sfx(buf, [str(sc.get("texto", "")).split()], t0 + 0.35, anim)
+        elif tp == "chat":
+            import formatos
+            for m, (ta, tb) in zip(sc.get("mensajes", []), formatos.chat_times(sc.get("mensajes", []))[0]):
+                add(buf, pop(1.5 if m.get("de") == "yo" else 1.15), t0 + tb, 0.75)
+        elif tp == "notificaciones":
+            for i in range(len(sc.get("items", []))): add(buf, ding(1 + 0.06 * i), t0 + 0.4 + i * 0.65, 0.8)
+        elif tp == "scroll": add(buf, whoosh(1.2, 0.8), t0 + 0.4, 0.5)
+        elif tp == "escribir":
+            n = sum(len(x) for x in sc.get("lineas", [])); dur = max(0.6, d - 1.1)
+            for c in range(0, n, 2): add(buf, scratch(), t0 + 0.5 + dur * c / max(1, n), 1.0)
+        elif tp == "antes_despues": add(buf, whoosh(0.6, 1.2), t0, 0.9); add(buf, impact(), t0 + 0.55, 0.5)
+        elif tp == "top3":
+            for i in range(3): add(buf, impact(), t0 + i * d / 3, 0.55); add(buf, pop(1.2), t0 + i * d / 3 + 0.2, 0.6)
         elif tp == "problema":
             for i, _ in enumerate(sc.get("items", [])): add(buf, pop(0.8), t0 + 0.55 + i * 0.5, 0.7); add(buf, click(), t0 + 0.68 + i * 0.5, 0.8)
         elif tp == "incluye":

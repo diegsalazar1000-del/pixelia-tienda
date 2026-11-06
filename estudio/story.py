@@ -190,6 +190,8 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
     RENDER.update(formatos.RENDERERS)
     style = style or story.get("estilo", "color"); colors = B["colores"]
     M.set_style(style, colors, pages)
+    S["letra"] = story.get("letra") or "poppins"; S["anim"] = story.get("animacion") or "pop"
+    S["letra_k"] = {"bebas": 1.22, "anton": 1.08, "pacifico": 0.86, "archivo": 0.9, "lora": 1.0}.get(S["letra"], 1.0)
     TL = timeline(story, vdurs); T = TL["T"]
     pw = 860; pr = []
     for p in pages:
@@ -200,19 +202,38 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
     rng = random.Random(seed)
     X = {"B": B, "pages": pr, "phone": phone, "stickers": stickers, "t": 0.0,
          "falling": [(rng.uniform(80, W - 80), rng.uniform(-900, -100), rng.uniform(-40, 40), rng.uniform(300, 520), rng.choice(stickers)) for _ in range(S["falling"])],
-         "broll": {}}
-    for sc, s in zip(story["escenas"], TL["scenes"]):  # videos reales de fondo (si hay clave de Pexels)
-        if sc["tipo"] == "broll":
+         "broll": {}, "fps": FPS}
+    # Modo Pixabay: un video real distinto de fondo en CADA escena (se abre al llegar a la escena: poca memoria)
+    fondos = story.get("fondos") or []
+    X["bgq"] = [(sc.get("busqueda") or (fondos[k % len(fondos)] if fondos else None)) if story.get("stock") else None for k, sc in enumerate(story["escenas"])]
+    X["bgr"] = {}
+    for sc, s in zip(story["escenas"], TL["scenes"]):  # escenas de video real
+        if sc["tipo"] == "broll" and not story.get("stock"):
             v = formatos.pexels_video(sc.get("busqueda"))
             if v: X["broll"][id(sc)] = formatos.BrollReader(v, FPS, s["dur"])
+    def real_bg(i, u):
+        q = X["bgq"][i] if i < len(X["bgq"]) else None
+        if not q: return None
+        if i not in X["bgr"]:
+            for k in [k for k in X["bgr"] if k < i - 1]: X["bgr"].pop(k).p.kill()  # cierra videos ya usados
+            v = formatos.pexels_video(q); X["bgr"][i] = formatos.BrollReader(v, FPS, TL["scenes"][i]["dur"] + 0.5) if v else None
+        rd = X["bgr"][i]; fr = rd.frame(u) if rd else None
+        if fr is None: return None
+        z = 1.04 + 0.05 * u / max(0.1, TL["scenes"][i]["dur"])
+        big = fr.resize((int(W * z), int(H * z)), Image.BILINEAR)
+        big = big.crop(((big.width - W) // 2, (big.height - H) // 2, (big.width - W) // 2 + W, (big.height - H) // 2 + H))
+        return Image.blend(big, Image.new("RGB", (W, H), (10, 8, 16)), 0.42).convert("RGBA")
     def frame(t):
-        X["t"] = t; cv = M.background(W, H, colors, t)
+        X["t"] = t
         i = max(k for k, s in enumerate(TL["scenes"]) if s["start"] <= t + 1e-6)
         sc, s = story["escenas"][i], TL["scenes"][i]; u = t - s["start"]
+        cv = (real_bg(i, u) if story.get("stock") and sc["tipo"] != "broll" else None) or M.background(W, H, colors, t)
         RENDER[sc["tipo"]](cv, sc, u, s["dur"], X)
         if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones"): subtitles(cv, sc, s, t)
         if i > 0 and u < XF:  # transición: la escena anterior se aleja y se desvanece
-            ps = TL["scenes"][i - 1]; prev = M.background(W, H, colors, t)
+            ps = TL["scenes"][i - 1]
+            pr_ = X["bgr"].get(i - 1) if story.get("stock") else None
+            prev = (Image.blend(pr_.last.resize((W, H)), Image.new("RGB", (W, H), (10, 8, 16)), 0.42).convert("RGBA") if pr_ is not None and pr_.last is not None else M.background(W, H, colors, t))
             RENDER[story["escenas"][i - 1]["tipo"]](prev, story["escenas"][i - 1], ps["dur"] - 0.01, ps["dur"], X)
             a = u / XF; prev = prev.resize((int(W * (1 + 0.15 * a)), int(H * (1 + 0.15 * a))), Image.BILINEAR).crop(
                 (int(W * 0.075 * a), int(H * 0.075 * a), int(W * 0.075 * a) + W, int(H * 0.075 * a) + H))
@@ -224,5 +245,8 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
     proc = subprocess.Popen(ff, stdin=subprocess.PIPE)
     for fi in range(int(T * FPS)): proc.stdin.write(frame(fi / FPS).tobytes())
     proc.stdin.close(); proc.wait()
+    for rd in list(X["bgr"].values()) + list(X["broll"].values()):
+        try: rd.p.kill()
+        except Exception: pass
     TL["story"] = True
     return TL

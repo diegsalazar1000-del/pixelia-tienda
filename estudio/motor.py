@@ -10,7 +10,30 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 HERE = pathlib.Path(__file__).parent
 FONTS = HERE / "fonts"
-def F(w, s): return ImageFont.truetype(str(FONTS / f"Poppins-{w}.ttf"), int(s))
+# Tipografías para titulares (licencia OFL: gratis para uso comercial). Se descargan una vez en el servidor.
+LETRAS = {"poppins": ("Poppins-Bold.ttf", None),
+          "anton": ("Anton-Regular.ttf", "anton/Anton-Regular.ttf"),
+          "bebas": ("BebasNeue-Regular.ttf", "bebasneue/BebasNeue-Regular.ttf"),
+          "archivo": ("ArchivoBlack-Regular.ttf", "archivoblack/ArchivoBlack-Regular.ttf"),
+          "pacifico": ("Pacifico-Regular.ttf", "pacifico/Pacifico-Regular.ttf"),
+          "lora": ("Lora-Medium.ttf", None)}
+_font_ok = {}
+def letra_path(name):
+    file, src = LETRAS.get(name, LETRAS["poppins"]); p = FONTS / file
+    if p.exists(): return p
+    if src and name not in _font_ok:
+        _font_ok[name] = False
+        try:
+            import urllib.request
+            with urllib.request.urlopen(f"https://raw.githubusercontent.com/google/fonts/main/ofl/{src}", timeout=30) as r: data = r.read()
+            if len(data) > 10000: p.write_bytes(data); return p
+        except Exception as e: print("no pude bajar la letra", name, e)
+    return FONTS / "Poppins-Bold.ttf"
+
+def F(w, s):
+    if w == "Bold" and S.get("letra") and S["letra"] != "poppins":  # titulares con la letra elegida para este anuncio
+        return ImageFont.truetype(str(letra_path(S["letra"])), int(s * S.get("letra_k", 1.0)))
+    return ImageFont.truetype(str(FONTS / f"Poppins-{w}.ttf"), int(s))
 W, H, FPS = 1080, 1920, 30
 INK = "#2E2823"
 
@@ -161,8 +184,18 @@ def highlight_words(cv, words, cx, y, font, t0, t, hl_index=None, hl_color=INK):
     x = cx - total / 2
     for i, b in enumerate(boxes):
         p = prog(t, t0 + i * 0.12, t0 + i * 0.12 + 0.35)
+        anim = S.get("anim", "pop"); dy = 0
+        if anim == "maquina":  # se escribe letra a letra
+            n = len(words[i]); k = int(n * clamp((t - t0 - i * 0.18) / max(0.05, 0.06 * n)))
+            if k <= 0: x += b.width + gap; continue
+            if k < n: b = text_box(words[i][:k], font, S.get("hl_text", "#FFFFFF") if i == hl_index else (S.get("box_text") if S.get("boxed") else S.get("text", "#FFFFFF")))
+            p = 1.0
         if p > 0:
             s = back_out(p); im = b
+            if anim == "subir": dy = (1 - ease_in_out(p)) * 90; s = 1.0
+            elif anim == "rebote": dy = -abs(math.cos(p * math.pi * 1.5)) * (1 - p) * 160; s = 1.0
+            elif anim == "zoom": s = 1 + (1 - ease_in_out(p)) * 1.4
+            elif anim == "maquina": s = 1.0
             if i == hl_index or S.get("boxed"):
                 pad = 14; bx = Image.new("RGBA", (b.width + 2 * pad, b.height + pad), (0, 0, 0, 0))
                 ImageDraw.Draw(bx).rounded_rectangle([0, 0, bx.width - 1, bx.height - 1], radius=18 if not S.get("boxed") else 12,
@@ -174,8 +207,9 @@ def highlight_words(cv, words, cx, y, font, t0, t, hl_index=None, hl_color=INK):
             elif S.get("shadow", True):
                 dark = Image.new("RGBA", b.size, (60, 25, 10, 0))
                 dark.putalpha(b.getchannel("A").point(lambda v: int(v * 0.45)).filter(ImageFilter.GaussianBlur(6)))
-                paste_center(cv, dark, x + b.width / 2 + 3, y + 6, s, rot=(1 - p) * -8)
-            paste_center(cv, im, x + b.width / 2, y, s, rot=(1 - p) * -8)
+                paste_center(cv, dark, x + b.width / 2 + 3, y + 6 + dy, s, rot=(1 - p) * -8 if anim == "pop" else 0)
+            paste_center(cv, im, x + b.width / 2, y + dy, s, rot=(1 - p) * -8 if anim == "pop" else 0,
+                         alpha=ease_in_out(p) if anim in ("subir", "zoom") else 1.0)
         x += b.width + gap
 
 def lines_block(cv, lines, cx, y0, maxw, size, t0, t, line_gap=1.2):
