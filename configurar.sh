@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
+# Uso: bash configurar.sh voz | probar-voz | paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -80,6 +80,13 @@ case "$1" in
       console.log('   Imagen:  ' + pick(/image|banana/));
       console.log('   Video:   ' + pick(/omni|veo/));
       console.log('   Música:  ' + pick(/lyria/));"
+    exit 0;;
+  voz)
+    ask ELEVENLABS_API_KEY "Pega la API key de ElevenLabs (no se verá) y pulsa Enter:" 1
+    docker restart pixelia-estudio >/dev/null 2>&1 && echo "   ✔ Estudio reiniciado con la voz nueva";;
+  probar-voz)
+    echo "Generando una frase de prueba con voz femenina y masculina… (llega a @PixeliaRadarBot)"
+    docker exec pixelia-estudio python3 /pixelia/estudio/prueba_voz.py
     exit 0;;
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1

@@ -23,6 +23,7 @@ KEY = ENV.get("N8N_API_KEY", "")
 TG = ENV.get("RADAR_BOT_TOKEN", ""); CHAT = ENV.get("TELEGRAM_ADMIN_CHAT_ID", "")
 os.environ.setdefault("ANTHROPIC_API_KEY", ENV.get("ANTHROPIC_API_KEY", ""))
 os.environ.setdefault("ANTHROPIC_MODEL", ENV.get("ANTHROPIC_MODEL", "claude-sonnet-5-5"))
+if ENV.get("ELEVENLABS_API_KEY"): os.environ.setdefault("ELEVENLABS_API_KEY", ENV["ELEVENLABS_API_KEY"])
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
 # 4 variantes para A/B en Meta: (estilo, tipo de gancho)
