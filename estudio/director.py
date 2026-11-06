@@ -145,3 +145,19 @@ def revisar(story, video, TL, tmpdir, ahorro=False):
     except Exception as e: print("revisión falló:", e); return None, []
     if R.get("ok") or not isinstance(R.get("guion"), dict): return None, []
     return R["guion"], [str(x)[:160] for x in (R.get("problemas") or [])][:6]
+
+# ===================== 📹 clip del usuario =====================
+def describir_clip(path, dur, tmpdir):
+    """Mira 4 fotogramas del clip y dice qué pasa (para escribir el resto del anuncio alrededor)."""
+    frames = []
+    for k, t in enumerate([dur * x for x in (0.1, 0.4, 0.65, 0.9)]):
+        p = os.path.join(tmpdir, f"clip{k}.jpg")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{t:.2f}", "-i", str(path), "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "5", p], check=False)
+        if os.path.exists(p): frames.append(p)
+    if not frames: return ""
+    content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(open(p, "rb").read()).decode()}} for p in frames]
+    content.append({"type": "text", "text": f"Son 4 fotogramas en orden de un clip de {dur:.0f} s que abrirá un anuncio. Devuelve SOLO JSON: "
+                    '{"que_pasa": "qué pasa en el clip, en 1-2 frases", "momento_clave": segundos en que pasa lo más fuerte (número), "emocion": "1 palabra", '
+                    '"zona_libre": "arriba|abajo (dónde se puede poner texto sin tapar la cara)"}'})
+    try: return _claude(content, max_tokens=400)
+    except Exception as e: print("no pude describir el clip:", e); return {}

@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, story as story_mod, audio, musica, brief as brief_mod, director  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod, director, formatos  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -29,7 +29,7 @@ if ENV.get("PIXABAY_API_KEY"): os.environ.setdefault("PIXABAY_API_KEY", ENV["PIX
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
 FORMAT_NAMES = {"clasico": "Clásico", "conversacion": "💬 Chat", "vida_real": "🎬 Video real", "pantalla": "📱 Pantalla de móvil",
-                "tutorial": "✍️ Cómo se usa", "comparacion": "🔀 Antes/después", "lista": "🏆 Top 3", "comedia": "😂 Comedia"}
+                "tutorial": "✍️ Cómo se usa", "comparacion": "🔀 Antes/después", "lista": "🏆 Top 3", "comedia": "😂 Comedia", "clip": "📹 Tu video"}
 # 4 variantes para A/B en Meta: (estilo, tipo de gancho)
 VARIANTES = [("color", "gancho"), ("tiktok", "pov"), ("neon", "problema"), ("minimal", "gancho")]  # (estilo, escena de apertura)
 
@@ -126,6 +126,7 @@ def hook_lines(story):
     """Titular de imagen a partir de la apertura del guion (para que imagen y reel cuenten lo mismo)."""
     sc = story["escenas"][0]
     if sc["tipo"] in ("gancho", "broll"): return sc["lineas"]
+    if sc["tipo"] == "clip" and (sc.get("gancho") or {}).get("lineas"): return sc["gancho"]["lineas"]
     if sc["tipo"] == "chat": words = next((m["texto"] for m in sc["mensajes"] if m.get("texto")), "").split()[:8]
     elif sc["tipo"] == "notificaciones": words = sc["items"][0]["titulo"].split()
     elif sc["tipo"] == "antes_despues": words = ["Antes", "vs", "AHORA"]
@@ -143,6 +144,13 @@ def real_photo(story):
     q = next((p.get("busqueda") for s in story["escenas"] for p in s.get("planos", []) if p.get("busqueda") and not p.get("producto")), None) \
         or next((s.get("busqueda") for s in story["escenas"] if s.get("busqueda")), None) or "cozy desk coffee notebook"
     return formatos.stock_photo(q)
+
+def clip_frame(story, tmp):
+    """Fotograma del clip del usuario para las imágenes estáticas."""
+    sc = story["escenas"][0]; p = os.path.join(tmp, "clipframe.jpg")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{sc['dur'] * 0.45:.2f}", "-i", sc["archivo"], "-frames:v", "1", p], check=False)
+    try: return Image.open(p).convert("RGB")
+    except Exception: return None
 
 def history(out):
     f = out / "historial.json"
@@ -194,6 +202,31 @@ def next_format(prod, B, brief_file, out):
     rank = ranked_formats(prod, B, brief_file) + [f for f in brief_mod.FORMATOS if f not in B.get("formatos_rank", [])]
     return next((f for f in rank if f not in used), rank[0])
 
+def clip_story(prod, B, titles, n_pages, out, clip, tmp, force_style=None):
+    """📹 Anuncio con un video del usuario (ej. Gemini): su clip abre (con su sonido) y el resto lo arma la IA alrededor."""
+    dur = formatos.clip_duration(clip)
+    info = director.describir_clip(clip, dur, tmp) or {}
+    extra = (f"Este reel EMPIEZA con un clip real ya grabado de {dur:.1f} segundos (con su propio sonido y diálogo): {info.get('que_pasa', 'una persona en una situación cotidiana')}. "
+             f"Emoción: {info.get('emocion', '')}. Lo más fuerte pasa hacia el segundo {info.get('momento_clave', 1)}. NO escribas una escena para el clip. "
+             "Agrega al JSON 'gancho_clip': {\"lineas\": [1-2 líneas de 1-3 palabras], \"t\": segundo en que aparece el texto (0 si debe frenar el scroll desde el inicio, o el momento clave si el clip ya engancha solo)}. "
+             "Las escenas del JSON son las que van DESPUÉS del clip: 2-3 que muestren el producto como la solución a lo que pasó en el clip (la primera retoma la situación del clip), y al final 'precio'. "
+             "No uses escenas de apertura (gancho, pov, chat, notificaciones, broll, meme).")
+    try:
+        story = brief_mod.make_storyboard(prod, B, titles, force_style=force_style, avoid=history(out)[-5:], extra=extra)
+    except Exception as e:
+        print("guion IA falló:", e); story = brief_mod.fallback_story(B, n_pages, force_style=force_style, seed=int(time.time()))
+    rest = [e for e in story["escenas"] if e["tipo"] not in ("gancho", "pov", "chat", "notificaciones", "broll", "meme", "montaje")][:4]
+    if not any(e["tipo"] in ("paginas", "zoom", "grid", "scroll", "pasos") for e in rest):
+        rest.insert(0, {"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": (B.get("textos_paginas") or [""])[:4], "voz": ""})
+    g = story.pop("gancho_clip", None) or {}
+    ls = [l for l in (g.get("lineas") or []) if isinstance(l, dict) and l.get("palabras")] or B["gancho"][:2]
+    for l in ls: l["palabras"] = [brief_mod.noemoji(w)[:14] for w in l["palabras"] if brief_mod.noemoji(w)][:3]
+    try: t = max(0.0, min(dur - 1.5, float(g.get("t", 0))))
+    except Exception: t = 0.0
+    story["escenas"] = [{"tipo": "clip", "archivo": str(clip), "dur": dur, "voz": "", "gancho": {"lineas": ls[:2], "t": t}}] + rest
+    story["formato"] = "clip"; story["subtitulos"] = story.get("subtitulos", True)
+    return story
+
 def pick(v, g, story):
     """'ia' o vacío = lo que sugiere la IA para este reel."""
     v = v if v in ("f", "m", "0") else ("f" if story["voz"] == "femenina" else "m")
@@ -235,13 +268,15 @@ def run_job(J):
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
             ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else (opts.get("f") if opts.get("f") in brief_mod.FORMATOS else None)
             stock = opts.get("p") == "1"  # botón "📸 Crear con fotos y videos de Pixabay"
-            say("🧠 Anuncio PRO: 3 guiones, el director elige el mejor y al final reviso el video…" if pro else "📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
-            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock, single=not pro)
+            say("📹 Armando el anuncio alrededor de tu video…" if opts.get("c") else "🧠 Anuncio PRO: 3 guiones, el director elige el mejor y al final reviso el video…" if pro else "📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
+            clip = PIXELIA / "storage" / "clips" / f"{opts.get('c')}.mp4" if opts.get("c") else None
+            if clip is not None and not clip.exists(): raise RuntimeError("no encontré tu video; mándamelo otra vez al bot")
+            story = clip_story(prod, B, titles, len(pages), out, clip, tmp, force_style=fs) if clip else new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock, single=not pro)
             st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
             say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
             for old in out.glob("[ABC]-*.jpg"): old.unlink()
-            motor.build_static(B2, pages, phone, out, style=st, photo=real_photo(story) if stock else None)
+            motor.build_static(B2, pages, phone, out, style=st, photo=clip_frame(story, tmp) if story["escenas"][0]["tipo"] == "clip" else real_photo(story) if stock else None)
             vd = None
             if v in ("f", "m"):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)

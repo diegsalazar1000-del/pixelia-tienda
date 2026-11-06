@@ -293,6 +293,10 @@ def sfx_story(story, TL):
                 if j % 2 == 1: add(buf, impact(), t0 + ta, 0.3)
                 ws = str(sc["planos"][j].get("texto", "")).split()
                 word_sfx(buf, [ws[k:k + 3] for k in range(0, len(ws), 3)][:2], t0 + ta + 0.04, anim)
+        elif tp == "clip":
+            g = sc.get("gancho") or {}
+            ls = [l.get("palabras", []) for l in g.get("lineas", [])]
+            if ls: add(buf, whoosh(0.3, 1.4), t0 + float(g.get("t", 0)), 0.5); word_sfx(buf, ls, t0 + float(g.get("t", 0)) + 0.05, anim)
         elif tp == "meme":
             import formatos
             ts = formatos.meme_times(sc, d)
@@ -460,8 +464,18 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
             ia, ib = int(max(0, a - 0.12) * SR), int(min(T, b + 0.2) * SR)
             duck[ia:ib] = np.minimum(duck[ia:ib], 0.5); sfx_gain[ia:ib] = 0.45
         k = int(0.08 * SR); duck = np.convolve(duck, np.ones(k) / k, "same"); sfx_gain = np.convolve(sfx_gain, np.ones(k) / k, "same")
+    clip = np.zeros(n)
+    for sc, s_ in zip((story or {}).get("escenas", []), TL["scenes"]):  # 📹 el sonido original del clip (la actriz, el ambiente)
+        if sc["tipo"] != "clip": continue
+        try:
+            raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", sc["archivo"], "-t", str(s_["dur"]), "-ac", "1", "-ar", str(SR), "-f", "s16le", "-"], capture_output=True).stdout
+            a = np.frombuffer(raw, np.int16).astype(np.float64) / 32768; a = a / (np.abs(a).max() + 1e-9) * 0.95
+            i0 = int(s_["start"] * SR); a = a[: max(0, n - i0)]; clip[i0:i0 + len(a)] += a
+            i1 = min(n, i0 + int(s_["dur"] * SR)); duck[i0:i1] = np.minimum(duck[i0:i1], 0.22); sfx_gain[i0:i1] = np.minimum(sfx_gain[i0:i1], 0.6)
+        except Exception as e: print("audio del clip falló:", e)
+    if clip.any(): k = int(0.15 * SR); duck = np.convolve(duck, np.ones(k) / k, "same")
     music_level = 1.25 if not with_voice else 1.0
-    out = sfx * 0.45 * sfx_gain + music * duck * music_level + voice * 1.0
+    out = sfx * 0.45 * sfx_gain + music * duck * music_level + voice * 1.0 + clip * 1.0
     out = out / (np.abs(out).max() + 1e-9) * 0.9  # solo normaliza: nada de saturación
     with wave.open(str(out_wav), "w") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((out * 32767).astype(np.int16).tobytes())

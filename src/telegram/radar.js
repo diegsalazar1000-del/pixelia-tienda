@@ -225,6 +225,34 @@ async function saveSong(m) {
   return send(`✅ Guardada en <b>${GENRES[genre]}</b> (${songs(genre)} canciones). Los próximos anuncios con ese ritmo la usarán.`);
 }
 
+// 📹 Video propio (ej. Gemini): se guarda y se arma el anuncio alrededor
+const CLIPS_DIR = path.join(path.dirname(MUSIC_DIR), 'clips');
+async function saveClip(m) {
+  const f = m.video || m.document;
+  if (f.file_size > 20e6) return send('El video pesa más de 20 MB; Telegram no me deja bajarlo. Mándalo con menos calidad (o recórtalo).');
+  const info = await rtg('getFile', { file_id: f.file_id });
+  const r = await fetch(`https://api.telegram.org/file/bot${token()}/${info.file_path}`);
+  if (!r.ok) throw new Error('no pude descargar el video');
+  fs.mkdirSync(CLIPS_DIR, { recursive: true });
+  const cid = Date.now().toString(36);
+  fs.writeFileSync(path.join(CLIPS_DIR, `${cid}.mp4`), Buffer.from(await r.arrayBuffer()));
+  const list = Products.list().slice(0, 20);
+  const cap = String(m.caption || '').toLowerCase();
+  const guess = cap && list.find((p) => cap.split(/\s+/).filter((w) => w.length > 3 && w !== 'video').some((w) => p.title.toLowerCase().includes(w)));
+  if (guess) return clipOptions(guess.id, cid);
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, text: '📹 Video recibido. ¿De qué producto es el anuncio?',
+    reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `clp:${p.id}:${cid}` }]) } });
+}
+function clipOptions(pid, cid) {
+  const p = Products.byId(Number(pid));
+  const o = (v, g) => `ad:${pid}:${packOpts({ c: cid, v, g })}`;
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, text: `📹 Anuncio con tu video para <b>${esc(p?.title || '')}</b>\nTu clip va al inicio con su sonido; después el producto, los métodos de pago y el precio. ¿Qué le agrego?`, parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: [
+      [{ text: '🎙️ Voz + 🎵 música (en la parte del producto)', callback_data: o('ia', 'ia') }],
+      [{ text: '🎵 Solo música', callback_data: o('0', 'ia') }, { text: '🎙️ Solo voz', callback_data: o('ia', '0') }],
+      [{ text: '🔇 Nada (solo el sonido del clip + efectos)', callback_data: o('0', '0') }]] } });
+}
+
 async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
@@ -234,6 +262,7 @@ async function onMessage(m) {
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿De qué producto creo anuncios?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
+  if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/creditos') || text.startsWith('/créditos')) return creditos();
   if (text.startsWith('/ahorro')) {
@@ -262,7 +291,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -314,13 +343,17 @@ export async function onCallback(q) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
   }
+  if (action === 'clp' && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+    return clipOptions(id, opts);
+  }
   if (action === 'ad' && String(q.from?.id) === String(config.telegram.adminChatId)) {
     const p = Products.byId(Number(id));
     if (!p) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Producto no encontrado' });
     const options = parseOpts(opts);
     const r = AdJobs.enqueue(p.id, options);
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: r.duplicated ? 'Ya se está creando' : 'En marcha 🎬' }).catch(() => {});
-    const desc = [options.p ? '📸 con Pixabay' : '', options.f ? (FORMATS[options.f] || '🎲 otro formato') : '', options.v && options.v !== 'ia' ? VOICES[options.v] : '', options.g && options.g !== 'ia' ? GENRES[options.g] : '', options.s && options.s !== 'ia' ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
+    const desc = [options.c ? '📹 con tu video' : '', options.p ? '📸 con Pixabay' : '', options.f ? (FORMATS[options.f] || '🎲 otro formato') : '', options.v && options.v !== 'ia' ? VOICES[options.v] : '', options.g && options.g !== 'ia' ? GENRES[options.g] : '', options.s && options.s !== 'ia' ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
     if (!r.duplicated) await send(options.x
       ? `🧪 Creando <b>4 variantes</b> de <b>${esc(p.title)}</b> (estilos y ganchos distintos). Tarda unos 15-25 min; te aviso al terminar.`
       : `🎬 Creando anuncios de <b>${esc(p.title)}</b>${desc ? ' · ' + esc(desc) : ''}.\nTe los mando aquí en unos minutos.`);

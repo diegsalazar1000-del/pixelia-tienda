@@ -11,6 +11,7 @@ XF = 0.22  # duración de la transición entre escenas
 
 def scene_duration(sc, vdur=None):
     import formatos
+    if sc["tipo"] == "clip": return round(float(sc.get("dur", 8)), 2)  # el clip dura lo que dura
     words = len(str(sc.get("voz") or "").split())
     need = (vdur + 0.6) if vdur else (words * 0.42 + 0.9)  # con la duración REAL de la voz si ya se generó
     d = max(MIN_DUR.get(sc["tipo"], formatos.MIN_DUR.get(sc["tipo"], 2.6)), need, formatos.extra_duration(sc))
@@ -229,7 +230,7 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
         sc, s = story["escenas"][i], TL["scenes"][i]; u = t - s["start"]
         cv = (real_bg(i, u) if story.get("stock") and sc["tipo"] != "broll" else None) or M.background(W, H, colors, t)
         RENDER[sc["tipo"]](cv, sc, u, s["dur"], X)
-        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones", "montaje", "pasos", "meme"): subtitles(cv, sc, s, t)
+        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones", "montaje", "pasos", "meme", "clip"): subtitles(cv, sc, s, t)
         if i > 0 and u < XF:  # transición: la escena anterior se aleja y se desvanece
             ps = TL["scenes"][i - 1]
             pr_ = X["bgr"].get(i - 1) if story.get("stock") else None

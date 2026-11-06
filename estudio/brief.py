@@ -197,7 +197,7 @@ def precio_dicho(p):
         return f"{e} dólares con {c}" if c else f"{e} dólares"
     except Exception: return str(p)
 
-def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None, force_format=None, stock=False):
+def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None, force_format=None, stock=False, extra=None):
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     model = model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
     forzar = []
@@ -209,6 +209,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                       "Cada foto debe ilustrar EXACTAMENTE la frase que se dice en ese momento (si hablas de olvidar citas: 'woman forgot appointment phone calendar'; de desorden: 'messy desk sticky notes'; de organizarse: 'hands writing planner coffee'). "
                       "Puedes usar ideas graciosas o curiosas (un gato sobre la agenda, alguien enterrado en papeles) siempre que se entienda la relación con el producto. Mete 2-3 planos con producto: true. "
                       "Las búsquedas en inglés, concretas y visuales; nada de marcas ni personas famosas.")
+    if extra: forzar.append(extra)
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
         publico=B.get("publico", ""), investigacion=json.dumps({k: (B.get("investigacion") or {}).get(k) for k in ("publico_real", "anuncios")}, ensure_ascii=False)[:3000] if B.get("investigacion") else "no disponible", paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
@@ -219,7 +220,10 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                                  headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=180) as r: data = json.load(r)
     text = "".join(b.get("text", "") for b in data.get("content", [])).replace("```json", "").replace("```", "")
-    return normalize_story(json.loads(text[text.index("{"): text.rindex("}") + 1]), B, len(titles), force_open, force_style, force_format, stock)
+    raw = json.loads(text[text.index("{"): text.rindex("}") + 1])
+    st = normalize_story(raw, B, len(titles), force_open, force_style, force_format, stock)
+    if isinstance(raw.get("gancho_clip"), dict): st["gancho_clip"] = raw["gancho_clip"]
+    return st
 
 def rank_formats(prod, B, api_key=None):
     """Los 4 formatos que más pegan con este público (para las 4 variantes)."""

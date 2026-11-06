@@ -283,6 +283,32 @@ class BrollReader:
             self.last = Image.frombytes("RGB", (self.w, self.h), raw); self.n += 1
         return self.last
 
+# ---------- 📹 clip real del usuario (ej. video de Gemini) con el gancho encima ----------
+class ClipReader(BrollReader):
+    def __init__(self, path, fps, dur):
+        self.w, self.h = W, H; self.n = 0; self.last = None; self.fps = fps
+        vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps}"
+        self.p = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", str(path), "-t", str(dur + 0.5), "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+def clip_duration(path):
+    try:
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)], capture_output=True, text=True)
+        return round(float(r.stdout.strip()), 2)
+    except Exception: return 8.0
+
+def sc_clip(cv, sc, u, d, X):
+    rd = X.setdefault("clipr", {}).get(id(sc))
+    if rd is None: rd = X["clipr"][id(sc)] = ClipReader(sc["archivo"], X.get("fps", 30), d)
+    fr = rd.frame(u)
+    if fr is not None: cv.paste(fr.convert("RGBA"), (0, 0))
+    g = sc.get("gancho") or {}; t0 = float(g.get("t", 0)); ls = g.get("lineas") or []
+    if ls and u >= t0 and u < t0 + float(g.get("dura", 99)):
+        sh = Image.new("RGBA", (W, H), (0, 0, 0, 0)); sd = ImageDraw.Draw(sh)
+        for k in range(30): sd.rectangle([0, 0 + k * 22, W, (k + 1) * 22], fill=(0, 0, 0, int(150 * (1 - k / 30))))
+        cv.alpha_composite(sh)
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0)); lines_block(lay, ls, W / 2, 330, W - 120, 100, 0.12, u - t0, 1.2); cv.alpha_composite(lay)
+
 def sc_broll(cv, sc, u, d, X):
     rd = X.get("broll", {}).get(id(sc))
     if rd is None and sc.get("busqueda") and "bgr_sc" not in X: X["bgr_sc"] = {}
@@ -436,7 +462,7 @@ def sc_meme(cv, sc, u, d, X):
     if v < 0.06: cv.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(220 * (1 - v / 0.06)))))
 
 RENDERERS = {"chat": sc_chat, "notificaciones": sc_notificaciones, "scroll": sc_scroll, "escribir": sc_escribir,
-             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje, "pasos": sc_pasos, "meme": sc_meme}
+             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje, "pasos": sc_pasos, "meme": sc_meme, "clip": sc_clip}
 MIN_DUR = {"meme": 4.0, "pasos": 5.0, "montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
 
 def extra_duration(sc):
@@ -446,5 +472,6 @@ def extra_duration(sc):
     if sc["tipo"] == "escribir": return 1.4 + 0.06 * sum(len(x) for x in sc.get("lineas", []))
     if sc["tipo"] == "montaje": return 0.95 * len(sc.get("planos", []))
     if sc["tipo"] == "pasos": return 1.7 * len(sc.get("items", []))
+    if sc["tipo"] == "clip": return float(sc.get("dur", 8))
     if sc["tipo"] == "meme": return 1.9 * len(sc.get("paneles", []))
     return 0
