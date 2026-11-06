@@ -118,6 +118,35 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
     DATA: JSON.stringify({ ...pp, packs: packOffers(p) }).replace(/</g, '\\u003c') }));
 });
+// 🎁 Regalos gratis a cambio del correo (lead magnet)
+const REGALOS = {
+  ahorro: { title: 'Reto de Ahorro 52 Semanas 2027', file: '/regalos/Reto-de-Ahorro-52-Semanas-Pixelia.zip' },
+  navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
+};
+on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
+on('POST', '/api/regalo', async (req, res) => {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
+  const n = (subHits.get(ip) || 0) + 1; subHits.set(ip, n); if (subHits.size > 5000) subHits.clear();
+  if (n > 8) return fail(res, 429, 'Demasiados intentos, prueba más tarde');
+  const b = await body(req, 1e4); const email = String(b.email || '').trim().slice(0, 120);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Revisa tu correo');
+  if (!b.consent) return fail(res, 400, 'Marca la casilla para poder enviarte el regalo');
+  const ids = [...new Set((Array.isArray(b.regalos) ? b.regalos : []).filter((x) => REGALOS[x]))];
+  if (!ids.length) return fail(res, 400, 'Elige al menos un regalo');
+  const s = Subscribers.add(email, 'regalo:' + ids.join('+'));
+  const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file }));
+  const code = s.used_order ? null : s.code, off = Math.round(COUPON_OFF * 100);
+  if (config.email.resendKey) {
+    sendEmail(email, `🎁 Tu regalo de ${config.storeName}`, links.map((l) => `${l.title}: ${l.url}`).join('\n') + (code ? `\n\nTu cupón de ${off}%: ${code}` : ''),
+      `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px">
+       <h2 style="margin:0 0 12px">🎁 ¡Aquí está tu regalo!</h2>
+       ${links.map((l) => `<p><a style="display:inline-block;background:#ff4fa3;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${l.url}">⬇️ Descargar ${esc(l.title)}</a></p>`).join('')}
+       ${code ? `<p style="margin-top:18px">Y para tu primera compra, <b>${off}% de descuento</b> con el cupón:</p><p style="font-size:26px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:8px 16px;border-radius:12px">${code}</p>` : ''}
+       <p style="color:#aab">Mira todos los productos en <a style="color:#b9a6ff" href="${config.baseUrl}">${esc(config.baseUrl.replace(/^https?:\/\//, ''))}</a></p></div>`)
+      .catch((e) => console.error('[regalo]', e.message));
+  }
+  json(res, 200, { links, code, off });
+});
 on('GET', '/pedido/:id', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('order.html')); });
 on('GET', '/legal', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('legal.html')); });
 // Reels e imágenes de anuncios terminados (públicos: Instagram/Facebook los descargan desde aquí para publicarlos)

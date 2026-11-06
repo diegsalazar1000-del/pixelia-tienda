@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Regalos gratis · {{STORE}}</title>
+<meta name="description" content="Descarga gratis el Reto de Ahorro 52 Semanas 2027 y el Planificador Navideño (PDF + Excel/Google Sheets).">
+<meta property="og:title" content="🎁 Regalos gratis de {{STORE}}">
+<meta property="og:description" content="Reto de Ahorro 52 Semanas 2027 y Planificador Navideño: PDF para imprimir + Excel/Google Sheets.">
+<meta property="og:image" content="{{BASE}}/regalos/portada-reto-ahorro.jpg">
+<meta name="theme-color" content="#07060f">
+{{PIXEL}}
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+.gifts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:22px 0}
+.gift{border:2px solid var(--line);border-radius:22px;overflow:hidden;cursor:pointer;background:#ffffff08;transition:.2s}
+.gift img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.gift .t{padding:12px 14px}.gift h3{margin:0 0 4px;font-size:1.05rem}.gift p{margin:0;color:var(--mut);font-size:.9rem}
+.gift.on{border-color:#ff4fa3;box-shadow:0 0 0 4px #ff4fa333}
+.form{max-width:520px;margin:0 auto;padding:20px;border-radius:22px;background:linear-gradient(135deg,#7c5cff33,#ff4fa333);border:1px solid #ffffff22}
+.form input[type=email]{width:100%;margin:8px 0}.chk{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;color:var(--mut);margin:10px 0}
+.chk input{margin-top:3px}.ok{color:#5fe3a1}.err{color:#ff7b8a;min-height:1.2em}
+.done a.btn{display:block;text-align:center;margin:10px 0}
+.code{font-size:1.5rem;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:6px 14px;border-radius:12px}
+@media(max-width:620px){.gifts{gap:10px}.gift .t{padding:9px 10px}.gift p{display:none}}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+<header class="top"><div class="wrap"><a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a><nav class="nav"><a href="/#catalogo">Catálogo</a></nav></div></header>
+<main class="wrap" style="padding:30px 0 80px;max-width:860px">
+  <h1 style="text-align:center;margin:0">🎁 Elige tu regalo gratis</h1>
+  <p style="text-align:center;color:var(--mut);margin:8px 0 0">PDF para imprimir + versión que se calcula sola en Excel o Google Sheets. Puedes llevarte los dos.</p>
+  <div class="gifts" id="gifts"></div>
+  <div class="form" id="form">
+    <b>¿A qué correo te lo mandamos?</b>
+    <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email">
+    <label class="chk"><input type="checkbox" id="ok"> <span>Acepto recibir correos de {{STORE}} con el regalo, novedades y ofertas. Puedo darme de baja cuando quiera.</span></label>
+    <button class="btn btn-main btn-block" id="go">Quiero mi regalo gratis</button>
+    <p class="err" id="err"></p>
+  </div>
+  <div class="form done" id="done" hidden></div>
+</main>
+<script>
+const GIFTS = [
+  { id: 'ahorro', title: 'Reto de Ahorro 52 Semanas 2027', desc: 'Colorea cada semana que ahorras. Versión creciente y fija + Excel que suma solo.', img: '/regalos/portada-reto-ahorro.jpg' },
+  { id: 'navidad', title: 'Planificador Navideño', desc: 'Presupuesto, lista de regalos, cenas y checklist de diciembre + Excel.', img: '/regalos/portada-planificador-navideno.jpg' },
+];
+const q = new URLSearchParams(location.search).get('r');
+const sel = new Set(q ? q.split(',').filter((x) => GIFTS.some((g) => g.id === x)) : GIFTS.map((g) => g.id));
+const box = document.getElementById('gifts');
+function draw() {
+  box.innerHTML = GIFTS.map((g) => `<div class="gift ${sel.has(g.id) ? 'on' : ''}" data-id="${g.id}"><img src="${g.img}" alt=""><div class="t"><h3>${sel.has(g.id) ? '✅ ' : ''}${g.title}</h3><p>${g.desc}</p></div></div>`).join('');
+  box.querySelectorAll('.gift').forEach((el) => el.onclick = () => { const id = el.dataset.id; sel.has(id) ? sel.delete(id) : sel.add(id); draw(); });
+}
+draw();
+const $ = (i) => document.getElementById(i);
+$('go').onclick = async () => {
+  $('err').textContent = '';
+  if (!sel.size) return $('err').textContent = 'Elige al menos un regalo 👆';
+  if (!$('ok').checked) return $('err').textContent = 'Marca la casilla para poder enviarte el regalo.';
+  $('go').disabled = true;
+  try {
+    const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('email').value, regalos: [...sel], consent: true }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo');
+    try { fbq('track', 'Lead', { content_name: 'regalo-' + [...sel].join('-') }); } catch {}
+    $('form').hidden = true; $('done').hidden = false;
+    $('done').innerHTML = `<h3 class="ok" style="margin-top:0">✅ ¡Listo! Descárgalo aquí (y también te lo mandamos al correo):</h3>` +
+      j.links.map((l) => `<a class="btn btn-main" href="${l.url}" download>⬇️ ${l.title}</a>`).join('') +
+      (j.code ? `<p style="margin-top:18px">🎁 Y de regalo extra, <b>${j.off}% de descuento</b> en tu primera compra:</p><p class="code">${j.code}</p><p><a href="/#catalogo" style="color:#b9a6ff">Ver la tienda →</a></p>` : '');
+  } catch (e) { $('err').textContent = e.message; $('go').disabled = false; }
+};
+</script>
+</body>
+</html>

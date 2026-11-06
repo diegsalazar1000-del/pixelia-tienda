@@ -156,7 +156,7 @@ def sc_precio(cv, sc, u, d, X):
     btn = pill(sc.get("cta") or B["cta"], F("Bold", 58), S["cta_fill"], S["cta_text"], (55, 25))
     paste_center(cv, btn, W / 2, 1270, back_out(prog(u, 0.6, 0.95)) * (1 + 0.05 * math.sin(u * 9)))
     paste_center(cv, text_box(B["dominio"], F("Bold", 46), S["domain"]), W / 2, 1420, prog(u, 0.9, 1.2))
-    if M.PAGOS:
+    if M.PAGOS and B.get("precio"):
         ps = M.pay_strip(1.35); ps = ps if ps.width <= W - 80 else ps.resize((W - 80, int(ps.height * (W - 80) / ps.width)), Image.LANCZOS)
         paste_center(cv, ps, W / 2, 1545, back_out(prog(u, 1.0, 1.35)))
     for j, st in enumerate(X["stickers"][:min(4, S["stickers"])]):

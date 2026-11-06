@@ -88,6 +88,7 @@ def normalize(B, prod, n_pages, titles=None):
     m = B.get("musica") or {}; m["genero"] = m.get("genero") if m.get("genero") in GENEROS else "pop"; B["musica"] = m
     B["precio"] = float(prod.get("price") or 0); B["tachado"] = float(prod.get("compare") or 0) or None
     B["dominio"] = prod.get("dominio", "pixeliadigital.app")
+    if not B["precio"]: B["dominio"] += "/regalo"; B["tachado"] = None; B["regalo"] = True; B["cta"] = "DESCÁRGALO GRATIS"  # regalo a cambio del correo
     gv = B.get("guion_voz") or {"gancho": " ".join(w for l in B["gancho"][:2] for w in l["palabras"]), "paginas": "Todo lo que necesitas, en un solo lugar.",
                                 "movil": "También en tu móvil.", "precio": "Hoy con descuento. Descárgalo ya."}
     lim = {"gancho": 6, "paginas": 10, "movil": 6, "precio": 8}
@@ -193,6 +194,7 @@ def _words(t, n): return " ".join(noemoji(t).split()[:n])
 
 def precio_dicho(p):
     try:
+        if not float(p): return "gratis"
         e, c = divmod(round(float(p) * 100), 100)
         return f"{e} dólares con {c}" if c else f"{e} dólares"
     except Exception: return str(p)
@@ -209,6 +211,8 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                       "Cada foto debe ilustrar EXACTAMENTE la frase que se dice en ese momento (si hablas de olvidar citas: 'woman forgot appointment phone calendar'; de desorden: 'messy desk sticky notes'; de organizarse: 'hands writing planner coffee'). "
                       "Puedes usar ideas graciosas o curiosas (un gato sobre la agenda, alguien enterrado en papeles) siempre que se entienda la relación con el producto. Mete 2-3 planos con producto: true. "
                       "Las búsquedas en inglés, concretas y visuales; nada de marcas ni personas famosas.")
+    if not float(prod.get("price") or 0):
+        forzar.append("ES UN REGALO GRATIS (se descarga dejando el correo en pixeliadigital.app/regalo). El cierre invita a COMENTAR una palabra clave corta en mayúsculas relacionada (ej. AHORRO o NAVIDAD) y a descargarlo gratis; en 'precio' di 'gratis' y usa cta 'DESCÁRGALO GRATIS'. Genera curiosidad y ganas de compartirlo/guardarlo.")
     if extra: forzar.append(extra)
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],

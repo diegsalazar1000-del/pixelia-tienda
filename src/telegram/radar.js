@@ -239,7 +239,7 @@ async function saveClip(m) {
   fs.mkdirSync(CLIPS_DIR, { recursive: true });
   const cid = Date.now().toString(36);
   fs.writeFileSync(path.join(CLIPS_DIR, `${cid}.mp4`), Buffer.from(await r.arrayBuffer()));
-  const list = Products.list().slice(0, 20);
+  const list = [...Products.list(), ...Products.list({ all: true }).filter((p) => p.category === 'Regalo' && !p.active)].slice(0, 20);
   const cap = String(m.caption || '').toLowerCase();
   const guess = cap && list.find((p) => cap.split(/\s+/).filter((w) => w.length > 3 && w !== 'video').some((w) => p.title.toLowerCase().includes(w)));
   if (guess) return clipOptions(guess.id, cid);
@@ -336,7 +336,8 @@ function ultimoReel(pid) {
   const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', p.slug);
   let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(dir, 'guion.json'), 'utf8')).story || {}; } catch {}
   const base = String(story.copy?.texto || p.short || '').trim();
-  const caption = `${base}\n\n💰 $${(p.price_cents / 100).toFixed(2)} · descarga inmediata\n👉 Link en la bio: pixeliadigital.app\n\n#productosdigitales #pixelia #descargainmediata`;
+  const caption = p.price_cents ? `${base}\n\n💰 $${(p.price_cents / 100).toFixed(2)} · descarga inmediata\n👉 Link en la bio: pixeliadigital.app\n\n#productosdigitales #pixelia #descargainmediata`
+    : `${base}\n\n🎁 GRATIS · descárgalo en el link de la bio: pixeliadigital.app/regalo\n💬 ¿Lo quieres? Coméntalo y compártelo con quien lo necesite\n\n#gratis #regalo #pixelia #productosdigitales`;
   return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
 }
 async function previewPublicar(pid) {
@@ -351,7 +352,7 @@ async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
   if (text.startsWith('/anuncios')) {
-    const list = Products.list().slice(0, 20);
+    const list = [...Products.list(), ...Products.list({ all: true }).filter((p) => p.category === 'Regalo' && !p.active)].slice(0, 20);
     if (!list.length) return send('No hay productos publicados.');
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿De qué producto creo anuncios?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
@@ -368,7 +369,7 @@ async function onMessage(m) {
       reply_markup: { inline_keyboard: [[{ text: '✅ Sí, publicar ahora', callback_data: `pub:kit:${desde}` }, { text: '❌ No', callback_data: 'x:0' }]] } });
   }
   if (text.startsWith('/gemini')) {
-    const list = Products.list().filter((p) => !p.bundle_ids).slice(0, 20);
+    const list = [...Products.list().filter((p) => !p.bundle_ids), ...Products.list({ all: true }).filter((p) => p.category === 'Regalo' && !p.active)].slice(0, 20);
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿Para qué producto escribo los prompts de Gemini?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `gem:${p.id}:` }]) } });
   }
