@@ -103,6 +103,78 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
+// ===== 🧬 Fusionar ideas del radar =====
+const fusions = new Map();  // propuestas recientes (token → propuesta)
+const slugify = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'producto';
+const freeSlug = (t) => { const b = slugify(t); let s = b; for (let i = 2; Products.bySlug(s); i++) s = `${b}-${i}`; return s; };
+
+async function askJson(prompt, maxTokens = 6000) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: process.env.FUSION_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error('IA: ' + (data.error?.message || res.status));
+  const t = (data.content || []).map((b) => b.text || '').join('').replace(/```json|```/g, '');
+  return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+}
+
+async function fuse() {
+  if (!config.anthropic.key) return send('Falta ANTHROPIC_API_KEY en la tienda.');
+  const pool = Candidates.list('', 200).map(parseC)
+    .filter((c) => !['discarded', 'retired'].includes(c.status) && (c.ai_score || 0) >= 5).slice(0, 45)
+    .map((c) => ({ id: c.id, fuente: c.source, titulo: c.title.slice(0, 110), nota: c.ai_score, idea: String(c.ai?.idea || c.ai?.nicho || c.ai?.resumen || c.snippet || '').slice(0, 160) }));
+  if (pool.length < 3) return send('Todavía hay pocos productos en el radar para fusionar (mínimo 3 con nota ≥ 5). Espera unos días de búsquedas.');
+  const mine = Products.list().filter((p) => !p.bundle_ids).map((p) => p.title);
+  await send(`🧬 Analizando ${pool.length} productos del radar para combinarlos… (1 min)`);
+  const out = await askJson(`Eres estratega de productos digitales para una tienda en español (Latinoamérica) que vende productos a $4.99 y packs de 3 a $9.99.
+Productos en tendencia que encontró el radar:
+${JSON.stringify(pool)}
+Productos que la tienda YA vende: ${JSON.stringify(mine)}
+
+Propón 3 ideas, cada una de uno de estos tipos:
+- "fusion": UN producto nuevo y mejor que combina lo mejor de 2-3 productos de la lista (para el mismo público).
+- "pack": 3 productos que se complementan para el MISMO público (pueden incluir alguno que la tienda ya vende), para vender a $4.99 cada uno o los 3 a $9.99.
+Todo debe ser contenido ORIGINAL (inspirado en la idea, nunca copiar diseños ni textos). Productos que se puedan fabricar como PDF, planner, plantillas, hojas de cálculo o guías.
+Devuelve SOLO JSON:
+{"propuestas":[{"tipo":"fusion|pack","nombre":"nombre comercial","publico":"para quién","por_que":"por qué va a vender (1-2 frases)","basado_en":[ids del radar],
+"productos":[{"titulo":"...","emoji":"1 emoji","frase_corta":"máx 90 caracteres","descripcion":"qué incluye, en 4-6 viñetas","contenido":"lista de páginas/secciones para fabricarlo","ya_existe":false}],
+"precio_pack":9.99}]}
+En "fusion" pon 1 producto en "productos"; en "pack" pon 3 (marca "ya_existe": true si es uno que la tienda ya vende, con su título exacto).`);
+  const props = (out.propuestas || []).slice(0, 3);
+  if (!props.length) return send('La IA no devolvió propuestas. Prueba de nuevo con /fusionar.');
+  for (const p of props) {
+    const tok = Math.random().toString(36).slice(2, 10); fusions.set(tok, p);
+    if (fusions.size > 60) fusions.delete(fusions.keys().next().value);
+    const items = (p.productos || []).map((x) => `${esc(x.emoji || '✨')} <b>${esc(x.titulo)}</b>${x.ya_existe ? ' <i>(ya lo vendes)</i>' : ''}\n   ${esc(x.frase_corta || '')}`).join('\n');
+    await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML', link_preview_options: { is_disabled: true },
+      text: `${p.tipo === 'pack' ? '📦 <b>PACK</b>' : '🧬 <b>FUSIÓN</b>'}: <b>${esc(p.nombre)}</b>\n👥 ${esc(p.publico)}\n💡 ${esc(p.por_que)}\n\n${items}${p.tipo === 'pack' ? `\n\n💰 $4.99 c/u · los 3 por $${Number(p.precio_pack || 9.99).toFixed(2)}` : '\n\n💰 $4.99'}\n🔎 Basado en radar #${(p.basado_en || []).join(', #')}`,
+      reply_markup: { inline_keyboard: [[{ text: '🛠️ Crear borradores + plan', callback_data: `fz:ok:${tok}` }, { text: '❌ No', callback_data: `fz:no:${tok}` }]] } });
+  }
+}
+
+async function createFusion(p) {
+  const created = [];
+  for (const x of p.productos || []) {
+    if (x.ya_existe) { const ex = Products.list({ all: true }).find((q) => q.title.toLowerCase() === String(x.titulo).toLowerCase()); if (ex) { created.push(ex); continue; } }
+    created.push(Products.upsert({ slug: freeSlug(x.titulo), title: String(x.titulo).slice(0, 120), short: String(x.frase_corta || '').slice(0, 200),
+      description: String(x.descripcion || ''), category: 'General', price_cents: 499, compare_cents: 999, stars: Math.ceil(4.99 / 0.013),
+      emoji: String(x.emoji || '✨').slice(0, 4), color: '#7c5cff', license_type: 'Propio', license_note: `Fusión del radar #${(p.basado_en || []).join(', #')}`, active: 0 }));
+  }
+  let pack = null;
+  if (p.tipo === 'pack' && created.length >= 2) {
+    pack = Products.upsert({ slug: freeSlug('pack ' + p.nombre), title: String(p.nombre).slice(0, 120), short: `Los ${created.length} juntos con descuento`,
+      description: created.map((c) => `• ${c.emoji} ${c.title}`).join('\n'), category: 'Packs', price_cents: Math.round(Number(p.precio_pack || 9.99) * 100),
+      compare_cents: created.reduce((t, c) => t + c.price_cents, 0), stars: Math.ceil(Number(p.precio_pack || 9.99) / 0.013), emoji: '📦', color: '#ff4fa3',
+      license_type: 'Propio', bundle_ids: created.map((c) => c.id).join(','), active: 0 });
+  }
+  for (const id of p.basado_en || []) { const c = Candidates.get(id); if (c && ['new', 'notified'].includes(c.status)) Candidates.update(id, { status: 'recreate' }); }
+  // plan de fabricación de cada producto nuevo
+  const nuevos = (p.productos || []).filter((x) => !x.ya_existe);
+  const plan = await askJson(`Para cada producto digital, escribe un plan de fabricación concreto en español (texto plano, sin markdown):
+${JSON.stringify(nuevos.map((x) => ({ titulo: x.titulo, publico: p.publico, contenido: x.contenido, descripcion: x.descripcion })))}
+Devuelve SOLO JSON: {"planes":[{"titulo":"...","plan":"1) Páginas exactas y qué va en cada una 2) Estilo visual (colores, tipografía) 3) Formato (PDF tablet/móvil, imprimible…) 4) Bono barato 5) Gancho de anuncio"}]}`, 8000).catch((e) => ({ planes: [], error: e.message }));
+  return { created, pack, plan };
+}
 // ===== Biblioteca de música real (canciones libres de derechos enviadas al bot) =====
 const GENRE_ALIAS = { reggaeton: 'reggaeton', 'reggaetón': 'reggaeton', regueton: 'reggaeton', pop: 'pop', trap: 'trap', cumbia: 'cumbia',
   electronica: 'electronica', 'electrónica': 'electronica', edm: 'electronica', house: 'electronica', lofi: 'lofi', 'lo-fi': 'lofi',
@@ -140,6 +212,7 @@ async function onMessage(m) {
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  if (text.startsWith('/fusionar')) return fuse().catch((e) => send(`⚠️ No pude fusionar: ${esc(e.message)}`));
   const mb = text.match(/^\/m[uú]sica\s+buscar\s+(\S+)/i);
   if (mb) {
     const g = GENRE_ALIAS[mb[1].toLowerCase()];
@@ -151,7 +224,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/musica — agregar canciones reales para los anuncios');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/musica — agregar canciones reales para los anuncios');
 }
 
 export async function onCallback(q) {
@@ -179,6 +252,23 @@ export async function onCallback(q) {
       await done('❌ Descartada');
     }
     try { fs.unlinkSync(path.join(pend, `${tok}.json`)); } catch {}
+    return;
+  }
+  if (action === 'fz' && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    const p = fusions.get(String(opts)); const done = (label) => rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text: label, callback_data: 'x:0' }]] } }).catch(() => {});
+    if (!p) { await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Propuesta vencida: usa /fusionar otra vez' }).catch(() => {}); return done('—'); }
+    if (id === 'no') { fusions.delete(String(opts)); await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Descartada' }).catch(() => {}); return done('❌ Descartada'); }
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Creando borradores y plan (1-2 min)…' }).catch(() => {});
+    await done('🛠️ Creando…'); fusions.delete(String(opts));
+    const { created, pack, plan } = await createFusion(p);
+    await done('✅ Borradores creados');
+    let msg = `✅ <b>${esc(p.nombre)}</b> · borradores creados (ocultos hasta que subas los archivos):\n` + created.map((c) => `• ${esc(c.emoji)} ${esc(c.title)}${c.active ? ' (ya en la tienda)' : ''}`).join('\n');
+    if (pack) msg += `\n• 📦 Pack: ${esc(pack.title)} ($${(pack.price_cents / 100).toFixed(2)}) — actívalo cuando los 3 estén publicados`;
+    msg += `\n\nEntra en ${esc(config.baseUrl)}/admin → Productos → Editar → sube el archivo → Guardar.\nO mándale este plan a Claude y te los fabrica.`;
+    await send(msg);
+    for (const pl of plan.planes || []) await send(`🛠️ <b>Plan: ${esc(pl.titulo)}</b>\n\n${esc(pl.plan)}`);
+    if (plan.error) await send(`(No pude generar el plan detallado: ${esc(plan.error)})`);
     return;
   }
   if (action === 'sel' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // marcar/desmarcar en el selector

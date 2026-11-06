@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { config } from './config.js';
-import { Products, Orders } from './db.js';
+import { Products, Orders, Subscribers, COUPON_OFF } from './db.js';
+import { sendEmail } from './delivery/email.js';
 import { deliver, verifyDownload, downloadLink } from './delivery/index.js';
 import { whatsappEnabled } from './delivery/whatsapp.js';
 import { paypalEnabled, createPaypalOrder, capturePaypalOrder } from './payments/paypal.js';
@@ -36,7 +37,45 @@ function publicProduct(p, lang = 'es') {
   let tr = {}; try { tr = JSON.parse(p.i18n || '{}')[lang] || {}; } catch {}
   return { id: p.id, slug: p.slug, title: tr.title || p.title, short: tr.short || p.short, description: tr.description || p.description,
     category: p.category, price: p.price_cents / 100, compare: p.compare_cents / 100, stars: p.stars, emoji: p.emoji, color: p.color,
-    cover: p.cover_url || `/cover/${p.slug}.svg`, license: p.license_type, featured: !!p.featured, sales: p.sales };
+    cover: p.cover_url || `/cover/${p.slug}.svg`, license: p.license_type, featured: !!p.featured, sales: p.sales,
+    pack: p.bundle_ids ? Products.bundleItems(p).map((i) => ({ slug: i.slug, title: i.title, emoji: i.emoji, price: i.price_cents / 100 })) : null };
+}
+
+/** Datos extra de la página de producto: packs que lo incluyen (para la caja "Llévate los 3"). */
+function packOffers(p) {
+  if (p.bundle_ids) return [];
+  return Products.bundlesWith(p.id).map((b) => {
+    const items = Products.bundleItems(b); const normal = items.reduce((t, i) => t + i.price_cents, 0);
+    return { slug: b.slug, title: b.title, price: b.price_cents / 100, normal: normal / 100, save: Math.max(0, normal - b.price_cents) / 100,
+      items: items.map((i) => ({ title: i.title, emoji: i.emoji })) };
+  });
+}
+
+/** Oferta "completa tu pack" después de comprar un producto suelto. */
+function upsellFor(o) {
+  if (o.status !== 'paid' || o.bundle_ids || o.currency === 'XTR' || Orders.upsellPaid(o.id)) return null;
+  const b = Products.bundlesWith(o.product_id)[0]; if (!b) return null;
+  const price = Math.max(100, b.price_cents - o.amount_cents);
+  const others = Products.bundleItems(b).filter((i) => i.id !== o.product_id);
+  return { slug: b.slug, title: b.title, price: price / 100, items: others.map((i) => ({ title: i.title, emoji: i.emoji })),
+    normal: others.reduce((t, i) => t + i.price_cents, 0) / 100 };
+}
+
+/** Precio final de un pedido web (cupón o "completa tu pack"). */
+function priceFor(p, b) {
+  if (b.upsell?.id) {
+    const prev = Orders.withProduct(b.upsell.id);
+    if (!prev || !keyOk(prev.id, b.upsell.key) || prev.status !== 'paid') throw new Error('La oferta no es válida');
+    const up = upsellFor(prev);
+    if (!up || up.slug !== p.slug) throw new Error('La oferta ya no está disponible');
+    return { cents: Math.round(up.price * 100), upsell_of: prev.id };
+  }
+  if (b.coupon) {
+    if (p.bundle_ids) throw new Error('El cupón es para productos sueltos (el pack ya tiene su descuento).');
+    const s = Subscribers.valid(b.coupon); if (!s) throw new Error('Cupón no válido o ya usado.');
+    return { cents: Math.max(100, Math.round(p.price_cents * (1 - COUPON_OFF))), coupon: s.code };
+  }
+  return { cents: p.price_cents };
 }
 
 function serveFile(res, file, headers = {}) {
@@ -76,7 +115,7 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
-    DATA: JSON.stringify(pp).replace(/</g, '\\u003c') }));
+    DATA: JSON.stringify({ ...pp, packs: packOffers(p) }).replace(/</g, '\\u003c') }));
 });
 on('GET', '/pedido/:id', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('order.html')); });
 on('GET', '/legal', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('legal.html')); });
@@ -108,9 +147,11 @@ on('POST', '/api/orders', async (req, res) => {
   const whatsapp = String(b.whatsapp || '').replace(/[^\d+]/g, '').slice(0, 20);
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Correo no válido');
   if (!email && !whatsapp) return fail(res, 400, 'Indica tu correo o WhatsApp para enviarte el producto');
+  let pr; try { pr = priceFor(p, b); } catch (e) { return fail(res, 400, e.message); }
+  const extra = { coupon: pr.coupon || '', upsell_of: pr.upsell_of || '' };
   if (b.method === 'paypal') {
     if (!paypalEnabled()) return fail(res, 400, 'PayPal no está activo');
-    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'paypal', amount_cents: p.price_cents, currency: 'USD', lang: b.lang });
+    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'paypal', amount_cents: pr.cents, currency: 'USD', lang: b.lang, ...extra });
     try {
       const paypalId = await createPaypalOrder(o, p);
       Orders.update(o.id, { provider_ref: paypalId });
@@ -119,10 +160,39 @@ on('POST', '/api/orders', async (req, res) => {
   }
   if (b.method === 'binance') {
     if (!binanceEnabled()) return fail(res, 400, 'Binance no está activo');
-    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'binance', amount_cents: uniqueAmount(p.price_cents), currency: 'USDT', lang: b.lang });
+    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'binance', amount_cents: uniqueAmount(pr.cents), currency: 'USDT', lang: b.lang, ...extra });
     return json(res, 200, { id: o.id, key: orderKey(o.id), amount: (o.amount_cents / 100).toFixed(2), payId: config.binance.payId });
   }
   return fail(res, 400, 'Método de pago no válido');
+});
+
+// Cupón: comprobar antes de pagar
+on('POST', '/api/coupon', async (req, res) => {
+  const b = await body(req, 1e4); const p = Products.bySlug(String(b.slug || ''));
+  if (!p?.active) return fail(res, 404, 'Producto no disponible');
+  try { const pr = priceFor(p, { coupon: b.code }); json(res, 200, { code: pr.coupon, price: pr.cents / 100, off: Math.round(COUPON_OFF * 100) }); }
+  catch (e) { fail(res, 400, e.message); }
+});
+// Correo a cambio de cupón (también suma a la lista para futuras ofertas)
+const subHits = new Map();
+on('POST', '/api/subscribe', async (req, res) => {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
+  const n = (subHits.get(ip) || 0) + 1; subHits.set(ip, n); if (subHits.size > 5000) subHits.clear();
+  if (n > 8) return fail(res, 429, 'Demasiados intentos, prueba más tarde');
+  const b = await body(req, 1e4); const email = String(b.email || '').trim().slice(0, 120);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Revisa tu correo');
+  const s = Subscribers.add(email, b.source);
+  if (s.used_order) return fail(res, 400, 'Este correo ya usó su cupón de bienvenida 💜');
+  if (!s.existed && config.email.resendKey) {
+    const off = Math.round(COUPON_OFF * 100);
+    sendEmail(email, `🎁 Tu cupón de ${off}% en ${config.storeName}`, `Tu cupón: ${s.code} (${off}% en tu primera compra de un producto).`,
+      `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px">
+       <h2 style="margin:0 0 8px">🎁 ¡Bienvenida/o a ${esc(config.storeName)}!</h2><p>Tu cupón de <b>${off}% de descuento</b> en tu primera compra:</p>
+       <p style="font-size:28px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:10px 18px;border-radius:12px">${s.code}</p>
+       <p style="color:#aab">Válido una vez, en cualquier producto suelto. <a style="color:#b9a6ff" href="${config.baseUrl}">Ver la tienda</a></p></div>`)
+      .catch((e) => console.error('[cupón]', e.message));
+  }
+  json(res, 200, { code: s.code, off: Math.round(COUPON_OFF * 100) });
 });
 
 on('POST', '/api/paypal/capture', async (req, res) => {
@@ -155,7 +225,8 @@ on('POST', '/api/binance/submit', async (req, res) => {
 on('GET', '/api/orders/:id', (req, res, { id }, url) => {
   const o = Orders.withProduct(id);
   if (!o || !keyOk(o.id, url.searchParams.get('k'))) return fail(res, 404, 'Pedido no encontrado');
-  json(res, 200, { id: o.id, status: o.status, method: o.method, title: o.title, emoji: o.emoji, slug: o.slug,
+  json(res, 200, { id: o.id, status: o.status, method: o.method, title: o.title, emoji: o.emoji, slug: o.slug, email: o.email,
+    upsell: upsellFor(o), pack: o.bundle_ids ? Products.bundleItems(o).map((i) => i.title) : null,
     amount: o.currency === 'XTR' ? o.amount_cents : (o.amount_cents / 100).toFixed(2), currency: o.currency,
     payId: o.method === 'binance' ? config.binance.payId : undefined,
     download: o.status === 'paid' ? downloadLink(o.id) : null,
@@ -175,27 +246,39 @@ on('POST', '/api/stars/invoice', async (req, res) => {
 });
 
 // ===== Descargas =====
-on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }) => {
+on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }, url) => {
   const problem = verifyDownload(id, exp, sig);
   const o = Orders.withProduct(id);
   const msg = (t) => { res.writeHead(403, { 'content-type': MIME['.html'] }); res.end(renderPage('order.html', { DATA: JSON.stringify({ error: t }) })); };
   if (problem || !o || o.status !== 'paid') return msg(problem === 'caducado' ? 'El enlace caducó. Pide uno nuevo en el bot con /mispedidos o escríbenos.' : 'Enlace no válido.');
-  if (o.downloads >= config.maxDownloads) return msg('Llegaste al máximo de descargas de este pedido. Escríbenos si necesitas ayuda.');
+  let item = o;
+  if (o.bundle_ids) {  // pack: página con un botón por producto
+    const items = Products.bundleItems(o); const i = Number(url.searchParams.get('i'));
+    if (!i) {
+      res.writeHead(200, { 'content-type': MIME['.html'] });
+      return res.end(renderPage('order.html', { DATA: JSON.stringify({ packDownload: { title: o.title, id: o.id,
+        items: items.map((x) => ({ title: x.title, emoji: x.emoji, url: `${url.pathname}?i=${x.id}` })) } }).replace(/</g, '\\u003c') }));
+    }
+    item = items.find((x) => x.id === i); if (!item) return msg('Ese producto no está en tu pack.');
+  }
+  const limit = config.maxDownloads * (o.bundle_ids ? Math.max(1, Products.bundleItems(o).length) : 1);
+  if (o.downloads >= limit) return msg('Llegaste al máximo de descargas de este pedido. Escríbenos si necesitas ayuda.');
   Orders.update(o.id, { downloads: o.downloads + 1 });
-  if (o.external_url) { res.writeHead(302, { location: o.external_url }); return res.end(); }
-  const file = path.join(config.paths.files, path.basename(o.file_name || ''));
-  if (!o.file_name || !fs.existsSync(file)) return msg('El archivo no está disponible todavía. Te lo enviaremos pronto.');
+  if (item.external_url) { res.writeHead(302, { location: item.external_url }); return res.end(); }
+  const file = path.join(config.paths.files, path.basename(item.file_name || ''));
+  if (!item.file_name || !fs.existsSync(file)) return msg('El archivo no está disponible todavía. Te lo enviaremos pronto.');
   serveFile(res, file, { 'content-disposition': `attachment; filename="${encodeURIComponent(path.basename(file))}"` });
 });
 
 // ===== Admin =====
 // La clave viaja codificada (encodeURIComponent) para admitir tildes, ñ y símbolos; se ignoran espacios al inicio/final.
 const adminKeyFrom = (req) => { const raw = String(req.headers['x-admin-key'] || ''); try { return decodeURIComponent(raw).trim(); } catch { return raw.trim(); } };
-const adminOk = (req) => { const k = adminKeyFrom(req), pw = String(config.adminPassword || '').trim();
+const adminOkKey = (raw) => { let k = String(raw || ''); try { k = decodeURIComponent(k); } catch {} k = k.trim(); const pw = String(config.adminPassword || '').trim();
   return !!pw && !!k && crypto.timingSafeEqual(crypto.createHash('sha256').update(k).digest(), crypto.createHash('sha256').update(pw).digest()); };
+const adminOk = (req) => adminOkKey(req.headers['x-admin-key']);
 
 on('GET', '/api/admin/summary', (req, res) => adminOk(req) ? json(res, 200, {
-  stats: Orders.stats(), products: Products.list({ all: true }), orders: Orders.recent(100),
+  stats: Orders.stats(), products: Products.list({ all: true }), orders: Orders.recent(100), subscribers: Subscribers.count(),
   perf: Object.fromEntries(Products.performance(7).map((p) => [p.id, p])) }) : fail(res, 401, 'Clave incorrecta'));
 
 on('POST', '/api/admin/products', async (req, res) => {
@@ -207,20 +290,32 @@ on('POST', '/api/admin/products', async (req, res) => {
     price_cents: Math.round(b.price * 100), compare_cents: Math.round((b.compare || 0) * 100),
     stars: Number(b.stars) || Math.ceil(b.price / 0.013), emoji: b.emoji || '✨', color: b.color || '#7c5cff', cover_url: b.cover_url || '',
     external_url: b.external_url || '', license_type: b.license_type || 'PLR', license_note: b.license_note || '',
-    featured: b.featured ? 1 : 0, active: b.active === false ? 0 : 1 };
+    featured: b.featured ? 1 : 0, active: b.active === false ? 0 : 1,
+    bundle_ids: Array.isArray(b.bundle_ids) ? b.bundle_ids.map(Number).filter((x) => x && x !== Number(b.id)).join(',') : undefined };
   if (b.fileBase64 && b.fileName) {
     const name = `${slug}-${Date.now()}${path.extname(b.fileName).toLowerCase().replace(/[^.\w]/g, '')}`;
     await fs.promises.writeFile(path.join(config.paths.files, name), Buffer.from(b.fileBase64, 'base64'));
     data.file_name = name;
   }
+  if (data.bundle_ids && data.active) {  // un pack solo se publica si todos sus productos tienen archivo
+    const ids = data.bundle_ids.split(',').map(Number); const items = ids.map((i) => Products.byId(i)).filter(Boolean);
+    const missing = items.filter((i) => !i.file_name && !i.external_url);
+    if (items.length < 2) return fail(res, 400, 'Un pack necesita al menos 2 productos');
+    if (missing.length) return fail(res, 400, 'Primero sube el archivo de: ' + missing.map((i) => i.title).join(', '));
+  }
   const before = data.id ? Products.byId(data.id) : null;
   try {
     const saved = Products.upsert(data);
-    if (saved.active && (!before || !before.active) && (saved.file_name || saved.external_url)) offerAds(saved).catch(() => {});
+    if (saved.active && (!before || !before.active) && !saved.bundle_ids && (saved.file_name || saved.external_url)) offerAds(saved).catch(() => {});
     json(res, 200, saved);
   } catch (e) { fail(res, 400, e.message.includes('UNIQUE') ? 'Ya existe un producto con ese enlace (slug)' : e.message); }
 });
 
+on('GET', '/api/admin/subscribers.csv', (req, res, _, url) => {
+  if (!adminOk(req) && !adminOkKey(url.searchParams.get('k'))) return fail(res, 401, 'Clave incorrecta');
+  res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="suscriptores.csv"' });
+  res.end('email,cupon,usado_en_pedido,fecha\n' + Subscribers.list(100000).map((s) => [s.email, s.code, s.used_order || '', s.created_at].join(',')).join('\n'));
+});
 on('POST', '/api/admin/products/:id/delete', (req, res, { id }) => { if (!adminOk(req)) return fail(res, 401, 'Clave incorrecta'); Products.remove(Number(id)); json(res, 200, { ok: true }); });
 
 on('POST', '/api/admin/orders/:id/:action', async (req, res, { id, action }) => {

@@ -102,7 +102,42 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN launched_at TEXT",
   "ALTER TABLE products ADD COLUMN retired_at TEXT",
   "ALTER TABLE products ADD COLUMN candidate_id INTEGER",
+  "ALTER TABLE products ADD COLUMN bundle_ids TEXT DEFAULT ''",   // pack: ids de los productos incluidos, ej "3,5,8"
+  "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
+  "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",      // pedido original cuando es "completa tu pack"
 ]) { try { db.exec(sql); } catch {} }
+
+// Suscriptores: dejan su correo a cambio de un cupón de primera compra
+db.exec(`CREATE TABLE IF NOT EXISTS subscribers (
+  email TEXT PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  source TEXT DEFAULT '',
+  used_order TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);`);
+
+export const COUPON_OFF = 0.15;  // 15 % en productos sueltos, una sola vez
+
+export const Subscribers = {
+  /** Devuelve el cupón del correo (lo crea si es nuevo). */
+  add(email, source = '') {
+    const e = String(email).trim().toLowerCase();
+    const old = db.prepare('SELECT * FROM subscribers WHERE email = ?').get(e);
+    if (old) return { ...old, existed: true };
+    let code;
+    do { code = 'HOLA-' + crypto.randomBytes(3).toString('hex').toUpperCase(); }
+    while (db.prepare('SELECT 1 FROM subscribers WHERE code = ?').get(code));
+    db.prepare('INSERT INTO subscribers (email, code, source) VALUES (?, ?, ?)').run(e, code, String(source).slice(0, 60));
+    return db.prepare('SELECT * FROM subscribers WHERE email = ?').get(e);
+  },
+  /** Cupón válido y sin usar (ignora mayúsculas y espacios). */
+  valid(code) {
+    const c = String(code || '').trim().toUpperCase();
+    return c ? db.prepare('SELECT * FROM subscribers WHERE code = ? AND used_order IS NULL').get(c) || null : null;
+  },
+  count: () => db.prepare('SELECT COUNT(*) n, SUM(used_order IS NOT NULL) used FROM subscribers').get(),
+  list: (limit = 500) => db.prepare('SELECT email, code, source, used_order, created_at FROM subscribers ORDER BY created_at DESC LIMIT ?').all(limit),
+};
 
 export const newOrderId = () =>
   'P' + crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 7);
@@ -116,7 +151,7 @@ export const Products = {
   upsert(p) {
     const fields = ['slug', 'title', 'short', 'description', 'category', 'price_cents', 'compare_cents', 'stars', 'emoji',
       'color', 'cover_url', 'file_name', 'external_url', 'license_type', 'license_note', 'i18n', 'featured', 'active',
-      'launched_at', 'retired_at', 'candidate_id'];
+      'launched_at', 'retired_at', 'candidate_id', 'bundle_ids'];
     // Al activarse por primera vez queda registrada la fecha de lanzamiento.
     if (p.active === 1 && !(p.id && Products.byId(p.id)?.launched_at)) p.launched_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (p.active === 1) p.retired_at = null;
@@ -130,6 +165,13 @@ export const Products = {
     db.prepare(`INSERT INTO products (${keys.join(',')}) VALUES (${keys.map((k) => ':' + k).join(',')})`).run(data);
     return Products.bySlug(data.slug);
   },
+  /** Productos incluidos en un pack (vacío si no es pack). */
+  bundleItems(p) {
+    const ids = String(p?.bundle_ids || '').split(',').map(Number).filter(Boolean);
+    return ids.map((i) => Products.byId(i)).filter(Boolean);
+  },
+  /** Packs activos que incluyen este producto. */
+  bundlesWith: (id) => db.prepare("SELECT * FROM products WHERE active = 1 AND bundle_ids != '' AND (',' || bundle_ids || ',') LIKE ?").all(`%,${Number(id)},%`),
   remove: (id) => db.prepare("UPDATE products SET active = 0, retired_at = datetime('now') WHERE id = ?").run(id),
   view: (id) => db.prepare(`INSERT INTO product_views (product_id, day, views) VALUES (?, date('now'), 1)
     ON CONFLICT(product_id, day) DO UPDATE SET views = views + 1`).run(id),
@@ -203,13 +245,13 @@ export const Candidates = {
 export const Orders = {
   create(o) {
     const id = newOrderId();
-    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
-      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '');
+    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
+      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '');
     return Orders.get(id);
   },
   get: (id) => db.prepare('SELECT * FROM orders WHERE id = ?').get(String(id || '').toUpperCase()),
-  withProduct: (id) => db.prepare(`SELECT o.*, p.title, p.slug, p.file_name, p.external_url, p.emoji
+  withProduct: (id) => db.prepare(`SELECT o.*, p.title, p.slug, p.file_name, p.external_url, p.emoji, p.bundle_ids
     FROM orders o JOIN products p ON p.id = o.product_id WHERE o.id = ?`).get(String(id || '').toUpperCase()),
   update(id, data) {
     const sets = Object.keys(data).map((k) => `${k} = :${k}`).join(', ');
@@ -220,9 +262,15 @@ export const Orders = {
   markPaid(id, ref = '') {
     const r = db.prepare(`UPDATE orders SET status = 'paid', paid_at = datetime('now'), provider_ref = COALESCE(NULLIF(?, ''), provider_ref)
       WHERE id = ? AND status IN ('pending','review')`).run(ref, id);
-    if (r.changes) db.prepare('UPDATE products SET sales = sales + 1 WHERE id = (SELECT product_id FROM orders WHERE id = ?)').run(id);
+    if (r.changes) {
+      db.prepare('UPDATE products SET sales = sales + 1 WHERE id = (SELECT product_id FROM orders WHERE id = ?)').run(id);
+      const c = db.prepare('SELECT coupon FROM orders WHERE id = ?').get(id)?.coupon;
+      if (c) db.prepare('UPDATE subscribers SET used_order = ? WHERE code = ? AND used_order IS NULL').run(id, c);
+    }
     return r.changes > 0;
   },
+  /** ¿Ya se pagó un "completa tu pack" de este pedido? */
+  upsellPaid: (orderId) => !!db.prepare("SELECT 1 FROM orders WHERE upsell_of = ? AND status = 'paid'").get(orderId),
   recent: (limit = 50) => db.prepare(`SELECT o.*, p.title FROM orders o JOIN products p ON p.id = o.product_id
     ORDER BY o.created_at DESC LIMIT ?`).all(limit),
   byStatus: (status) => db.prepare(`SELECT o.*, p.title FROM orders o JOIN products p ON p.id = o.product_id

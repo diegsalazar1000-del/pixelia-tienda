@@ -25,6 +25,9 @@ function show(icon, title, text, actions = '') {
 }
 
 async function load() {
+  if (PRESET && PRESET.packDownload) { const d = PRESET.packDownload;
+    return show('<div class="icon">📦</div>', escH(d.title), `Pedido ${escH(d.id)} · descarga cada producto de tu pack:`,
+      d.items.map((i) => `<a class="btn btn-main" href="${escH(i.url)}">⬇️ ${escH(i.emoji)} ${escH(i.title)}</a>`).join('')); }
   if (PRESET && PRESET.error) return show('<div class="icon">⚠️</div>', 'Ups', escH(PRESET.error), `<a class="btn btn-ghost" href="/">${t('back')}</a>`);
   try {
     const o = await api(`/api/orders/${encodeURIComponent(id)}?k=${encodeURIComponent(key || '')}`);
@@ -34,9 +37,13 @@ async function load() {
       try { if (o.currency !== 'XTR' && !localStorage.getItem('px_' + o.id)) {
         fbq('track', 'Purchase', { value: Number(o.amount), currency: 'USD', content_ids: [o.slug], content_type: 'product' }, { eventID: o.id });
         localStorage.setItem('px_' + o.id, '1'); } } catch {}
+      const up = o.upsell ? `<div style="margin-top:22px;padding:16px;border-radius:16px;background:linear-gradient(135deg,#7c5cff33,#ff4fa333);border:1px solid #ffffff22;text-align:left">
+          <h3 style="margin:0 0 6px">🎁 Completa tu pack por solo ${money(o.upsell.price)}</h3>
+          <p style="margin:4px 0">Llévate también ${o.upsell.items.map((i) => `${escH(i.emoji)} <b>${escH(i.title)}</b>`).join(' + ')} (normalmente ${money(o.upsell.normal)}). Solo en esta página.</p>
+          <a class="btn btn-main btn-block" style="margin-top:10px" href="/p/${encodeURIComponent(o.upsell.slug)}?up=${encodeURIComponent(o.id)}&k=${encodeURIComponent(key)}">Sí, lo quiero →</a></div>` : '';
       return show('<div class="icon">🎉</div>', t('orderPaid'),
         `${escH(o.emoji)} <b>${escH(o.title)}</b><br>Pedido ${o.id}. También te lo enviamos por los canales que indicaste.`,
-        `<a class="btn btn-main" href="${o.download}">⬇️ ${t('download')}</a>${tgBtn}<a class="btn btn-ghost" href="/">${t('back')}</a>`);
+        `<a class="btn btn-main" href="${o.download}">⬇️ ${t('download')}</a>${tgBtn}<a class="btn btn-ghost" href="/">${t('back')}</a>${up}`);
     }
     if (o.status === 'review') return show('<div class="spinner"></div>', t('orderReview'),
       `Pedido <b>${o.id}</b> · ${o.amount} ${o.currency}. Esta página se actualiza sola; también te avisaremos cuando esté listo.`, tgBtn);

@@ -13,6 +13,14 @@
 {{PIXEL}}
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/css/styles.css">
+<style>
+.offer{margin:14px 0;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#7c5cff33,#ff4fa333);border:1px solid #ffffff22}
+.offer h4{margin:0 0 6px;font-size:1.02rem}.offer p{margin:4px 0;color:var(--dim,#aab);font-size:.92rem}
+.offer .row{display:flex;gap:8px;margin-top:8px}.offer input{flex:1;min-width:0}.offer .btn{white-space:nowrap}
+.pack-list{list-style:none;padding:0;margin:8px 0}.pack-list li{padding:4px 0}
+.coupon-line{margin:8px 0 0;font-size:.9rem}.coupon-line a{color:#b9a6ff;cursor:pointer}
+.ok{color:#5fe3a1}
+</style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -30,6 +38,54 @@
 <script>
 const P = {{DATA}};
 let CFG = {}, METHOD = '', ORDER = null;
+const QS = new URLSearchParams(location.search);
+let PRICE = P.price, COUPON = '', UPSELL = null;   // precio final, cupón aplicado, oferta "completa tu pack"
+
+function priceBox() {
+  const off = P.compare > PRICE ? Math.round((1 - PRICE / P.compare) * 100) : 0;
+  const was = UPSELL ? UPSELL.normal : COUPON ? P.price : P.compare;
+  return `<b>${inTelegram ? P.stars + ' ⭐' : money(PRICE)}</b>${!inTelegram && was > PRICE ? `<s>${money(was)}</s><span class="save">-${Math.round((1 - PRICE / was) * 100)}%</span>` : (off && !inTelegram ? `<s>${money(P.compare)}</s><span class="save">-${off}%</span>` : '')}`;
+}
+function refreshPrice() { const b = $('.big-price'); if (b) b.innerHTML = priceBox(); }
+
+function offersHtml() {
+  if (inTelegram) return '';
+  let h = '';
+  if (UPSELL) h += `<div class="offer"><h4>🎁 Oferta solo para ti: completa tu pack</h4><p>Por haber comprado, te llevas ${UPSELL.items.map((i) => `${escH(i.emoji)} <b>${escH(i.title)}</b>`).join(' + ')} por solo <b>${money(UPSELL.price)}</b> (normalmente ${money(UPSELL.normal)}).</p></div>`;
+  if (P.pack) h += `<div class="offer"><h4>📦 Este pack incluye</h4><ul class="pack-list">${P.pack.map((i) => `<li>${escH(i.emoji)} ${escH(i.title)} <small style="color:var(--dim)">(${money(i.price)})</small></li>`).join('')}</ul></div>`;
+  for (const k of (P.packs || []).slice(0, 1)) h += `<a class="offer" style="display:block;text-decoration:none;color:inherit" href="/p/${encodeURIComponent(k.slug)}">
+      <h4>🔥 Llévate los ${k.items.length} por ${money(k.price)}</h4><p>${k.items.map((i) => escH(i.emoji) + ' ' + escH(i.title)).join(' · ')}</p>
+      <p><b>Ahorras ${money(k.save)}</b> · <u>Ver el pack →</u></p></a>`;
+  if (!P.pack && !UPSELL) h += `<div class="offer" id="welcome"><h4>🎁 ¿Primera compra? 15% de descuento</h4>
+      <p>Déjanos tu correo y te damos tu cupón al instante (también te avisamos de novedades).</p>
+      <div class="row"><input id="subEmail" type="email" placeholder="tu@correo.com" autocomplete="email"><button class="btn btn-main" id="subBtn">Quiero mi 15%</button></div>
+      <p class="err" id="subErr"></p></div>`;
+  return h;
+}
+
+function wireOffers() {
+  const sb = $('#subBtn'); if (!sb) return;
+  sb.onclick = async () => {
+    $('#subErr').textContent = ''; sb.disabled = true;
+    try {
+      const email = $('#subEmail').value.trim();
+      const r = await api('/api/subscribe', { method: 'POST', body: { email, source: P.slug } });
+      try { localStorage.setItem('px_coupon', r.code); } catch {}
+      fbq('track', 'Lead', { content_name: 'cupon-bienvenida' });
+      await applyCoupon(r.code, true);
+      if ($('#email') && !$('#email').value) $('#email').value = email;
+      $('#welcome').innerHTML = `<h4 class="ok">✅ ¡Listo! Cupón <b>${escH(r.code)}</b> aplicado (-${r.off}%)</h4><p>También te lo enviamos por correo.</p>`;
+    } catch (e) { $('#subErr').textContent = e.message; sb.disabled = false; }
+  };
+}
+
+async function applyCoupon(code, silent) {
+  const r = await api('/api/coupon', { method: 'POST', body: { slug: P.slug, code } });
+  COUPON = r.code; PRICE = r.price; refreshPrice();
+  const cl = $('#couponLine'); if (cl) cl.innerHTML = `<span class="ok">✅ Cupón ${escH(r.code)} aplicado: -${r.off}%</span>`;
+  if (METHOD === 'paypal') pick('paypal');  // vuelve a dibujar PayPal con el precio nuevo
+  return r;
+}
 
 function view() {
   const off = P.compare > P.price ? Math.round((1 - P.price / P.compare) * 100) : 0;
@@ -39,13 +95,13 @@ function view() {
     <div class="crumbs reveal"><a href="/">Inicio</a> / <a href="/#catalogo">${escH(P.category)}</a></div>
     <h1 class="reveal">${escH(P.emoji)} ${escH(P.title)}</h1>
     <p class="short reveal">${escH(P.short)}</p>
-    <div class="big-price reveal"><b>${inTelegram ? P.stars + ' ⭐' : money(P.price)}</b>
-      ${off && !inTelegram ? `<s>${money(P.compare)}</s><span class="save">-${off}%</span>` : ''}</div>
+    <div class="big-price reveal">${priceBox()}</div>
+    ${offersHtml()}
     <div class="checkout reveal" id="checkout"></div>
     <div class="feats reveal"><div>⚡ ${t('instant')}</div><div>📩 Correo · Telegram · WhatsApp</div><div>🔁 Descarga hasta 5 veces</div><div>💬 Soporte por Telegram</div></div>
     <div class="desc reveal">${escH(P.description)}</div>
   </div>`;
-  enhance();
+  enhance(); wireOffers();
 }
 
 function checkoutTelegram() {
@@ -78,7 +134,13 @@ function checkoutWeb() {
     ${CFG.whatsapp ? `<div class="field"><label>${t('whatsapp')}</label><input id="wa" type="tel" placeholder="+58 412 1234567" autocomplete="tel"></div>` : ''}
     <h3 style="margin-top:18px">${t('payWith')}</h3>
     <div class="methods">${methods.map(([k, n, s]) => `<button class="method" data-m="${k}">${n}<small>${s}</small></button>`).join('')}</div>
-    <div id="pay"></div><div class="err" id="err"></div>`;
+    <div id="pay"></div><div class="err" id="err"></div>
+    ${!P.pack && !UPSELL ? `<p class="coupon-line" id="couponLine"><a id="haveCoupon">¿Tienes un cupón?</a></p>` : ''}`;
+  const hc = $('#haveCoupon');
+  if (hc) hc.onclick = () => {
+    $('#couponLine').innerHTML = `<span class="row" style="display:flex;gap:8px"><input id="cpn" placeholder="HOLA-XXXXXX" style="flex:1"><button class="btn btn-ghost" id="cpnBtn">Aplicar</button></span>`;
+    $('#cpnBtn').onclick = () => applyCoupon($('#cpn').value).catch((e) => { $('#err').textContent = e.message; });
+  };
   $('.methods').onclick = (e) => { const b = e.target.closest('.method'); if (b) pick(b.dataset.m); };
   pick(methods[0][0]);
 }
@@ -92,8 +154,9 @@ function contact() {
 
 async function createOrder(method) {
   $('#err').textContent = '';
-  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact() } });
-  fbq('track', 'InitiateCheckout', { content_ids: [P.slug], value: P.price, currency: 'USD' });
+  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact(),
+    coupon: COUPON || undefined, upsell: UPSELL ? { id: QS.get('up'), key: QS.get('k') } : undefined } });
+  fbq('track', 'InitiateCheckout', { content_ids: [P.slug], value: PRICE, currency: 'USD' });
   return ORDER;
 }
 
@@ -155,10 +218,24 @@ function binanceSteps(o) {
   };
 }
 
-view();
-fbq('track', 'ViewContent', { content_ids: [P.slug], content_type: 'product', value: P.price, currency: 'USD' });
-if (inTelegram) checkoutTelegram();
-else api('/api/config').then((c) => { CFG = c; checkoutWeb(); });
+async function start() {
+  // ¿Viene de "completa tu pack"? (enlace desde la página del pedido)
+  if (QS.get('up') && QS.get('k') && P.pack) {
+    try {
+      const o = await api(`/api/orders/${encodeURIComponent(QS.get('up'))}?k=${encodeURIComponent(QS.get('k'))}`);
+      if (o.upsell && o.upsell.slug === P.slug) { UPSELL = o.upsell; PRICE = o.upsell.price; UPSELL.email = o.email; }
+    } catch {}
+  }
+  view();
+  fbq('track', 'ViewContent', { content_ids: [P.slug], content_type: 'product', value: PRICE, currency: 'USD' });
+  if (inTelegram) return checkoutTelegram();
+  CFG = await api('/api/config'); checkoutWeb();
+  if (UPSELL?.email && $('#email')) $('#email').value = UPSELL.email;
+  // cupón guardado de una visita anterior
+  let saved = ''; try { saved = localStorage.getItem('px_coupon') || ''; } catch {}
+  if (saved && !P.pack && !UPSELL) applyCoupon(saved).then(() => { const w = $('#welcome'); if (w) w.remove(); }).catch(() => { try { localStorage.removeItem('px_coupon'); } catch {} });
+}
+start();
 </script>
 </body>
 </html>

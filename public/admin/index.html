@@ -48,6 +48,7 @@ function render() {
     <div class="kpi"><small>Ingresos USD</small><b>${money(s.usd_cents / 100)}</b></div>
     <div class="kpi"><small>Ingresos Stars</small><b>${s.stars} ⭐</b></div>
     <div class="kpi"><small>Por revisar (Binance)</small><b style="color:var(--warn)">${review}</b></div>
+    <div class="kpi"><small>Correos (cupón)</small><b>${DATA.subscribers?.n || 0}</b><a href="/api/admin/subscribers.csv?k=${encodeURIComponent(KEY.trim())}" style="font-size:.75rem;color:var(--dim)">descargar lista · ${DATA.subscribers?.used || 0} usaron cupón</a></div>
   </div>
   <div class="tabs">
     <button class="chip ${TAB === 'orders' ? 'on' : ''}" data-tab="orders">Pedidos</button>
@@ -93,7 +94,7 @@ function products() {
   $('#tab').innerHTML = `<div class="scroll"><table><tr><th></th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stars</th><th>Licencia</th><th>Archivo</th><th>Últimos 7 días</th><th>Ventas</th><th></th></tr>
   ${DATA.products.map((p) => `<tr style="${p.active ? '' : 'opacity:.4'}"><td style="font-size:1.4rem">${p.emoji}</td><td><b>${escH(p.title)}</b><br><a href="/p/${p.slug}" target="_blank" style="color:var(--dim)">/p/${p.slug}</a></td>
     <td>${escH(p.category)}</td><td>${money(p.price_cents / 100)}</td><td>${p.stars}</td><td>${escH(p.license_type)}</td>
-    <td>${p.file_name ? '✅' : p.external_url ? '🔗' : '<span style="color:var(--bad)">falta</span>'}</td>
+    <td>${p.bundle_ids ? '📦 pack' : p.file_name ? '✅' : p.external_url ? '🔗' : '<span style="color:var(--bad)">falta</span>'}</td>
     <td><small>${DATA.perf[p.id] ? `👁 ${DATA.perf[p.id].views} · 🛒 ${DATA.perf[p.id].checkouts} · 💰 ${DATA.perf[p.id].sales}` : p.active ? '' : 'borrador/oculto'}</small></td><td>${p.sales}</td>
     <td><button class="mini" data-e="${p.id}">Editar</button>${p.active ? `<button class="mini" data-d="${p.id}">Ocultar</button>` : ''}</td></tr>`).join('')}</table></div>`;
   $('#tab').onclick = async (e) => {
@@ -120,6 +121,9 @@ function form(p) {
     <div class="field full"><label>Imagen de portada (URL, opcional; si no, se genera una)</label><input id="f_cover_url" value="${v('cover_url')}"></div>
     <div class="field"><label>Archivo del producto (PDF, ZIP…) ${p.file_name ? '· actual: ' + escH(p.file_name) : ''}</label><input id="f_file" type="file"></div>
     <div class="field"><label>…o enlace de entrega (Drive, Notion…)</label><input id="f_external_url" value="${v('external_url')}"></div>
+    <div class="field full"><label>📦 ¿Es un PACK? Marca los productos que incluye (entonces no hace falta subir archivo). Ej.: 3 productos de $4.99 → pack a $9.99</label>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">${DATA.products.filter((x) => !x.bundle_ids && x.id !== p.id).map((x) =>
+        `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="f_bundle" value="${x.id}" ${String(p.bundle_ids || '').split(',').includes(String(x.id)) ? 'checked' : ''}> ${escH(x.emoji)} ${escH(x.title)} (${money(x.price_cents / 100)})</label>`).join('') || '<small>Primero crea los productos sueltos.</small>'}</div></div>
     <label class="full" style="display:flex;gap:8px;align-items:center;margin:6px 0 16px"><input id="f_featured" type="checkbox" ${p.featured ? 'checked' : ''}> Destacar (🔥 Top)</label>
     <button class="btn btn-main full" id="save">Guardar producto</button><div class="err full" id="ferr"></div></div>`;
   $('#save').onclick = async () => {
@@ -127,6 +131,7 @@ function form(p) {
     ['title', 'short', 'description', 'category', 'emoji', 'color', 'license_type', 'license_note', 'cover_url', 'external_url'].forEach((k) => (b[k] = $('#f_' + k).value.trim()));
     b.price = parseFloat($('#f_price').value); b.compare = parseFloat($('#f_compare').value) || 0; b.stars = parseInt($('#f_stars').value) || 0;
     b.featured = $('#f_featured').checked; b.active = true;
+    b.bundle_ids = $$('.f_bundle').filter((c) => c.checked).map((c) => Number(c.value));
     const f = $('#f_file').files[0];
     $('#save').disabled = true; $('#save').textContent = f ? 'Subiendo archivo…' : 'Guardando…';
     try {
