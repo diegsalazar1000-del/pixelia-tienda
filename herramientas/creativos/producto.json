@@ -1,0 +1,23 @@
+{
+  "nombre": "Mi Año en Mini · Planner Digital 2027",
+  "precio": 7, "tachado": 14,
+  "dominio": "pixeliadigital.app",
+  "extras": "+ 75 stickers · 4 portadas · edición estudiante",
+  "imagenes": {"portada": "portada.png", "semana": "semana.png", "mes": "mes.png", "finanzas": "finanzas.png",
+               "movil": "movil.png", "movil-mes": "movil-mes.png", "mockup": "mockup.png"},
+  "enfoques": [
+    {"id": "A-agenda", "etiqueta": "Planner 2027", "titular": "La agenda que sí vas a usar todo el año",
+     "subtitulo": "Una semana por página, sin relleno. En tu tablet y en tu móvil.", "imagen": "semana", "movil": "movil", "cta": "Descárgalo hoy"},
+    {"id": "B-todo-en-uno", "etiqueta": "Todo en un archivo", "titular": "Metas, hábitos y finanzas en un solo planner",
+     "subtitulo": "Con enlaces: toca un mes o una semana y llegas en un segundo.", "imagen": "mes", "movil": "movil-mes", "cta": "Lo quiero"},
+    {"id": "C-oferta", "etiqueta": "Precio de lanzamiento", "titular": "Organiza tu 2027 por solo $7",
+     "subtitulo": "Incluye 75 stickers, 4 portadas y edición estudiante.", "imagen": "portada", "movil": "movil", "cta": "Aprovechar oferta"}
+  ],
+  "reel": [
+    {"tipo": "gancho", "texto": "¿Tu agenda también se queda en febrero?", "sub": "Esta es distinta", "seg": 2.6},
+    {"tipo": "pantalla", "texto": "Una semana por página, sin relleno", "imagen": "semana", "seg": 2.6},
+    {"tipo": "pantalla", "texto": "Toca un mes y llegas al instante", "imagen": "movil-mes", "movil": true, "seg": 2.6},
+    {"tipo": "lista", "titulo": "Incluye", "items": ["Tablet y móvil", "Hábitos y finanzas", "Reto 52 semanas", "Edición estudiante", "75 stickers de regalo"], "seg": 3.2},
+    {"tipo": "cierre", "cta": "Descárgalo hoy", "seg": 3.0}
+  ]
+}
