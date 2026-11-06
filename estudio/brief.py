@@ -129,9 +129,10 @@ ESCENAS = {
     "antes_despues": "pantalla dividida: ANTES (notas desordenadas) vs AHORA (el producto) (antes: 3 palabras del caos, pagina, texto ≤ 30 caracteres opcional)",
     "top3": "3 razones numeradas con números gigantes (titulo ≤ 4 palabras, items: 3 razones ≤ 4 palabras)",
     "broll": "video REAL de fondo (stock) con texto grande encima (busqueda: 2-4 palabras EN INGLÉS para buscar el video, de objetos/lugares, sin caras, ej. 'cozy desk coffee notebook'; lineas como en gancho)",
+    "montaje": "SOLO en modo fotos reales: montaje rápido de 4-8 fotos reales, cada foto ilustra lo que se dice (planos: [{busqueda: 2-5 palabras EN INGLÉS de una foto concreta que muestre esa idea, puede ser graciosa o curiosa pero relacionada con el producto, texto: ≤ 4 palabras en pantalla, producto: true si en ese plano se ve el producto, pagina}])",
     "precio": "SIEMPRE la última: precio que golpea + botón (cta en MAYÚSCULAS ≤ 18 caracteres)",
 }
-APERTURAS = ["gancho", "pov", "problema", "chat", "notificaciones", "broll", "antes_despues"]
+APERTURAS = ["gancho", "pov", "problema", "chat", "notificaciones", "broll", "antes_despues", "montaje"]
 FORMATOS = {
     "clasico": ("texto animado + producto en tablet pasando páginas", ["gancho", "paginas"]),
     "conversacion": ("empieza con un chat de WhatsApp que cuenta una historia y revela el producto", ["chat"]),
@@ -195,8 +196,10 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     if force_style: forzar.append(f"Usa el estilo \"{force_style}\".")
     if force_format in FORMATOS: forzar.append(f"Usa el formato \"{force_format}\" ({FORMATOS[force_format][0]}).")
     if stock:  # botón "Crear con fotos y videos de Pixabay"
-        forzar.append("Añade al JSON \"fondos\": 3-5 búsquedas EN INGLÉS de videos reales de fondo, una por escena, que encajen con el producto y el público (objetos, lugares, manos usando una tablet o un cuaderno; sin caras en primer plano), ej. [\"cozy desk coffee morning\", \"hands writing planner\"].")
-        forzar.append("Este reel usa material REAL: incluye 1 o 2 escenas \"broll\" (video real de fondo) con búsquedas en inglés que encajen con el producto; el resto de escenas, las que mejor combinen.")
+        forzar.append("MODO FOTOS REALES: arma el reel sobre todo con 2 o 3 escenas \"montaje\" (en total 10-18 fotos) intercaladas con 1 escena que muestre el producto (paginas o zoom) y termina con \"precio\". "
+                      "Cada foto debe ilustrar EXACTAMENTE la frase que se dice en ese momento (si hablas de olvidar citas: 'woman forgot appointment phone calendar'; de desorden: 'messy desk sticky notes'; de organizarse: 'hands writing planner coffee'). "
+                      "Puedes usar ideas graciosas o curiosas (un gato sobre la agenda, alguien enterrado en papeles) siempre que se entienda la relación con el producto. Mete 2-3 planos con producto: true. "
+                      "Las búsquedas en inglés, concretas y visuales; nada de marcas ni personas famosas.")
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
         publico=B.get("publico", ""), paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
@@ -266,6 +269,10 @@ def key_scene(t, B, n_pages):
             "antes_despues": {"tipo": "antes_despues", "antes": ["papelitos", "olvidos", "estrés"], "pagina": min(1, n_pages - 1), "texto": "", "voz": "Antes, caos. Ahora, todo en orden."},
             "top3": {"tipo": "top3", "titulo": "3 razones", "items": [x for x in tp[:3]] or ["Fácil", "Bonito", "Completo"], "voz": "Tres razones para tenerlo."},
             "gancho": {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")},
+            "montaje": {"tipo": "montaje", "voz": "¿Tu agenda es un caos? Así se organiza tu año.", "planos": [
+                {"busqueda": "messy desk sticky notes", "texto": "¿Todo un caos?"}, {"busqueda": "stressed woman calendar", "texto": "¿Olvidas todo?"},
+                {"busqueda": "", "texto": "Tu planner 2027", "producto": True, "pagina": 0}, {"busqueda": "hands writing planner coffee", "texto": "Todo en orden"},
+                {"busqueda": "happy woman tablet sofa", "texto": "Por fin"}]},
             "paginas": {"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": tp[:4], "voz": B.get("guion_voz", {}).get("paginas", "")}}[t]
 
 def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_format=None, stock=False):
@@ -273,7 +280,7 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
     out, seen = [], set()
     for sc in S.get("escenas") or []:
         t = sc.get("tipo")
-        if t not in ESCENAS or t in seen or t == "precio": continue
+        if t not in ESCENAS or (t in seen and t != "montaje") or t == "precio" or (t == "montaje" and not stock): continue
         seen.add(t); sc = dict(sc); sc["voz"] = _words(sc.get("voz"), 11)
         if t == "gancho":
             ls = [l for l in sc.get("lineas") or [] if isinstance(l, dict) and l.get("palabras")] or B["gancho"]
@@ -312,6 +319,13 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
         elif t == "top3":
             sc["titulo"] = _words(sc.get("titulo") or "3 razones", 5); sc["items"] = [_words(i, 5)[:28] for i in (sc.get("items") or [])][:3]
             if len(sc["items"]) < 3: continue
+        elif t == "montaje":
+            ps = [p for p in sc.get("planos") or [] if isinstance(p, dict) and (p.get("busqueda") or p.get("producto"))][:8]
+            for p in ps:
+                p["busqueda"] = " ".join(str(p.get("busqueda") or "").split()[:6]); p["texto"] = noemoji(p.get("texto"))[:28]
+                p["producto"] = bool(p.get("producto")); p["pagina"] = clamp(p.get("pagina", 0))
+            if len(ps) < 3: continue
+            sc["planos"] = ps
         elif t == "broll":
             sc["busqueda"] = " ".join(str(sc.get("busqueda") or "cozy desk notebook").split()[:5])
             ls = [l for l in sc.get("lineas") or [] if isinstance(l, dict) and l.get("palabras")] or [{"palabras": str(sc.get("texto") or "").split()[:3] or ["Nuevo"]}]
@@ -327,9 +341,8 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
     if not out or out[0]["tipo"] not in APERTURAS:
         out.insert(0, {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")})
     out = out[:5]
-    if stock and not any(s["tipo"] == "broll" for s in out):
-        out.insert(1 if len(out) > 1 else len(out), key_scene("broll", B, n_pages))
-        out = out[:5]
+    if stock and not any(s["tipo"] == "montaje" for s in out):
+        out.insert(0, key_scene("montaje", B, n_pages)); out = out[:5]
     if len(out) < 3:  # asegura algo de producto en pantalla
         if "paginas" not in [s["tipo"] for s in out]:
             out.append({"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": (B.get("textos_paginas") or [""])[:4], "voz": ""})

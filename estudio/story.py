@@ -205,7 +205,7 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
          "broll": {}, "fps": FPS}
     # Modo Pixabay: un video real distinto de fondo en CADA escena (se abre al llegar a la escena: poca memoria)
     fondos = story.get("fondos") or []
-    X["bgq"] = [(sc.get("busqueda") or (fondos[k % len(fondos)] if fondos else None)) if story.get("stock") else None for k, sc in enumerate(story["escenas"])]
+    X["bgq"] = [None for sc in story["escenas"]]  # (sin video pegado de fondo: en modo Pixabay se usa el montaje de fotos)
     X["bgr"] = {}
     for sc, s in zip(story["escenas"], TL["scenes"]):  # escenas de video real
         if sc["tipo"] == "broll" and not story.get("stock"):
@@ -229,7 +229,7 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
         sc, s = story["escenas"][i], TL["scenes"][i]; u = t - s["start"]
         cv = (real_bg(i, u) if story.get("stock") and sc["tipo"] != "broll" else None) or M.background(W, H, colors, t)
         RENDER[sc["tipo"]](cv, sc, u, s["dur"], X)
-        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones"): subtitles(cv, sc, s, t)
+        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones", "montaje"): subtitles(cv, sc, s, t)
         if i > 0 and u < XF:  # transición: la escena anterior se aleja y se desvanece
             ps = TL["scenes"][i - 1]
             pr_ = X["bgr"].get(i - 1) if story.get("stock") else None

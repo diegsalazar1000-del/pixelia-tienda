@@ -246,12 +246,12 @@ def pixabay_video(query, out):
         print("Pixabay:", e)
     return None
 
-def stock_photo(query):
-    """Foto real de Pixabay (gratis, uso comercial) para fondos de imágenes. Se guarda para reutilizarla."""
+def stock_photo(query, pick=0):
+    """Foto real de Pixabay (gratis, uso comercial). pick elige otra foto de la misma búsqueda. Se guarda para reutilizarla."""
     key = os.environ.get("PIXABAY_API_KEY", "").strip()
     if not key or not query: return None
     BROLL_DIR.mkdir(parents=True, exist_ok=True)
-    out = BROLL_DIR / ("img-" + hashlib.sha1(query.lower().encode()).hexdigest()[:16] + ".jpg")
+    out = BROLL_DIR / ("img-" + hashlib.sha1(f"{query.lower()}|{pick}".encode()).hexdigest()[:16] + ".jpg")
     if out.exists() and out.stat().st_size > 20000: return Image.open(out).convert("RGB")
     try:
         for q_ in (query, " ".join(query.split()[:2])):
@@ -260,7 +260,7 @@ def stock_photo(query):
                 hits = json.load(r).get("hits", [])
             if hits: break
         if not hits: return None
-        h = max(hits[:5], key=lambda x: x.get("likes", 0))
+        top = sorted(hits[:10], key=lambda x: -x.get("likes", 0)); h = top[pick % len(top)]
         with urllib.request.urlopen(urllib.request.Request(h.get("largeImageURL") or h["webformatURL"], headers={"User-Agent": "PixeliaEstudio/1.0"}), timeout=60) as r:
             out.write_bytes(r.read())
         return Image.open(out).convert("RGB")
@@ -304,13 +304,63 @@ def sc_broll(cv, sc, u, d, X):
         dev = M.device_frame(X["pages"][0], 380, max_h=520, r=30, pad=14)
         paste_center(cv, dev, W - 260, 1420, back_out(prog(u, 0.9, 1.3)), rot=8)
 
+# ---------- 📸 montaje de fotos reales (Pixabay) al ritmo de la voz ----------
+def plan_times(sc, d):
+    n = max(1, len(sc.get("planos", []))); w = [1.0 + 0.04 * len(p.get("texto", "")) for p in sc["planos"]]; k = d / sum(w)
+    t, out = 0.0, []
+    for x in w: out.append((t, t + x * k)); t += x * k
+    return out
+
+def _plan_img(X, sc, j):
+    key = (id(sc), j); cache = X.setdefault("mont", {})
+    if key not in cache:
+        p = sc["planos"][j]; img = None
+        if not p.get("producto"):
+            img = stock_photo(p.get("busqueda"), pick=j)
+        if img is None:  # sin foto (o plano de producto): la página del producto sobre fondo desenfocado
+            pg = X["pages"][min(len(X["pages"]) - 1, int(p.get("pagina", j)))]
+            img = pg.resize((W // 3, int(pg.height * (W // 3) / pg.width))).filter(ImageFilter.GaussianBlur(14)).resize((W, int(pg.height * W / pg.width)))
+            p["_producto"] = True
+        sc_ = max(W * 1.22 / img.width, H * 1.22 / img.height)
+        cache[key] = img.resize((int(img.width * sc_), int(img.height * sc_)), Image.LANCZOS).convert("RGB")
+        for k in [k for k in cache if k[0] == id(sc) and k[1] < j - 1]: cache.pop(k)  # libera memoria
+    return cache[key]
+
+def sc_montaje(cv, sc, u, d, X):
+    times = plan_times(sc, d); j = next((k for k, (a, b) in enumerate(times) if a <= u < b), len(times) - 1)
+    a, b = times[j]; v = u - a; L = max(0.3, b - a); p = sc["planos"][j]
+    big = _plan_img(X, sc, j); mv = j % 4; e = ease_in_out(clamp(v / L))
+    z = (1.0 + 0.1 * e) if mv in (0, 2) else (1.1 - 0.1 * e)  # Ken Burns: acerca/aleja y se desplaza
+    z += 0.14 * (1 - ease_in_out(clamp(v / 0.16)))  # "golpe" de zoom en cada corte
+    cw, ch = int(W / z * (big.width / (W * 1.22))), int(H / z * (big.height / (H * 1.22)))
+    cw, ch = min(cw, big.width), min(ch, big.height)
+    px = (big.width - cw) * (0.5 + (0.25 * (e - 0.5) if mv == 1 else -0.25 * (e - 0.5) if mv == 3 else 0)); py = (big.height - ch) / 2
+    fr = big.crop((int(px), int(py), int(px) + cw, int(py) + ch)).resize((W, H), Image.BILINEAR).convert("RGBA")
+    cv.paste(fr, (0, 0))
+    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0)); sd = ImageDraw.Draw(sh)
+    for k in range(24): sd.rectangle([0, H * (0.55 + 0.45 * k / 24), W, H], fill=(0, 0, 0, 7))  # sombra abajo para leer el texto
+    cv.alpha_composite(sh)
+    if p.get("_producto") or p.get("producto"):
+        dev = M.device_frame(X["pages"][min(len(X["pages"]) - 1, int(p.get("pagina", j)))], 820, max_h=1050)
+        paste_center(cv, dev, W / 2, 900, back_out(clamp(v / 0.3)) * 0.95, rot=-3 + 6 * (j % 2))
+    words = str(p.get("texto", "")).split()
+    if words:
+        lines = [words[k:k + 3] for k in range(0, len(words), 3)][:2]
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        lines_block(lay, [{"palabras": l, **({"resaltar": len(l) - 1} if n == len(lines) - 1 else {})} for n, l in enumerate(lines)],
+                    W / 2, 1470 if not (p.get("_producto") or p.get("producto")) else 1580, W - 120, 104, 0.04, v, 1.2)
+        cv.alpha_composite(lay)
+    if j % 2 == 1 and v < 0.07:  # destello en algunos cortes
+        cv.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(200 * (1 - v / 0.07)))))
+
 RENDERERS = {"chat": sc_chat, "notificaciones": sc_notificaciones, "scroll": sc_scroll, "escribir": sc_escribir,
-             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll}
-MIN_DUR = {"chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
+             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje}
+MIN_DUR = {"montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
 
 def extra_duration(sc):
     if sc["tipo"] == "chat": return chat_times(sc.get("mensajes", []))[1] + 0.6
     if sc["tipo"] == "notificaciones": return 0.9 + 0.65 * len(sc.get("items", []))
     if sc["tipo"] == "top3": return 1.5 * len(sc.get("items", []))
     if sc["tipo"] == "escribir": return 1.4 + 0.06 * sum(len(x) for x in sc.get("lineas", []))
+    if sc["tipo"] == "montaje": return 0.95 * len(sc.get("planos", []))
     return 0

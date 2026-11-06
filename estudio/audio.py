@@ -275,6 +275,13 @@ def sfx_story(story, TL):
             n = sum(len(x) for x in sc.get("lineas", [])); dur = max(0.6, d - 1.1)
             for c in range(0, n, 2): add(buf, scratch(), t0 + 0.5 + dur * c / max(1, n), 1.0)
         elif tp == "antes_despues": add(buf, whoosh(0.6, 1.2), t0, 0.9); add(buf, impact(), t0 + 0.55, 0.5)
+        elif tp == "montaje":
+            import formatos
+            for j, (ta, tb) in enumerate(formatos.plan_times(sc, d)):
+                add(buf, whoosh(0.22, 1.4 + 0.1 * (j % 3)), max(0, t0 + ta - 0.08), 0.6)
+                if j % 2 == 1: add(buf, impact(), t0 + ta, 0.3)
+                ws = str(sc["planos"][j].get("texto", "")).split()
+                word_sfx(buf, [ws[k:k + 3] for k in range(0, len(ws), 3)][:2], t0 + ta + 0.04, anim)
         elif tp == "top3":
             for i in range(3): add(buf, impact(), t0 + i * d / 3, 0.55); add(buf, pop(1.2), t0 + i * d / 3 + 0.2, 0.6)
         elif tp == "problema":

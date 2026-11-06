@@ -140,7 +140,8 @@ def hook_lines(story):
 def real_photo(story):
     """Foto real de Pixabay acorde al producto (usa la búsqueda de la escena de video real del guion)."""
     import formatos
-    q = next((s.get("busqueda") for s in story["escenas"] if s.get("busqueda")), None) or "cozy desk coffee notebook"
+    q = next((p.get("busqueda") for s in story["escenas"] for p in s.get("planos", []) if p.get("busqueda") and not p.get("producto")), None) \
+        or next((s.get("busqueda") for s in story["escenas"] if s.get("busqueda")), None) or "cozy desk coffee notebook"
     return formatos.stock_photo(q)
 
 def history(out):
