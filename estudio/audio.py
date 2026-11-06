@@ -284,6 +284,9 @@ def sfx_story(story, TL):
                 if j % 2 == 1: add(buf, impact(), t0 + ta, 0.3)
                 ws = str(sc["planos"][j].get("texto", "")).split()
                 word_sfx(buf, [ws[k:k + 3] for k in range(0, len(ws), 3)][:2], t0 + ta + 0.04, anim)
+        elif tp == "pasos":
+            n = max(1, len(sc.get("items", [])))
+            for i in range(n): add(buf, impact(), t0 + i * d / n, 0.4); add(buf, pop(1.1 + 0.08 * i), t0 + i * d / n + 0.15, 0.7)
         elif tp == "top3":
             for i in range(3): add(buf, impact(), t0 + i * d / 3, 0.55); add(buf, pop(1.2), t0 + i * d / 3 + 0.2, 0.6)
         elif tp == "problema":

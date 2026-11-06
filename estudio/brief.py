@@ -130,6 +130,7 @@ ESCENAS = {
     "top3": "3 razones numeradas con números gigantes (titulo ≤ 4 palabras, items: 3 razones ≤ 4 palabras)",
     "broll": "video REAL de fondo (stock) con texto grande encima (busqueda: 2-4 palabras EN INGLÉS para buscar el video, de objetos/lugares, sin caras, ej. 'cozy desk coffee notebook'; lineas como en gancho)",
     "montaje": "SOLO en modo fotos reales: montaje rápido de 4-8 fotos reales, cada foto ilustra lo que se dice (planos: [{busqueda: 2-5 palabras EN INGLÉS de una foto concreta que muestre esa idea, puede ser graciosa o curiosa pero relacionada con el producto, texto: ≤ 4 palabras en pantalla, producto: true si en ese plano se ve el producto, pagina}])",
+    "pasos": "TUTORIAL: explica cómo se usa el producto paso a paso con un ejemplo real (titulo ≤ 5 palabras, items: 3-5 pasos [{texto: ≤ 8 palabras, pagina: índice de la página que muestra ese paso}]); úsalo cuando la gente podría no entender qué es o cómo se usa",
     "precio": "SIEMPRE la última: precio que golpea + botón (cta en MAYÚSCULAS ≤ 18 caracteres)",
 }
 APERTURAS = ["gancho", "pov", "problema", "chat", "notificaciones", "broll", "antes_despues", "montaje"]
@@ -138,7 +139,7 @@ FORMATOS = {
     "conversacion": ("empieza con un chat de WhatsApp que cuenta una historia y revela el producto", ["chat"]),
     "vida_real": ("video real de fondo con un texto potente, luego el producto", ["broll"]),
     "pantalla": ("notificaciones en el móvil y el producto recorrido con el dedo", ["notificaciones", "scroll"]),
-    "tutorial": ("cómo se usa: un lápiz escribe sobre la página", ["escribir"]),
+    "tutorial": ("video tutorial: explica cómo se usa paso a paso con un ejemplo (ideal si el producto no es conocido); puede incluir el lápiz escribiendo", ["pasos", "escribir"]),
     "comparacion": ("antes / después", ["antes_despues"]),
     "lista": ("top 3 razones con números gigantes", ["top3"]),
 }
@@ -169,6 +170,7 @@ Reglas:
 - Campos por tipo: gancho→lineas [{{"palabras": [...], "resaltar": índice opcional}}]; pov→texto, pagina; problema→titulo, items; paginas→paginas, textos;
   zoom→pagina, texto; grid→texto; incluye→titulo, items; movil→palabras, resaltar; chat→nombre, mensajes; notificaciones→items, fecha;
   scroll→paginas, texto; escribir→pagina, lineas, texto; antes_despues→antes, pagina, texto; top3→titulo, items; broll→busqueda, lineas; precio→cta.
+- Si el producto es poco conocido o hay que explicar cómo se usa (un juego, un kit, algo nuevo), prefiere el formato "tutorial" con una escena "pasos".
 - El formato elegido manda: usa sus escenas clave y complétalo con 2-4 escenas que encajen (no siempre las mismas).
 - En "chat" la conversación es una escena dramatizada y cotidiana (amigas, compañeros), nunca una reseña ni un testimonio de resultados.
 - Los textos en pantalla deben corresponder a la página que se ve (usa los títulos de la lista).
@@ -269,6 +271,9 @@ def key_scene(t, B, n_pages):
             "antes_despues": {"tipo": "antes_despues", "antes": ["papelitos", "olvidos", "estrés"], "pagina": min(1, n_pages - 1), "texto": "", "voz": "Antes, caos. Ahora, todo en orden."},
             "top3": {"tipo": "top3", "titulo": "3 razones", "items": [x for x in tp[:3]] or ["Fácil", "Bonito", "Completo"], "voz": "Tres razones para tenerlo."},
             "gancho": {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")},
+            "pasos": {"tipo": "pasos", "titulo": "Así se usa", "voz": "Así de fácil se usa, paso a paso.", "items": [
+                {"texto": "Descárgalo al instante", "pagina": 0}, {"texto": "Ábrelo en tu tablet o imprímelo", "pagina": min(1, n_pages - 1)},
+                {"texto": "Rellénalo a tu gusto", "pagina": min(2, n_pages - 1)}, {"texto": "Disfrútalo todos los días", "pagina": min(3, n_pages - 1)}]},
             "montaje": {"tipo": "montaje", "voz": "¿Tu agenda es un caos? Así se organiza tu año.", "planos": [
                 {"busqueda": "messy desk sticky notes", "texto": "¿Todo un caos?"}, {"busqueda": "stressed woman calendar", "texto": "¿Olvidas todo?"},
                 {"busqueda": "", "texto": "Tu planner 2027", "producto": True, "pagina": 0}, {"busqueda": "hands writing planner coffee", "texto": "Todo en orden"},
@@ -326,6 +331,11 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
                 p["producto"] = bool(p.get("producto")); p["pagina"] = clamp(p.get("pagina", 0))
             if len(ps) < 3: continue
             sc["planos"] = ps
+        elif t == "pasos":
+            its = [i for i in sc.get("items") or [] if isinstance(i, dict) and i.get("texto")][:5]
+            for i in its: i["texto"] = _words(i["texto"], 9); i["pagina"] = clamp(i.get("pagina", 0))
+            if len(its) < 2: continue
+            sc["items"] = its; sc["titulo"] = _words(sc.get("titulo") or "Así se usa", 5)
         elif t == "broll":
             sc["busqueda"] = " ".join(str(sc.get("busqueda") or "cozy desk notebook").split()[:5])
             ls = [l for l in sc.get("lineas") or [] if isinstance(l, dict) and l.get("palabras")] or [{"palabras": str(sc.get("texto") or "").split()[:3] or ["Nuevo"]}]

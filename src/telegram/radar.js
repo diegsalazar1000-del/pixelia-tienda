@@ -86,6 +86,7 @@ function pickerKb(pid, sel, sug = {}) {
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
+    [{ text: '🎓 Video tutorial (cómo se usa, con ejemplo)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }],
     [{ text: '📸 Crear con fotos y videos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }],
     [{ text: '🧪 4 variantes con formatos distintos (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
     Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),

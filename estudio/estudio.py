@@ -207,7 +207,7 @@ def run_job(J):
         else:
             pages, phone, titles = load_pages()
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
-            ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else None
+            ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else (opts.get("f") if opts.get("f") in brief_mod.FORMATOS else None)
             stock = opts.get("p") == "1"  # botón "📸 Crear con fotos y videos de Pixabay"
             say("📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
             story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock)

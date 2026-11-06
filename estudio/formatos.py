@@ -353,9 +353,29 @@ def sc_montaje(cv, sc, u, d, X):
     if j % 2 == 1 and v < 0.07:  # destello en algunos cortes
         cv.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(200 * (1 - v / 0.07)))))
 
+# ---------- 🎓 pasos (tutorial: cómo se usa, con un ejemplo) ----------
+def sc_pasos(cv, sc, u, d, X):
+    items = sc.get("items") or []; n = max(1, len(items)); seg = d / n
+    i = min(n - 1, int(u // seg)); v = u - i * seg; it = items[i]
+    from story import caption
+    if sc.get("titulo"): caption(cv, sc["titulo"], 200, u, 0.0)
+    pg = X["pages"][min(len(X["pages"]) - 1, int(it.get("pagina", i)))]
+    z = 1.0 + 0.06 * ease_in_out(clamp(v / seg))
+    dev = M.device_frame(pg, int(760 * z), max_h=int(900 * z))
+    paste_center(cv, M.shadow(Image.new("RGBA", (1, 1)), 1) if False else dev, W / 2 + (1 - back_out(clamp(v / 0.35))) * 500, 900, 1.0, rot=-2 + 4 * (i % 2))
+    num = Image.new("RGBA", (190, 190), (0, 0, 0, 0)); nd = ImageDraw.Draw(num)
+    nd.ellipse([0, 0, 189, 189], fill=S["hl_fill"]); nd.text((95, 98), str(i + 1), font=F("Bold", 120), fill=S.get("hl_text", "#FFFFFF"), anchor="mm")
+    paste_center(cv, num, 170, 420, back_out(clamp(v / 0.3)), rot=(1 - clamp(v / 0.3)) * 30)
+    words = str(it.get("texto", "")).split()
+    lines = [words[k:k + 3] for k in range(0, len(words), 3)][:3]
+    lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    lines_block(lay, [{"palabras": l} for l in lines], W / 2, 1450, W - 120, 92, 0.15, v, 1.2); cv.alpha_composite(lay)
+    for k in range(n):  # puntos de progreso
+        ImageDraw.Draw(cv).ellipse([W / 2 - n * 22 + k * 44, 1760, W / 2 - n * 22 + k * 44 + 22, 1782], fill=S["hl_fill"] if k <= i else (255, 255, 255, 110))
+
 RENDERERS = {"chat": sc_chat, "notificaciones": sc_notificaciones, "scroll": sc_scroll, "escribir": sc_escribir,
-             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje}
-MIN_DUR = {"montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
+             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje, "pasos": sc_pasos}
+MIN_DUR = {"pasos": 5.0, "montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
 
 def extra_duration(sc):
     if sc["tipo"] == "chat": return chat_times(sc.get("mensajes", []))[1] + 0.6
@@ -363,4 +383,5 @@ def extra_duration(sc):
     if sc["tipo"] == "top3": return 1.5 * len(sc.get("items", []))
     if sc["tipo"] == "escribir": return 1.4 + 0.06 * sum(len(x) for x in sc.get("lineas", []))
     if sc["tipo"] == "montaje": return 0.95 * len(sc.get("planos", []))
+    if sc["tipo"] == "pasos": return 1.7 * len(sc.get("items", []))
     return 0
