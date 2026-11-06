@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tu opinión · {{STORE}}</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#07060f">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+.card{max-width:520px;margin:18px auto;padding:20px;border-radius:22px;background:#ffffff0d;border:1px solid var(--line)}
+.head{display:flex;gap:12px;align-items:center}.head img{width:64px;height:64px;border-radius:14px;object-fit:cover}
+.stars{display:flex;gap:6px;margin:14px 0 6px}.stars button{font-size:2.2rem;background:none;border:0;cursor:pointer;color:#ffffff33;padding:0;line-height:1}
+.stars button.on{color:#ffc83d}textarea,input{width:100%;margin:6px 0}textarea{min-height:90px}
+.ok{color:#5fe3a1}.err{color:#ff7b8a;min-height:1.2em}.lab{font-size:.85rem;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+<header class="top"><div class="wrap"><a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a></div></header>
+<main class="wrap" style="padding:26px 0 80px">
+  <h1 style="text-align:center;margin:0">⭐ ¿Qué te pareció?</h1>
+  <p style="text-align:center;color:var(--mut)">1 minuto. Tu opinión real ayuda a otras personas a decidir.</p>
+  <div id="list"><p style="text-align:center">Cargando…</p></div>
+</main>
+<script>
+const T = new URLSearchParams(location.search).get('t');
+const LAB = { compra: '✅ Compra verificada', regalo: '🎁 Lo descargaste gratis', gratis: '🎁 Lo recibiste gratis para opinar' };
+const list = document.getElementById('list');
+fetch('/api/resena?t=' + encodeURIComponent(T)).then((r) => r.json()).then((j) => {
+  if (!j.items) { list.innerHTML = `<p class="card err">${j.error || 'Enlace no válido'}</p>`; return; }
+  list.innerHTML = j.items.map((it) => `<div class="card" data-id="${it.id}">
+    <div class="head"><img src="${it.cover}" alt=""><div><b>${it.emoji || ''} ${it.title}</b><div class="lab">${LAB[it.source]}</div></div></div>
+    ${it.done ? '<p class="ok">✅ Ya nos dejaste tu opinión. ¡Gracias! (Puedes cambiarla abajo)</p>' : ''}
+    <div class="stars">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-n="${n}">★</button>`).join('')}</div>
+    <input class="name" placeholder="Tu nombre (opcional, ej. Ana G.)" maxlength="40">
+    <textarea class="text" placeholder="¿Qué te gustó? ¿Qué mejorarías? ¿Para qué lo usaste?" maxlength="800"></textarea>
+    <button class="btn btn-main btn-block send">Enviar mi opinión</button><p class="err"></p></div>`).join('');
+  list.querySelectorAll('.card').forEach((c) => {
+    let n = 0;
+    c.querySelectorAll('.stars button').forEach((b) => b.onclick = () => { n = +b.dataset.n; c.querySelectorAll('.stars button').forEach((x) => x.classList.toggle('on', +x.dataset.n <= n)); });
+    c.querySelector('.send').onclick = async () => {
+      const e = c.querySelector('.err'); e.textContent = '';
+      if (!n) return e.textContent = 'Toca las estrellas ⭐';
+      const r = await fetch('/api/resena', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ t: T, product_id: +c.dataset.id, stars: n, name: c.querySelector('.name').value, text: c.querySelector('.text').value }) });
+      const k = await r.json();
+      if (!r.ok) return e.textContent = k.error || 'No se pudo enviar';
+      c.innerHTML = '<p class="ok" style="margin:0">💜 ¡Gracias por tu opinión! La publicaremos después de revisarla.</p>';
+    };
+  });
+}).catch(() => { list.innerHTML = '<p class="card err">No se pudo cargar. Intenta de nuevo.</p>'; });
+</script>
+</body>
+</html>

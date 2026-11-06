@@ -1,7 +1,9 @@
 // Bot de Telegram (long polling: no necesita dominio ni webhook).
 // Dentro de Telegram los productos digitales se cobran SOLO con Telegram Stars (norma de Telegram).
 import { config } from '../config.js';
-import { Products, Orders } from '../db.js';
+import { Products, Orders, Reviews } from '../db.js';
+import { reviewLink } from '../resenas.js';
+import crypto from 'node:crypto';
 import { tg, tgEnabled, notifyAdmin, esc } from './api.js';
 import { deliver, downloadLink } from '../delivery/index.js';
 
@@ -134,6 +136,11 @@ async function onMessage(m) {
 
   // ===== Comandos de administrador =====
   switch (cmd) {
+    case '/linkresena': {  // enlace para alguien a quien le regalaste el producto a cambio de su opinión sincera
+      const p = Products.bySlug(arg) || Products.byId(Number(arg)) || Products.list({ all: true }).find((x) => arg && x.title.toLowerCase().includes(arg.toLowerCase()));
+      if (!p) return send(chatId, 'Uso: <code>/linkresena panel</code> (parte del nombre del producto). Genera un enlace para que alguien a quien le regalaste el producto deje su opinión; saldrá marcada como "lo recibió gratis".');
+      return send(chatId, `🎁 Enlace de opinión para <b>${esc(p.title)}</b> (uno por persona, mándaselo junto con el producto):\n${reviewLink({ k: 'g', p: p.id, c: crypto.randomBytes(4).toString('hex') })}`);
+    }
     case '/pendientes': {
       const list = Orders.byStatus('review');
       if (!list.length) return send(chatId, 'No hay pagos Binance por revisar.');
@@ -173,6 +180,12 @@ async function onCallback(q) {
   const chatId = q.message?.chat.id ?? q.from.id;
   const [action, value] = q.data.split(/:(.*)/s);
   await tg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+  if (action === 'rv' && isAdmin(q.from.id)) {
+    const [what, id] = value.split(':'); const r = Reviews.get(Number(id)); if (!r) return;
+    Reviews.setStatus(r.id, what === 'ok' ? 'approved' : 'rejected');
+    return tg('editMessageReplyMarkup', { chat_id: chatId, message_id: q.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text: what === 'ok' ? '✅ Publicada en la tienda' : '🚫 Rechazada', callback_data: 'x' }]] } }).catch(() => {});
+  }
   if (action === 'cats') return showCategories(chatId);
   if (action === 'cat') return showCategory(chatId, value);
   if (action === 'prod') return showProduct(chatId, Products.byId(Number(value)));

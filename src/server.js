@@ -16,6 +16,8 @@ import { Candidates, AdJobs } from './db.js';
 import { pixelSnippet } from './meta.js';
 import { startRadarBot, createDraft, offerAds, sendAdPicker } from './telegram/radar.js';
 import { startExplorador } from './telegram/explorador.js';
+import { Reviews } from './db.js';
+import { readToken, targets, notifyReview, startReviews, GIFT_SLUGS } from './resenas.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.mp4': 'video/mp4',
@@ -116,13 +118,31 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
-    DATA: JSON.stringify({ ...pp, packs: packOffers(p) }).replace(/</g, '\\u003c') }));
+    DATA: JSON.stringify({ ...pp, packs: packOffers(p), reviews: Reviews.approved(p.id), rating: Reviews.summary(p.id) }).replace(/</g, '\\u003c') }));
 });
 // 🎁 Regalos gratis a cambio del correo (lead magnet)
 const REGALOS = {
   ahorro: { title: 'Reto de Ahorro 52 Semanas 2027', file: '/regalos/Reto-de-Ahorro-52-Semanas-Pixelia.zip' },
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
 };
+// ⭐ Reseñas reales con enlace firmado
+on('GET', '/resena', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('resena.html')); });
+on('GET', '/api/resena', (req, res, _p, url) => {
+  const ts = targets(readToken(url.searchParams.get('t')));
+  if (!ts.length) return fail(res, 404, 'Este enlace no es válido o ya venció');
+  json(res, 200, { items: ts.map((x) => ({ id: x.p.id, title: x.p.title, emoji: x.p.emoji, cover: publicProduct(x.p).cover, source: x.source, done: !!Reviews.byRef(x.p.id, x.ref) })) });
+});
+on('POST', '/api/resena', async (req, res) => {
+  const b = await body(req, 2e4); const ts = targets(readToken(b.t));
+  const x = ts.find((t) => t.p.id === Number(b.product_id));
+  if (!x) return fail(res, 404, 'Este enlace no es válido');
+  const stars = Math.round(Number(b.stars)); if (!(stars >= 1 && stars <= 5)) return fail(res, 400, 'Elige de 1 a 5 estrellas');
+  const name = String(b.name || '').replace(/[<>]/g, '').trim().slice(0, 40), text = String(b.text || '').replace(/[<>]/g, '').trim().slice(0, 800);
+  Reviews.add({ product_id: x.p.id, ref: x.ref, source: x.source, name, stars, text });
+  notifyReview(Reviews.byRef(x.p.id, x.ref), x.p);
+  json(res, 200, { ok: true });
+});
+on('GET', '/api/regalo/resenas', (req, res) => json(res, 200, { reviews: Object.values(GIFT_SLUGS).flatMap((s) => { const p = Products.bySlug(s); return p ? Reviews.approved(p.id, 10).map((r) => ({ ...r, product: p.title })) : []; }) }));
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
@@ -467,4 +487,4 @@ if (binanceAutoVerify()) setInterval(async () => {
   }
 }, 60_000);
 
-if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); }
+if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); startReviews(); }

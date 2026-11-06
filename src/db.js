@@ -284,3 +284,31 @@ export const Orders = {
   stats: () => db.prepare(`SELECT COUNT(*) orders, COALESCE(SUM(CASE WHEN currency!='XTR' THEN amount_cents END),0) usd_cents,
     COALESCE(SUM(CASE WHEN currency='XTR' THEN amount_cents END),0) stars FROM orders WHERE status='paid'`).get(),
 };
+
+// ===== Reseñas reales (verificadas): se piden después de comprar o de descargar un regalo; el admin modera =====
+db.exec(`CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  ref TEXT NOT NULL,                     -- pedido, correo del regalo o código del enlace regalado
+  source TEXT NOT NULL,                  -- compra / regalo / gratis (recibió el producto gratis para opinar)
+  name TEXT DEFAULT '', stars INTEGER NOT NULL, text TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',         -- pending / approved / rejected
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(product_id, ref)
+);`);
+for (const sql of ["ALTER TABLE orders ADD COLUMN review_asked INTEGER DEFAULT 0", "ALTER TABLE subscribers ADD COLUMN review_asked INTEGER DEFAULT 0"]) { try { db.exec(sql); } catch {} }
+
+export const Reviews = {
+  add: (r) => db.prepare(`INSERT INTO reviews (product_id, ref, source, name, stars, text) VALUES (?,?,?,?,?,?)
+    ON CONFLICT(product_id, ref) DO UPDATE SET name=excluded.name, stars=excluded.stars, text=excluded.text, status='pending', created_at=datetime('now')`)
+    .run(r.product_id, r.ref, r.source, r.name, r.stars, r.text),
+  get: (id) => db.prepare('SELECT * FROM reviews WHERE id = ?').get(id),
+  byRef: (pid, ref) => db.prepare('SELECT * FROM reviews WHERE product_id = ? AND ref = ?').get(pid, ref),
+  setStatus: (id, s) => db.prepare('UPDATE reviews SET status = ? WHERE id = ?').run(s, id),
+  approved: (pid, limit = 30) => db.prepare(`SELECT name, stars, text, source, created_at FROM reviews WHERE product_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT ?`).all(pid, limit),
+  summary: (pid) => db.prepare(`SELECT COUNT(*) n, ROUND(AVG(stars),1) avg FROM reviews WHERE product_id = ? AND status = 'approved'`).get(pid),
+  ordersToAsk: () => db.prepare(`SELECT * FROM orders WHERE status='paid' AND review_asked=0 AND paid_at < datetime('now','-2 days') AND paid_at > datetime('now','-10 days')`).all(),
+  subsToAsk: () => db.prepare(`SELECT * FROM subscribers WHERE review_asked=0 AND source LIKE 'regalo:%' AND created_at < datetime('now','-1 day') AND created_at > datetime('now','-7 days')`).all(),
+  markOrderAsked: (id) => db.prepare('UPDATE orders SET review_asked=1 WHERE id=?').run(id),
+  markSubAsked: (email) => db.prepare('UPDATE subscribers SET review_asked=1 WHERE email=?').run(email),
+};

@@ -87,6 +87,17 @@ async function applyCoupon(code, silent) {
   return r;
 }
 
+const RV_LAB = { compra: '✅ Compra verificada', regalo: '🎁 Descargó el regalo', gratis: '🎁 Lo recibió gratis para opinar' };
+function reviewsHtml() {
+  const R = P.reviews || [];
+  if (!R.length) return '';
+  return `<div class="reveal" id="resenas" style="margin-top:26px"><h3 style="margin:0 0 10px">⭐ Opiniones reales (${P.rating.avg} de 5)</h3>` + R.map((r) =>
+    `<div style="padding:12px 14px;border:1px solid var(--line);border-radius:16px;margin:8px 0;background:#ffffff08">
+      <div style="color:#ffc83d">${'★'.repeat(r.stars)}<span style="color:#ffffff33">${'★'.repeat(5 - r.stars)}</span></div>
+      ${r.text ? `<p style="margin:6px 0">${escH(r.text)}</p>` : ''}
+      <div style="font-size:.82rem;color:var(--mut)">${escH(r.name || 'Cliente')} · ${RV_LAB[r.source] || ''} · ${escH(String(r.created_at).slice(0, 10))}</div></div>`).join('') + '</div>';
+}
+
 function view() {
   const off = P.compare > P.price ? Math.round((1 - P.price / P.compare) * 100) : 0;
   $('#pdp').innerHTML = `
@@ -94,12 +105,14 @@ function view() {
   <div>
     <div class="crumbs reveal"><a href="/">Inicio</a> / <a href="/#catalogo">${escH(P.category)}</a></div>
     <h1 class="reveal">${escH(P.emoji)} ${escH(P.title)}</h1>
+    ${P.rating && P.rating.n ? `<a href="#resenas" class="reveal" style="display:inline-block;margin:-4px 0 8px;color:#ffc83d;text-decoration:none">${'★'.repeat(Math.round(P.rating.avg))}${'☆'.repeat(5 - Math.round(P.rating.avg))} <span style="color:var(--mut)">${P.rating.avg} · ${P.rating.n} ${P.rating.n === 1 ? 'opinión' : 'opiniones'}</span></a>` : ''}
     <p class="short reveal">${escH(P.short)}</p>
     <div class="big-price reveal">${priceBox()}</div>
     ${offersHtml()}
     <div class="checkout reveal" id="checkout"></div>
-    <div class="feats reveal"><div>⚡ ${t('instant')}</div><div>📩 Correo · Telegram · WhatsApp</div><div>🔁 Descarga hasta 5 veces</div><div>💬 Soporte por Telegram</div></div>
+    <div class="feats reveal"><div>⚡ ${t('instant')}</div><div>📩 Correo · Telegram · WhatsApp</div><div>🔁 Descarga hasta 5 veces</div><div>💬 Soporte por Telegram</div><div>✅ Garantía: si tu archivo falla, lo arreglamos o te devolvemos el dinero</div></div>
     <div class="desc reveal">${escH(P.description)}</div>
+    ${reviewsHtml()}
   </div>`;
   enhance(); wireOffers();
 }
