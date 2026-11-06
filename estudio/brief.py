@@ -149,6 +149,7 @@ FORMATOS = {
 STORY_PROMPT = """Eres guionista de Reels/TikTok que venden productos digitales en Latinoamérica. Escribe el guion de UN reel vertical de 12-20 segundos.
 Producto: {producto}
 Público: {publico}
+Investigación REAL de este público y de los anuncios que funcionan en el nicho (úsala: sus dolores, sus frases y los ganchos que funcionan; no inventes datos): {investigacion}
 Páginas disponibles del producto (índice: título): {paginas}
 Tipos de escena disponibles: {escenas}
 Formatos de anuncio disponibles (elige UNO, el que más pegue con este público y producto): {formatos}
@@ -177,6 +178,9 @@ Reglas:
 - El formato elegido manda: usa sus escenas clave y complétalo con 2-4 escenas que encajen (no siempre las mismas).
 - En "chat" la conversación es una escena dramatizada y cotidiana (amigas, compañeros), nunca una reseña ni un testimonio de resultados.
 - Los textos en pantalla deben corresponder a la página que se ve (usa los títulos de la lista).
+- COHERENCIA (para que nadie se pierda): en cada escena la voz, el texto en pantalla y lo que se ve cuentan LA MISMA idea al mismo tiempo; una sola idea por escena; el texto en pantalla resume lo que dice la voz; las búsquedas de fotos/memes muestran literalmente lo que se dice; la historia avanza en orden (problema → producto → cómo ayuda → precio).
+- Sé concreto y detallista con ESTE producto: nombra lo que trae de verdad (usa los títulos de las páginas) y el momento real en que esta persona lo usa. Nada de frases genéricas que sirvan para cualquier producto.
+- Idioma: español NEUTRO latinoamericano (se vende en varios países): sin modismos de un solo país (ni chévere, pana, güey, chido, parce, bacán, vale), sin voseo, tuteo cálido.
 - "voz": español latino natural y conversacional, MÁXIMO 9 palabras por escena (se lee a ritmo normal). En "precio" di el precio de forma natural ({precio_dicho}).
 - Nada de promesas de dinero/salud, ni reseñas o testimonios inventados, ni urgencia falsa. Sin emojis en los textos de pantalla.
 - Precio {precio}, antes {tachado}.
@@ -207,7 +211,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                       "Las búsquedas en inglés, concretas y visuales; nada de marcas ni personas famosas.")
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
-        publico=B.get("publico", ""), paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
+        publico=B.get("publico", ""), investigacion=json.dumps({k: (B.get("investigacion") or {}).get(k) for k in ("publico_real", "anuncios")}, ensure_ascii=False)[:3000] if B.get("investigacion") else "no disponible", paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
         escenas=json.dumps(ESCENAS, ensure_ascii=False), formatos=json.dumps({k: v[0] for k, v in FORMATOS.items()}, ensure_ascii=False), forzar="\n".join(forzar), evitar=json.dumps(avoid or [], ensure_ascii=False)[:1500],
         generos=", ".join(GENEROS), precio=prod.get("price"), tachado=prod.get("compare") or "ninguno", precio_dicho=precio_dicho(prod.get("price")))
     body = {"model": model, "max_tokens": 4000, "temperature": 1.0, "messages": [{"role": "user", "content": prompt}]}

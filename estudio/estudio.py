@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, story as story_mod, audio, musica, brief as brief_mod  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod, director  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -29,7 +29,7 @@ if ENV.get("PIXABAY_API_KEY"): os.environ.setdefault("PIXABAY_API_KEY", ENV["PIX
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
 FORMAT_NAMES = {"clasico": "Clásico", "conversacion": "💬 Chat", "vida_real": "🎬 Video real", "pantalla": "📱 Pantalla de móvil",
-                "tutorial": "✍️ Cómo se usa", "comparacion": "🔀 Antes/después", "lista": "🏆 Top 3"}
+                "tutorial": "✍️ Cómo se usa", "comparacion": "🔀 Antes/después", "lista": "🏆 Top 3", "comedia": "😂 Comedia"}
 # 4 variantes para A/B en Meta: (estilo, tipo de gancho)
 VARIANTES = [("color", "gancho"), ("tiktok", "pov"), ("neon", "problema"), ("minimal", "gancho")]  # (estilo, escena de apertura)
 
@@ -154,9 +154,29 @@ def remember(out, st):
                          "frases": [e.get("voz") for e in st["escenas"]][:3]}]
     (out / "historial.json").write_text(json.dumps(h[-12:], ensure_ascii=False))
 
-def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0, force_format=None, stock=False):
+def three_formats(prod, B, out):
+    """3 formatos distintos para los candidatos: los 2 que más pegan y no se usaron hace poco + 1 al azar (para variar)."""
+    import random
+    used = [h.get("formato") for h in history(out)[-3:]]
+    rank = ranked_formats(prod, B, out / "brief.json") + [f for f in brief_mod.FORMATOS if f not in B.get("formatos_rank", [])]
+    fresh = [f for f in rank if f not in used] or rank
+    rest = [f for f in fresh[2:] if f != "comedia"] or fresh[2:] or rank
+    return list(dict.fromkeys(fresh[:2] + [random.choice(rest)]))
+
+def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0, force_format=None, stock=False, single=False):
     avoid = history(out)[-5:] + (extra_avoid or [])
-    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid, force_format=force_format, stock=stock)
+    mk = lambda f: brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid, force_format=f, stock=stock)
+    try:
+        if single or os.environ.get("AD_DIRECTOR", "1") == "0": return mk(force_format)
+        fmts = [force_format] * 3 if (force_format or stock) else three_formats(prod, B, out)
+        norm = lambda g, f: brief_mod.normalize_story(g, B, n_pages, force_open, force_style, f, stock)
+        story, info = director.elegir(prod, B, mk, fmts, norm)
+        if info:
+            n = info.get("nota") or {}
+            say(f"🎬 El director comparó {len(info['formatos'])} guiones ({', '.join(FORMAT_NAMES.get(f, f) for f in info['formatos'])}) y eligió "
+                f"<b>{esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))}</b>"
+                + (f" · gancho {n.get('gancho')}/10 · coherencia {n.get('coherencia')}/10" if n else "") + (f"\n💡 {esc(info['por_que'])}" if info.get("por_que") else ""))
+        return story
     except Exception as e:
         print("guion IA falló:", e)
         return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()), force_format=force_format, stock=stock)
@@ -200,6 +220,11 @@ def run_job(J):
         else:
             B = json.loads(brief_file.read_text())
             if "ganchos" not in B: B = brief_mod.normalize(B, prod, len(B.get("textos_paginas", [])) or 6)
+        if not B.get("investigacion") and os.environ.get("AD_RESEARCH", "1") != "0":
+            say("🔎 Investigando en internet a quién le vende este producto y qué anuncios funcionan en su nicho (1 sola vez por producto)…")
+            inv = director.investigar(prod, B)
+            if inv:
+                B["investigacion"] = inv; brief_file.write_text(json.dumps(B, ensure_ascii=False, indent=2)); say(director.resumen_investigacion(inv))
         if opts.get("x"): return run_variants(job, prod, B, out, tmp, load_pages, opts)
         audio_only = opts.get("a") == "1" and guion_file.exists() and silent.exists()
         if audio_only:
@@ -221,6 +246,23 @@ def run_job(J):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
                 except Exception as e: print("voz previa falló:", e)
             TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
+            if os.environ.get("AD_REVIEW", "1") != "0":
+                say("🔍 Revisando el video antes de mandártelo…")
+                fixed, probs = director.revisar(story, silent, TL, tmp, audio.ahorro())
+                if fixed:
+                    try:
+                        s2 = brief_mod.normalize_story(fixed, B, len(pages), None, fs, story["formato"], stock)
+                        if audio.ahorro() and [e["tipo"] for e in s2["escenas"]] == [e["tipo"] for e in story["escenas"]]:
+                            for a, b in zip(s2["escenas"], story["escenas"]): a["voz"] = b.get("voz", "")  # en ahorro no se generan voces nuevas
+                        for k in ("estilo", "musica", "voz", "letra", "animacion", "subtitulos", "copy", "concepto"): s2[k] = story.get(k, s2.get(k))
+                        story = s2; vd = None
+                        if v in ("f", "m"):
+                            try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
+                            except Exception as e: print("voz previa falló:", e)
+                        TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
+                        say("🔧 Corregí antes de enviarlo:\n" + "\n".join("• " + esc(p) for p in probs))
+                    except Exception as e: print("no pude aplicar la corrección:", e)
+                else: say("✅ Revisado: se entiende bien.")
             guion_file.write_text(json.dumps({"story": story, "TL": TL}, ensure_ascii=False, indent=1)); remember(out, story)
         st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
         with_voice = v in ("f", "m")
@@ -251,7 +293,7 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
     for k, fmt in enumerate(formats):
         name = f"V{k + 1}"
         say(f"🧪 {name}/4 · formato {FORMAT_NAMES.get(fmt, fmt)}: escribiendo guion…")
-        story = new_story(prod, B, titles, len(pages), out, force_format=fmt,
+        story = new_story(prod, B, titles, len(pages), out, force_format=fmt, single=True,
                           extra_avoid=[{"concepto": m.get("concepto"), "orden": [e["tipo"] for e in m["escenas"]]} for m in made], seed=k + 1)
         used = [m["estilo"] for m in made]
         if story["estilo"] in used:  # que cada variante también se vea distinta
