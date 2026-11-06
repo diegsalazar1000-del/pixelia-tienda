@@ -9,17 +9,20 @@ from motor import W, H, FPS, F, INK, S, back_out, ease_in_out, prog, clamp, past
 MIN_DUR = {"gancho": 2.4, "pov": 2.6, "problema": 3.2, "paginas": 3.4, "zoom": 2.6, "grid": 2.8, "incluye": 3.0, "movil": 2.8, "precio": 3.6}
 XF = 0.22  # duración de la transición entre escenas
 
-def scene_duration(sc):
+def scene_duration(sc, vdur=None):
+    import formatos
     words = len(str(sc.get("voz") or "").split())
-    d = max(MIN_DUR.get(sc["tipo"], 2.6), words * 0.42 + 0.9)
+    need = (vdur + 0.6) if vdur else (words * 0.42 + 0.9)  # con la duración REAL de la voz si ya se generó
+    d = max(MIN_DUR.get(sc["tipo"], formatos.MIN_DUR.get(sc["tipo"], 2.6)), need, formatos.extra_duration(sc))
     if sc["tipo"] in ("problema", "incluye"): d = max(d, 1.0 + 0.55 * len(sc.get("items", [])))
     if sc["tipo"] == "paginas": d = max(d, 0.8 + 0.75 * (len(sc.get("paginas", [])) - 1) + 0.4)
-    return round(min(d, 6.5), 2)
+    return round(min(d, 8.0), 2)
 
-def timeline(story):
+def timeline(story, vdurs=None):
     t, scenes = 0.0, []
-    for sc in story["escenas"]:
-        d = scene_duration(sc); scenes.append({"tipo": sc["tipo"], "start": round(t, 2), "dur": d, "n": len(sc.get("items") or sc.get("paginas") or sc.get("lineas") or [])}); t += d
+    for k, sc in enumerate(story["escenas"]):
+        vd = (vdurs or [None] * 99)[k] if vdurs else None
+        d = scene_duration(sc, vd); scenes.append({"tipo": sc["tipo"], "start": round(t, 2), "dur": d, "vdur": vd}); t += d
     return {"scenes": scenes, "T": round(t, 2)}
 
 # ---------- piezas ----------
@@ -159,14 +162,35 @@ def sc_precio(cv, sc, u, d, X):
         pos = [(200, 520), (880, 1150), (180, 1180), (900, 470)][j]
         paste_center(cv, st, *pos, back_out(prog(u, 0.2 + j * 0.1, 0.5 + j * 0.1)), rot=15 * math.sin(t * 2 + j))
 
+def subtitles(cv, sc, s, t):
+    """Subtítulos estilo TikTok: grupos de 4 palabras, la palabra que suena se ilumina."""
+    words = str(sc.get("voz") or "").split()
+    if not words: return
+    start = s["start"] + 0.15; dur = s.get("vdur") or len(words) * 0.36; per = dur / len(words)
+    if t < start or t > start + dur + 0.25: return
+    wi = min(len(words) - 1, int((t - start) / per)); a = wi // 4 * 4; chunk = words[a:a + 4]
+    f = F("Bold", 66); boxes = []
+    for j, w in enumerate(chunk):
+        on = a + j == wi
+        boxes.append(text_box(w, f, S["hl_fill"] if on and S["name"] != "minimal" else (S["colors"][0] if on else "#FFFFFF"), stroke="#000000", sw=7))
+    gap = 18; total = sum(b.width for b in boxes) + gap * (len(boxes) - 1)
+    if total > W - 80:
+        k = (W - 80) / total; boxes = [b.resize((int(b.width * k), int(b.height * k))) for b in boxes]; total = W - 80; gap *= k
+    x = W / 2 - total / 2
+    for j, b in enumerate(boxes):
+        sc_ = 1.12 if a + j == wi else 1.0
+        paste_center(cv, b, x + b.width / 2, 1650, sc_); x += b.width + gap
+
 RENDER = {"gancho": sc_gancho, "pov": sc_pov, "problema": sc_problema, "incluye": sc_incluye, "paginas": sc_paginas,
           "zoom": sc_zoom, "grid": sc_grid, "movil": sc_movil, "precio": sc_precio}
 
 # ---------- reel ----------
-def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None):
+def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None, vdurs=None):
+    import formatos
+    RENDER.update(formatos.RENDERERS)
     style = style or story.get("estilo", "color"); colors = B["colores"]
     M.set_style(style, colors, pages)
-    TL = timeline(story); T = TL["T"]
+    TL = timeline(story, vdurs); T = TL["T"]
     pw = 860; pr = []
     for p in pages:
         ph = int(p.height * pw / p.width)
@@ -175,12 +199,18 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None)
     stickers = M.make_stickers(B.get("stickers", ["NUEVO", "PDF", "Descarga inmediata"]), colors)
     rng = random.Random(seed)
     X = {"B": B, "pages": pr, "phone": phone, "stickers": stickers, "t": 0.0,
-         "falling": [(rng.uniform(80, W - 80), rng.uniform(-900, -100), rng.uniform(-40, 40), rng.uniform(300, 520), rng.choice(stickers)) for _ in range(S["falling"])]}
+         "falling": [(rng.uniform(80, W - 80), rng.uniform(-900, -100), rng.uniform(-40, 40), rng.uniform(300, 520), rng.choice(stickers)) for _ in range(S["falling"])],
+         "broll": {}}
+    for sc, s in zip(story["escenas"], TL["scenes"]):  # videos reales de fondo (si hay clave de Pexels)
+        if sc["tipo"] == "broll":
+            v = formatos.pexels_video(sc.get("busqueda"))
+            if v: X["broll"][id(sc)] = formatos.BrollReader(v, FPS, s["dur"])
     def frame(t):
         X["t"] = t; cv = M.background(W, H, colors, t)
         i = max(k for k, s in enumerate(TL["scenes"]) if s["start"] <= t + 1e-6)
         sc, s = story["escenas"][i], TL["scenes"][i]; u = t - s["start"]
         RENDER[sc["tipo"]](cv, sc, u, s["dur"], X)
+        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones"): subtitles(cv, sc, s, t)
         if i > 0 and u < XF:  # transición: la escena anterior se aleja y se desvanece
             ps = TL["scenes"][i - 1]; prev = M.background(W, H, colors, t)
             RENDER[story["escenas"][i - 1]["tipo"]](prev, story["escenas"][i - 1], ps["dur"] - 0.01, ps["dur"], X)

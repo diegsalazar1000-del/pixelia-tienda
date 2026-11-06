@@ -263,6 +263,14 @@ def sfx_story(story, TL):
             add(buf, click(), t0 + 0.62, 1.0); add(buf, sparkle(), t0 + 0.65, 1.0)
     return buf
 
+def voice_durations(story, genero, tmpdir):
+    """Genera (o toma de la caché) la voz de cada escena ANTES del video, para que cada escena dure lo que su frase."""
+    out = []
+    for sc in story["escenas"]:
+        t = str(sc.get("voz") or "").strip()
+        out.append(round(len(tts(t, genero, tmpdir, 1.0)) / SR, 2) if t else None)
+    return out
+
 def voice_story(story, TL, genero, tmpdir):
     """Una frase por escena, a ritmo natural. Nunca se corta: si una frase se alarga, la siguiente espera."""
     T = TL["T"]; buf = np.zeros(int(T * SR)); spans = []; free = 0.0

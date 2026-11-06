@@ -6,3 +6,10 @@ storage/products/*
 node_modules/
 storage/anuncios/
 __pycache__/
+
+# Archivos que genera el estudio en el servidor
+storage/musica/
+storage/voz-cache/
+storage/broll/
+storage/anuncios/
+storage/voces-elevenlabs.json

@@ -72,9 +72,9 @@ const parseOpts = (s) => Object.fromEntries(String(s || '').split(',').filter(Bo
 const packOpts = (o) => Object.entries(o).filter(([, x]) => x !== undefined && x !== null && x !== '').map(([k, x]) => `${k}=${x}`).join(',');
 
 // ===== Selector combinable (voz + música + estilo) =====
-export const GENRES = { reggaeton: 'Reggaetón', pop: 'Pop', trap: 'Trap', cumbia: 'Cumbia', electronica: 'Electrónica', lofi: 'Lo-fi', acustica: 'Acústica', base: 'Suave', 0: '🔇 Sin música' };
+export const GENRES = { ia: '🎲 La IA elige', reggaeton: 'Reggaetón', pop: 'Pop', trap: 'Trap', cumbia: 'Cumbia', electronica: 'Electrónica', lofi: 'Lo-fi', acustica: 'Acústica', base: 'Suave', 0: '🔇 Sin música' };
 export const STYLES = { ia: '🎲 La IA elige', color: '🌈 Color', neon: '🌃 Neón', minimal: '🤍 Minimal', tiktok: '📱 TikTok' };
-const VOICES = { f: '👩 Femenina', m: '👨 Masculina', 0: '🔇 Sin voz' };
+const VOICES = { ia: '🎲 IA', f: '👩 Mujer', m: '👨 Hombre', 0: '🔇 Sin voz' };
 const MUSIC_DIR = path.join(path.dirname(config.paths?.files || path.resolve('storage/products')), 'musica');
 const songs = (g) => { try { return fs.readdirSync(path.join(MUSIC_DIR, g)).filter((f) => /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f)).length; } catch { return 0; } };
 
@@ -83,12 +83,13 @@ function pickerKb(pid, sel, sug = {}) {
   const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
+    [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
+    [{ text: '🧪 4 variantes con formatos distintos (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
     Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
-    ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
+    [g('ia')], ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
     [btn('s', 'ia', STYLES.ia)], ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])),
-    [{ text: `🎬 Reel NUEVO (otro guion): ${VOICES[sel.v] || ''} · ${GENRES[sel.g] || ''}`.slice(0, 60), callback_data: `ad:${pid}:${packOpts(sel)}` }],
+    [{ text: `🎬 Reel nuevo con lo marcado: ${VOICES[sel.v] || ''} · ${GENRES[sel.g] || ''}`.slice(0, 60), callback_data: `ad:${pid}:${packOpts(sel)}` }],
     [{ text: '🔊 Solo cambiar voz/música del último reel', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, a: 1 })}` }],
-    [{ text: '🧪 4 variantes para probar en Meta (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
     [{ text: '🔁 Rehacer público, colores y textos (IA)', callback_data: `ad:${pid}:${packOpts({ ...sel, n: 1 })}` }],
   ];
 }
@@ -100,7 +101,7 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
   lastSug.set(p.id, sug);
   const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `${GENRES[g]} (${songs(g)})`).join(', ');
   return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-    text: `🎛️ <b>Arma otra versión de ${esc(p.title)}</b>\nMarca voz, música y estilo. <b>🎬 Reel nuevo</b> = la IA escribe otro guion (escenas y textos distintos). <b>🔊 Solo voz/música</b> = el mismo video con otro audio (1 min).\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
+    text: `🎛️ <b>Más versiones de ${esc(p.title)}</b>\n<b>🎲 Otra variante</b>: la IA elige otro formato (chat, video real, antes/después, top 3…) con su voz y música.\nO marca tú voz, música y estilo y pulsa <b>🎬 Reel nuevo</b>. <b>🔊 Solo voz/música</b> = mismo video, otro audio (1 min).\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
@@ -283,7 +284,7 @@ export async function onCallback(q) {
     const options = parseOpts(opts);
     const r = AdJobs.enqueue(p.id, options);
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: r.duplicated ? 'Ya se está creando' : 'En marcha 🎬' }).catch(() => {});
-    const desc = [options.v ? VOICES[options.v] : '', options.g ? GENRES[options.g] : '', options.s ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
+    const desc = [options.f ? '🎲 otro formato' : '', options.v && options.v !== 'ia' ? VOICES[options.v] : '', options.g && options.g !== 'ia' ? GENRES[options.g] : '', options.s && options.s !== 'ia' ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
     if (!r.duplicated) await send(options.x
       ? `🧪 Creando <b>4 variantes</b> de <b>${esc(p.title)}</b> (estilos y ganchos distintos). Tarda unos 15-25 min; te aviso al terminar.`
       : `🎬 Creando anuncios de <b>${esc(p.title)}</b>${desc ? ' · ' + esc(desc) : ''}.\nTe los mando aquí en unos minutos.`);

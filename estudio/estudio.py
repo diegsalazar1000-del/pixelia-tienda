@@ -24,8 +24,11 @@ TG = ENV.get("RADAR_BOT_TOKEN", ""); CHAT = ENV.get("TELEGRAM_ADMIN_CHAT_ID", ""
 os.environ.setdefault("ANTHROPIC_API_KEY", ENV.get("ANTHROPIC_API_KEY", ""))
 os.environ.setdefault("ANTHROPIC_MODEL", ENV.get("ANTHROPIC_MODEL", "claude-sonnet-5-5"))
 if ENV.get("ELEVENLABS_API_KEY"): os.environ.setdefault("ELEVENLABS_API_KEY", ENV["ELEVENLABS_API_KEY"])
+if ENV.get("PEXELS_API_KEY"): os.environ.setdefault("PEXELS_API_KEY", ENV["PEXELS_API_KEY"])
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
+FORMAT_NAMES = {"clasico": "Clásico", "conversacion": "💬 Chat", "vida_real": "🎬 Video real", "pantalla": "📱 Pantalla de móvil",
+                "tutorial": "✍️ Cómo se usa", "comparacion": "🔀 Antes/después", "lista": "🏆 Top 3"}
 # 4 variantes para A/B en Meta: (estilo, tipo de gancho)
 VARIANTES = [("color", "gancho"), ("tiktok", "pov"), ("neon", "problema"), ("minimal", "gancho")]  # (estilo, escena de apertura)
 
@@ -121,7 +124,14 @@ def product_pages(prod, tmp):
 def hook_lines(story):
     """Titular de imagen a partir de la apertura del guion (para que imagen y reel cuenten lo mismo)."""
     sc = story["escenas"][0]
-    if sc["tipo"] == "gancho": return sc["lineas"]
+    if sc["tipo"] in ("gancho", "broll"): return sc["lineas"]
+    if sc["tipo"] == "chat": words = next((m["texto"] for m in sc["mensajes"] if m.get("texto")), "").split()[:8]
+    elif sc["tipo"] == "notificaciones": words = sc["items"][0]["titulo"].split()
+    elif sc["tipo"] == "antes_despues": words = ["Antes", "vs", "AHORA"]
+    else: words = None
+    if words is not None:
+        lines = [words[k:k + 3] for k in range(0, len(words), 3)][:3]
+        return [{"palabras": l} for l in lines] or [{"palabras": ["Nuevo"]}]
     words = (["POV:"] + sc.get("texto", "").split()) if sc["tipo"] == "pov" else sc.get("titulo", "").split()
     lines = [words[k:k + 3] for k in range(0, len(words), 3)][:3]
     return [{"palabras": l, **({"resaltar": 0} if sc["tipo"] == "pov" and n == 0 else {})} for n, l in enumerate(lines)] or [{"palabras": ["Nuevo"]}]
@@ -132,16 +142,35 @@ def history(out):
     except Exception: return []
 
 def remember(out, st):
-    h = history(out) + [{"concepto": st.get("concepto"), "orden": [e["tipo"] for e in st["escenas"]],
+    h = history(out) + [{"concepto": st.get("concepto"), "formato": st.get("formato"), "orden": [e["tipo"] for e in st["escenas"]],
                          "frases": [e.get("voz") for e in st["escenas"]][:3]}]
     (out / "historial.json").write_text(json.dumps(h[-12:], ensure_ascii=False))
 
-def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0):
+def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0, force_format=None):
     avoid = history(out)[-5:] + (extra_avoid or [])
-    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid)
+    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid, force_format=force_format)
     except Exception as e:
         print("guion IA falló:", e)
-        return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()))
+        return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()), force_format=force_format)
+
+def ranked_formats(prod, B, brief_file):
+    """Formatos ordenados por lo que más pega con el público (se calcula una vez y se guarda en el brief)."""
+    if not B.get("formatos_rank"):
+        B["formatos_rank"] = brief_mod.rank_formats(prod, B)
+        brief_file.write_text(json.dumps(B, ensure_ascii=False, indent=2))
+    return B["formatos_rank"]
+
+def next_format(prod, B, brief_file, out):
+    """'Otra variante': el siguiente formato mejor valorado que no se usó en los últimos reels."""
+    used = [h.get("formato") for h in history(out)[-4:]]
+    rank = ranked_formats(prod, B, brief_file) + [f for f in brief_mod.FORMATOS if f not in B.get("formatos_rank", [])]
+    return next((f for f in rank if f not in used), rank[0])
+
+def pick(v, g, story):
+    """'ia' o vacío = lo que sugiere la IA para este reel."""
+    v = v if v in ("f", "m", "0") else ("f" if story["voz"] == "femenina" else "m")
+    g = g if g and g != "ia" else story["musica"]
+    return v, g
 
 def run_job(J):
     job, prod, opts = J["job"], J["product"], J["job"]["options"] or {}
@@ -170,17 +199,21 @@ def run_job(J):
         else:
             pages, phone, titles = load_pages()
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
-            say("✍️ Escribiendo un guion nuevo para este reel…")
-            story = new_story(prod, B, titles, len(pages), out, force_style=fs)
-            st = story["estilo"]
-            say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nEstilo {motor.STYLE_NAMES.get(st, st)} · escenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
+            ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else None
+            say("✍️ La IA está eligiendo el formato y escribiendo el guion…")
+            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff)
+            st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
+            say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
             for old in out.glob("[ABC]-*.jpg"): old.unlink()
             motor.build_static(B2, pages, phone, out, style=st)
-            TL = story_mod.build(B, story, pages, phone, silent, style=st)
+            vd = None
+            if v in ("f", "m"):
+                try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
+                except Exception as e: print("voz previa falló:", e)
+            TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
             guion_file.write_text(json.dumps({"story": story, "TL": TL}, ensure_ascii=False, indent=1)); remember(out, story)
-        st = story["estilo"]
-        v = opts.get("v") or ("f" if story["voz"] == "femenina" else "m"); g = opts.get("g") or story["musica"]
+        st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
         with_voice = v in ("f", "m")
         if with_voice: B["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         wav = pathlib.Path(tmp) / "audio.wav"
@@ -191,7 +224,7 @@ def run_job(J):
         deliver(prod, B, out, final, v, g, st, info, story, send_images=not audio_only)
         sug = {"v": "f" if story["voz"] == "femenina" else "m", "g": story["musica"], "s": "ia"}
         api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(out), "reel": final.name, "product_id": prod["id"],
-            "sel": {"v": v, "g": g, "s": opts.get("s") or "ia"}, "sug": sug}})
+            "sel": {"v": opts.get("v") or "ia", "g": opts.get("g") or "ia", "s": opts.get("s") or "ia"}, "sug": sug}})
         auto_scout(g)
     except Exception as e:
         traceback.print_exc()
@@ -204,22 +237,31 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
     """4 reels con guiones, estilos y aperturas distintos para probar en Meta cuál vende más."""
     pages, phone, titles = load_pages(); vdir = out / "variantes"; shutil.rmtree(vdir, ignore_errors=True); vdir.mkdir()
     reels, imgs, meta, made = [], [], [], []
-    for k, (st, opening) in enumerate(VARIANTES):
+    formats = ranked_formats(prod, B, out / "brief.json")[:4]
+    say("🧪 Formatos elegidos por la IA para este público: " + ", ".join(FORMAT_NAMES.get(f, f) for f in formats))
+    for k, fmt in enumerate(formats):
         name = f"V{k + 1}"
-        say(f"🧪 {name}/4 · {motor.STYLE_NAMES[st]} · empieza con «{opening}»: escribiendo guion…")
-        story = new_story(prod, B, titles, len(pages), out, force_style=st, force_open=opening,
+        say(f"🧪 {name}/4 · formato {FORMAT_NAMES.get(fmt, fmt)}: escribiendo guion…")
+        story = new_story(prod, B, titles, len(pages), out, force_format=fmt,
                           extra_avoid=[{"concepto": m.get("concepto"), "orden": [e["tipo"] for e in m["escenas"]]} for m in made], seed=k + 1)
-        made.append(story); remember(out, story)
-        v = opts.get("v") or ("f" if story["voz"] == "femenina" else "m"); g = opts.get("g") or story["musica"]
+        used = [m["estilo"] for m in made]
+        if story["estilo"] in used:  # que cada variante también se vea distinta
+            story["estilo"] = next((x for x in motor.STYLE_NAMES if x not in used), story["estilo"])
+        made.append(story); remember(out, story); st = story["estilo"]
+        v, g = pick(opts.get("v"), opts.get("g"), story)
         B2 = json.loads(json.dumps(B)); B2["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         est = B2["estaticos"][k % 3]; est["titular"] = hook_lines(story)
         motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
-        silent = pathlib.Path(tmp) / f"{name}.mp4"; TL = story_mod.build(B2, story, pages, phone, silent, style=st, seed=7 + k)
+        vd = None
+        if v in ("f", "m"):
+            try: vd = audio.voice_durations(story, B2["voz"]["genero"], tmp)
+            except Exception as e: print("voz previa falló:", e)
+        silent = pathlib.Path(tmp) / f"{name}.mp4"; TL = story_mod.build(B2, story, pages, phone, silent, style=st, seed=7 + k, vdurs=vd)
         wav = pathlib.Path(tmp) / f"{name}.wav"
         info = audio.mix(B2, TL, wav, music_genre=g, with_voice=v in ("f", "m"), tmpdir=tmp, seed=k, story=story)
         reel = vdir / f"{name}-reel.mp4"; audio.mux(silent, wav, reel)
         reels.append(reel); imgs.append(vdir / f"{name}-4x5.jpg")
-        meta.append({"nombre": name, "estilo": motor.STYLE_NAMES[st], "tipo": opening, "gancho": story.get("concepto", ""),
+        meta.append({"nombre": name, "estilo": FORMAT_NAMES.get(fmt, fmt) + " · " + motor.STYLE_NAMES[st], "tipo": fmt, "gancho": story.get("concepto", ""),
                      "texto": (story.get("copy") or {}).get("texto", ""), "titular": (story.get("copy") or {}).get("titular", ""),
                      "musica": info["musica"], "escenas": " → ".join(e["tipo"] for e in story["escenas"])})
     media = [{"type": "photo", "media": f"attach://i{k}", "caption": f"{m['nombre']} · {m['estilo']}"} for k, m in enumerate(meta)]
@@ -234,7 +276,7 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
     say(f"🧪 <b>4 variantes de {esc(prod['title'])} listas</b>\n" + "\n".join(f"• <b>{m['nombre']}</b>: {esc(m['estilo'])} — {esc(m['gancho'])}" for m in meta) +
         f"\n\n📋 <b>Cómo probarlas en Meta</b>\n1. Una campaña de Ventas con 1 conjunto de anuncios y los 4 anuncios dentro.\n2. Nómbralos <code>[{esc(prod['slug'])}] V1</code> … <code>V4</code>.\n3. 3-4 días sin tocar nada. Luego apaga los 2 con el costo por clic (CPC) más alto y deja los otros.\n4. El que consiga ventas más baratas es el ganador: de ese hacemos más versiones.")
     api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(vdir), "variantes": [m["nombre"] for m in meta], "product_id": prod["id"],
-        "sel": {"v": opts.get("v") or "f", "g": opts.get("g") or B["musica"]["genero"], "s": "ia"}, "sug": {"v": "f" if B["voz"]["genero"] == "femenina" else "m", "g": B["musica"]["genero"], "s": "ia"}}})
+        "sel": {"v": opts.get("v") or "ia", "g": opts.get("g") or "ia", "s": "ia"}, "sug": {"v": "ia", "g": "ia", "s": "ia"}}})
 
 def variants_text(prod, B, meta):
     L = [f"VARIANTES PARA PROBAR · {prod['title']}", f"Enlace: https://{prod.get('dominio', 'pixeliadigital.app')}/p/{prod['slug']}",
