@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | probar-binance | probar-correo
+# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -62,6 +62,24 @@ case "$1" in
     echo "   Guardada en el servidor: ${#SAVED} caracteres · la que escribiste: ${#PW} caracteres"
     if [ "$CODE" = 200 ]; then echo "✅ La contraseña es correcta en el servidor. Si la web dice 'incorrecta', el navegador está rellenando otra: bórrala y escríbela a mano."
     else echo "✖ No coincide (código $CODE). Cámbiala con: bash configurar.sh admin"; fi
+    exit 0;;
+  gemini)
+    ask GEMINI_API_KEY "Pega la clave de Gemini AIza... (no se verá) y pulsa Enter:" 1;;
+  probar-gemini)
+    docker exec pixelia node --no-warnings --input-type=module -e "
+      const { config } = await import('/app/src/config.js');
+      const key = process.env.GEMINI_API_KEY || (await import('node:fs')).readFileSync('/app/.env','utf8').match(/^GEMINI_API_KEY=(.*)$/m)?.[1];
+      if (!key) { console.log('✖ Falta GEMINI_API_KEY: ejecuta bash configurar.sh gemini'); process.exit(0); }
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+      const j = await r.json();
+      if (!r.ok) { console.log('✖ Gemini respondió: ' + (j.error?.message || r.status)); process.exit(0); }
+      const names = (j.models || []).map(m => m.name.replace('models/',''));
+      const pick = (re) => names.filter(n => re.test(n)).slice(0, 4).join(', ') || '—';
+      console.log('✅ Clave de Gemini correcta. Modelos disponibles:');
+      console.log('   Voz:     ' + pick(/tts/));
+      console.log('   Imagen:  ' + pick(/image|banana/));
+      console.log('   Video:   ' + pick(/omni|veo/));
+      console.log('   Música:  ' + pick(/lyria/));"
     exit 0;;
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1
