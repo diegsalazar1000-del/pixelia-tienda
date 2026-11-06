@@ -39,9 +39,27 @@ case "$1" in
   redes)
     echo "Conectar Instagram + Facebook para publicar desde el bot."
     ask META_APP_ID "Escribe el ID de la app de Meta (App ID, el número) y pulsa Enter:" 0
-    ask META_APP_SECRET "Pega la clave secreta de la app (App Secret, no se verá) y pulsa Enter:" 1
+    while true; do
+      ask META_APP_SECRET "Pega la clave secreta de la app (App Secret, 32 letras y números, no se verá) y pulsa Enter (o solo Enter si ya la guardaste):" 1
+      SEC=$(grep '^META_APP_SECRET=' .env | cut -d= -f2-)
+      if [[ "$SEC" =~ ^[0-9a-fA-F]{32}$ ]]; then break; fi
+      echo "   ✖ Eso no es la clave secreta (debe tener 32 caracteres; lo que hay guardado tiene ${#SEC}). Cópiala de Configuración → Básica → Mostrar y pégala otra vez."
+    done
     echo; echo "Pega el token del Explorador de la API Graph (no se verá) y pulsa Enter:"
     read -rs TOK; echo; TOK=$(clean "$TOK" | tr -d ' ')
+    PERMS=$(docker exec -e TOK="$TOK" pixelia node --input-type=module -e '
+      const r = await fetch(`https://graph.facebook.com/v23.0/me/permissions?access_token=${process.env.TOK}`).then((x) => x.json()).catch(() => ({}));
+      if (r.error) { console.log("ERR " + r.error.message); process.exit(0); }
+      const ok = (r.data || []).filter((p) => p.status === "granted").map((p) => p.permission);
+      const need = ["pages_show_list","pages_manage_posts","pages_read_engagement","instagram_basic","instagram_content_publish","business_management","instagram_manage_comments","pages_manage_engagement","pages_read_user_content","ads_management","ads_read"];
+      const miss = need.filter((n) => !ok.includes(n));
+      console.log(miss.length ? "FALTAN " + miss.join(" ") : "OK");' 2>/dev/null)
+    case "$PERMS" in
+      OK) echo "   ✔ El token tiene los 11 permisos";;
+      FALTAN*) echo "   ⚠️ A este token le faltan permisos: ${PERMS#FALTAN }"
+               echo "      (agrégalos en el Explorador, toca Generate Access Token y acepta en la ventana de Facebook). Sigo con lo que tiene.";;
+      *) echo "   ✖ El token no sirve: ${PERMS#ERR } — genera uno nuevo en el Explorador."; exit 1;;
+    esac
     AID=$(grep '^META_APP_ID=' .env | cut -d= -f2-); ASEC=$(grep '^META_APP_SECRET=' .env | cut -d= -f2-)
     OUT=$(docker exec -e AID="$AID" -e ASEC="$ASEC" -e TOK="$TOK" pixelia node --input-type=module -e '
       const G = "https://graph.facebook.com/v23.0"; const j = async (u) => { const r = await fetch(u); const x = await r.json(); if (x.error) throw new Error(x.error.message); return x; };
