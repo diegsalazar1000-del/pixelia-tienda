@@ -82,6 +82,7 @@ async function askClaude(text) {
     if (j.stop_reason !== 'pause_turn') break;
     body.messages = [...body.messages, { role: 'assistant', content: j.content }];
   }
+  out = out.replace(/<\/?cite[^>]*>/g, '');  // la búsqueda web marca citas: no deben salir en Telegram
   return { data: await parseLoose(out), searches };
 }
 
@@ -118,7 +119,7 @@ export async function explorar(tema = '') {
   const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
   try { res = await askClaude(prompt(cats, tema, ya)); }
   catch (e) { return say(`⚠️ El explorador falló: ${esc(e.message)}`); }
-  const { hallazgos = [], ideas = [], mundo = [] } = res.data || {};
+  const { hallazgos = [], ideas = [], mundo = [] } = JSON.parse(JSON.stringify(res.data || {}).replace(/<\\?\/?cite[^>]*>/g, ''));
   const items = [
     ...hallazgos.map((h) => ({ ...h, _tipo: 'hallazgo' })),
     ...ideas.map((i) => ({ ...i, titulo: i.titulo_tienda, plataforma: 'idea-ia', evidencia: `Idea nueva basada en: ${i.basada_en || ''}. ${i.por_que || ''}`, decision: 'recrear', _tipo: 'idea' })),
