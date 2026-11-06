@@ -11,9 +11,9 @@ import { paypalEnabled, createPaypalOrder, capturePaypalOrder } from './payments
 import { binanceEnabled, binanceAutoVerify, uniqueAmount, findBinancePayment } from './payments/binance.js';
 import { tg, tgEnabled, verifyInitData, notifyAdmin, esc } from './telegram/api.js';
 import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
-import { Candidates } from './db.js';
+import { Candidates, AdJobs } from './db.js';
 import { pixelSnippet } from './meta.js';
-import { startRadarBot, createDraft } from './telegram/radar.js';
+import { startRadarBot, createDraft, offerAds } from './telegram/radar.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
@@ -213,7 +213,12 @@ on('POST', '/api/admin/products', async (req, res) => {
     await fs.promises.writeFile(path.join(config.paths.files, name), Buffer.from(b.fileBase64, 'base64'));
     data.file_name = name;
   }
-  try { json(res, 200, Products.upsert(data)); } catch (e) { fail(res, 400, e.message.includes('UNIQUE') ? 'Ya existe un producto con ese enlace (slug)' : e.message); }
+  const before = data.id ? Products.byId(data.id) : null;
+  try {
+    const saved = Products.upsert(data);
+    if (saved.active && (!before || !before.active) && (saved.file_name || saved.external_url)) offerAds(saved).catch(() => {});
+    json(res, 200, saved);
+  } catch (e) { fail(res, 400, e.message.includes('UNIQUE') ? 'Ya existe un producto con ese enlace (slug)' : e.message); }
 });
 
 on('POST', '/api/admin/products/:id/delete', (req, res, { id }) => { if (!adminOk(req)) return fail(res, 401, 'Clave incorrecta'); Products.remove(Number(id)); json(res, 200, { ok: true }); });
@@ -274,6 +279,25 @@ on('POST', '/api/n8n/products/:id/retire', (req, res, { id }) => {
   Products.remove(p.id);
   if (p.candidate_id) Candidates.update(p.candidate_id, { status: 'retired' });
   json(res, 200, { ok: true, retired: p.slug });
+});
+
+// ===== Estudio de anuncios (el contenedor "pixelia-estudio" pide trabajos aquí) =====
+on('POST', '/api/studio/next', (req, res) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const j = AdJobs.claim(); if (!j) { res.writeHead(204); return res.end(); }
+  const p = Products.byId(j.product_id); if (!p) { AdJobs.finish(j.id, 'error', {}, 'producto no existe'); res.writeHead(204); return res.end(); }
+  const prev = AdJobs.last(p.id);
+  json(res, 200, { job: { id: j.id, options: j.options }, product: { ...publicProduct(p), file_name: p.file_name, external_url: p.external_url, dominio: config.baseUrl.replace(/^https?:\/\//, '') },
+    previous: prev ? JSON.parse(prev.result || '{}') : null });
+});
+on('POST', '/api/studio/jobs/:id', async (req, res, { id }) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const b = await body(req, 1e6); AdJobs.finish(Number(id), b.status === 'done' ? 'done' : 'error', b.result || {}, b.error || '');
+  json(res, 200, { ok: true });
+});
+on('POST', '/api/admin/products/:id/ads', async (req, res, { id }) => {
+  if (!adminOk(req)) return fail(res, 401, 'Clave incorrecta');
+  json(res, 200, AdJobs.enqueue(Number(id), (await body(req, 1e4)).options || {}));
 });
 
 on('GET', '/api/admin/radar', (req, res) => adminOk(req) ? json(res, 200, { items: Candidates.list('', 150).map(parseC) }) : fail(res, 401, 'Clave incorrecta'));

@@ -85,6 +85,18 @@ CREATE TABLE IF NOT EXISTS candidates (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS ad_jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  options TEXT DEFAULT '{}',
+  status TEXT DEFAULT 'queued',          -- queued / running / done / error
+  result TEXT DEFAULT '{}',
+  error TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);`);
+
 // Migraciones suaves (columnas nuevas en tablas existentes)
 for (const sql of [
   "ALTER TABLE products ADD COLUMN launched_at TEXT",
@@ -134,6 +146,27 @@ export const Products = {
         p.sales AS sales_total
       FROM products p WHERE p.active = 1 ORDER BY sales DESC, views DESC`).all({ since });
   },
+};
+
+export const AdJobs = {
+  enqueue(productId, options = {}) {
+    const dup = db.prepare("SELECT id FROM ad_jobs WHERE product_id = ? AND status IN ('queued','running') AND options = ?").get(productId, JSON.stringify(options));
+    if (dup) return { id: dup.id, duplicated: true };
+    const r = db.prepare('INSERT INTO ad_jobs (product_id, options) VALUES (?, ?)').run(productId, JSON.stringify(options));
+    return { id: Number(r.lastInsertRowid) };
+  },
+  /** Toma el trabajo más antiguo en cola (y recupera los que se quedaron colgados más de 30 min). */
+  claim() {
+    db.prepare("UPDATE ad_jobs SET status = 'queued' WHERE status = 'running' AND updated_at < datetime('now','-30 minutes')").run();
+    const j = db.prepare("SELECT * FROM ad_jobs WHERE status = 'queued' ORDER BY id LIMIT 1").get();
+    if (!j) return null;
+    db.prepare("UPDATE ad_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?").run(j.id);
+    return { ...j, options: JSON.parse(j.options || '{}') };
+  },
+  finish(id, status, result = {}, error = '') {
+    db.prepare("UPDATE ad_jobs SET status = ?, result = ?, error = ?, updated_at = datetime('now') WHERE id = ?").run(status, JSON.stringify(result), String(error).slice(0, 1000), id);
+  },
+  last: (productId) => db.prepare("SELECT * FROM ad_jobs WHERE product_id = ? AND status = 'done' ORDER BY id DESC LIMIT 1").get(productId),
 };
 
 export const Candidates = {

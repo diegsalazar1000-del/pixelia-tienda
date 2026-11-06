@@ -1,7 +1,7 @@
 // Bot del RADAR: la tienda escucha los botones 🛒 🛠️ ❌ que manda n8n (long polling, sin webhooks).
 // Así n8n no necesita dirección pública: solo busca y avisa; la tienda ejecuta las decisiones.
 import { config } from '../config.js';
-import { Products, Candidates } from '../db.js';
+import { Products, Candidates, AdJobs } from '../db.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -57,8 +57,40 @@ No copies textos ni diseños del original; todo debe ser contenido nuevo. Sé co
   return (data.content || []).map((b) => b.text || '').join('');
 }
 
+/** Ofrece crear anuncios de un producto recién publicado. */
+export async function offerAds(p) {
+  if (!token()) return;
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `🚀 <b>Publicaste:</b> ${esc(p.title)}\n¿Creo los anuncios (imágenes + reel)?`,
+    reply_markup: { inline_keyboard: [[{ text: '🎬 Crear anuncios', callback_data: `ad:${p.id}:` }]] } });
+}
+
+// Opciones compactas del anuncio en callback_data: "ad:<id>:v=f,g=reggaeton,n=1"
+const parseOpts = (s) => Object.fromEntries(String(s || '').split(',').filter(Boolean).map((kv) => kv.split('=')));
+
+async function onMessage(m) {
+  if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
+  const text = (m.text || '').trim();
+  if (text.startsWith('/anuncios')) {
+    const list = Products.list().slice(0, 20);
+    if (!list.length) return send('No hay productos publicados.');
+    return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿De qué producto creo anuncios?',
+      reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
+  }
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto');
+}
+
 export async function onCallback(q) {
-  const [action, id] = String(q.data || '').split(':');
+  const [action, id, opts] = String(q.data || '').split(':');
+  if (action === 'ad' && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    const p = Products.byId(Number(id));
+    if (!p) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Producto no encontrado' });
+    const options = parseOpts(opts);
+    const r = AdJobs.enqueue(p.id, options);
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: r.duplicated ? 'Ya se está creando' : 'En marcha 🎬' }).catch(() => {});
+    if (!r.duplicated) await send(`🎬 Creando anuncios de <b>${esc(p.title)}</b>${options.v && options.v !== '0' ? ' · con voz' : ''}${options.g ? ' · ritmo ' + esc(options.g) : ''}.\nTe los mando aquí en unos minutos.`);
+    return;
+  }
   if (String(q.from?.id) !== String(config.telegram.adminChatId)) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'No autorizado' });
   if (!['buy', 'rec', 'no'].includes(action)) return rtg('answerCallbackQuery', { callback_query_id: q.id });
   await rtg('answerCallbackQuery', { callback_query_id: q.id, text: action === 'rec' ? 'Preparando el plan (1 min)…' : 'Hecho' }).catch(() => {});
@@ -107,10 +139,11 @@ export async function startRadarBot() {
   let offset = 0;
   for (;;) {
     try {
-      const updates = await rtg('getUpdates', { offset, timeout: 30, allowed_updates: ['callback_query'] });
+      const updates = await rtg('getUpdates', { offset, timeout: 30, allowed_updates: ['callback_query', 'message'] });
       for (const u of updates) {
         offset = u.update_id + 1;
         if (u.callback_query) await onCallback(u.callback_query).catch((e) => console.error('[radar]', e.message));
+        else if (u.message) await onMessage(u.message).catch((e) => console.error('[radar]', e.message));
       }
     } catch (e) {
       console.error('[radar] polling:', e.message);
