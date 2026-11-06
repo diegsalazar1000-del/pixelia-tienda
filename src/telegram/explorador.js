@@ -5,9 +5,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
-import { Candidates } from '../db.js';
+import { Candidates, Products } from '../db.js';
 
 const CATEGORIAS = [
+  'planners, agendas y trackers digitales (con un enfoque nuevo o un nicho concreto)',
+  'finanzas personales, ahorro y control de deudas',
   'mini cursos y cursos en video prácticos (enseñar a hacer algo concreto)',
   'plantillas de Notion, Canva o Excel/Google Sheets',
   'ebooks y guías prácticas cortas',
@@ -35,13 +37,15 @@ const hash = (s) => { let h = 0; for (const ch of String(s)) h = (Math.imul(31, 
 const STATE = path.join(path.dirname(config.paths.db), 'explorador.json');
 const state = () => { try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { return {}; } };
 
-function prompt(cats, tema) {
+function prompt(cats, tema, ya) {
   const hoy = new Date().toISOString().slice(0, 10);
   return `Hoy es ${hoy}. Eres buscador de oportunidades para una tienda de productos digitales en español (Latinoamérica) que vende a 3-10 USD.
 Investiga en internet (varias búsquedas en español e inglés: Etsy best sellers, TikTok Shop, TikTok/Instagram virales, Hotmart, Gumroad, Pinterest, Google Trends, artículos recientes)
 qué productos DIGITALES se están vendiendo o haciendo virales en los ÚLTIMOS 3 MESES (no clásicos de hace años).
 ${tema ? `Tema pedido: ${tema}.` : `Céntrate en estas categorías: ${cats.join('; ')}.`}
-La tienda YA tiene planners y finanzas personales: NO propongas más planners, agendas ni plantillas de presupuesto.
+Planners y finanzas también valen, pero solo si es algo distinto a lo que ya tenemos.
+NO repitas nada parecido a esto (ya lo tenemos o ya lo vimos): ${JSON.stringify(ya)}.
+Busca VARIEDAD: cada hallazgo de una categoría y un formato distinto (video, PDF, plantilla, audio, pack…).
 Incluye cursos o videos que se vendan (la tienda los recrearía como curso propio con guion, diapositivas y ejercicios, sin copiar a la persona).
 Evita: marcas registradas, personajes, "cómo ganar dinero rápido", promesas de salud o resultados, contenido para adultos.
 Además de lo que encuentres, propone IDEAS NUEVAS derivadas: productos que se puedan sacar a partir de esas tendencias y que nadie esté vendiendo igual.
@@ -84,7 +88,8 @@ export async function explorar(tema = '') {
   const cats = [0, 1, 2, 3].map((k) => CATEGORIAS[(day * 4 + k) % CATEGORIAS.length]);  // rota categorías cada día
   await say(`🌐 <b>Explorando tendencias</b>${tema ? ` sobre <i>${esc(tema)}</i>` : `: ${esc(cats.map((c) => c.split(' (')[0].split(':')[0]).join(' · '))}`}… (2-4 min)`);
   let res;
-  try { res = await askClaude(prompt(cats, tema)); }
+  const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
+  try { res = await askClaude(prompt(cats, tema, ya)); }
   catch (e) { return say(`⚠️ El explorador falló: ${esc(e.message)}`); }
   const { hallazgos = [], ideas = [] } = res.data || {};
   const items = [
