@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
+import { explorar } from './explorador.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -242,6 +243,10 @@ async function onMessage(m) {
     const n = AdJobs.cancelQueued();
     return send(n ? `❌ Quité ${n} anuncio(s) de la fila. El que ya se está haciendo termina igual.` : 'No hay anuncios esperando en la fila (si uno ya se está haciendo, termina igual).');
   }
+  if (text.startsWith('/explorar')) {
+    const tema = text.replace(/^\/explorar(@\w+)?/, '').trim();
+    explorar(tema).catch((e) => send(`⚠️ Explorador: ${esc(e.message)}`)); return;
+  }
   if (text.startsWith('/fusionar')) return fuse().catch((e) => send(`⚠️ No pude fusionar: ${esc(e.message)}`));
   const mb = text.match(/^\/m[uú]sica\s+buscar\s+(\S+)/i);
   if (mb) {
@@ -254,7 +259,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
 }
 
 export async function onCallback(q) {

@@ -15,6 +15,7 @@ import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
 import { Candidates, AdJobs } from './db.js';
 import { pixelSnippet } from './meta.js';
 import { startRadarBot, createDraft, offerAds, sendAdPicker } from './telegram/radar.js';
+import { startExplorador } from './telegram/explorador.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
@@ -431,4 +432,4 @@ if (binanceAutoVerify()) setInterval(async () => {
   }
 }, 60_000);
 
-if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); }
+if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); }
