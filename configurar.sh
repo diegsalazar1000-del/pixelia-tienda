@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | probar-correo
+# Uso: bash configurar.sh paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | probar-binance | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -66,6 +66,20 @@ case "$1" in
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1
     ask ANTHROPIC_API_KEY "Pega la clave de Claude sk-ant-... (no se verá) y pulsa Enter:" 1;;
+  probar-binance)
+    docker exec pixelia node --no-warnings --input-type=module -e "
+      const { config } = await import('/app/src/config.js');
+      const crypto = await import('node:crypto');
+      const b = config.binance;
+      console.log('Pay ID:', b.payId || '✖ falta');
+      if (!b.apiKey || !b.apiSecret) { console.log('Sin API key: Binance funcionará en modo manual (confirmas con botón en Telegram).'); process.exit(0); }
+      const qs = 'timestamp=' + Date.now() + '&recvWindow=10000&limit=10';
+      const sig = crypto.createHmac('sha256', b.apiSecret).update(qs).digest('hex');
+      const r = await fetch('https://api.binance.com/sapi/v1/pay/transactions?' + qs + '&signature=' + sig, { headers: { 'X-MBX-APIKEY': b.apiKey } });
+      const j = await r.json();
+      if (r.ok) console.log('✅ Conexión con Binance correcta. Movimientos de Binance Pay recientes visibles: ' + (j.data || []).length);
+      else console.log('✖ Binance respondió: ' + (j.msg || JSON.stringify(j)) + '  (código ' + j.code + ')');"
+    exit 0;;
   probar-correo)
     echo; echo "Escribe tu correo personal para enviarte un correo de prueba y pulsa Enter:"
     read -r TO; TO=$(clean "$TO" | tr -d ' ')
