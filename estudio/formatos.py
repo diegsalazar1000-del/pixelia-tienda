@@ -207,7 +207,7 @@ def pexels_video(query):
     if out.exists() and out.stat().st_size > 50000: return out
     try:
         q = urllib.parse.urlencode({"query": query, "orientation": "portrait", "size": "medium", "per_page": 8})
-        req = urllib.request.Request(f"https://api.pexels.com/videos/search?{q}", headers={"Authorization": key, "User-Agent": "PixeliaEstudio/1.0"})
+        req = urllib.request.Request(f"https://api.pexels.com/v1/videos/search?{q}", headers={"Authorization": key, "User-Agent": "PixeliaEstudio/1.0"})
         with urllib.request.urlopen(req, timeout=30) as r: data = json.load(r)
         best = None
         for v in data.get("videos", []):
