@@ -39,5 +39,5 @@
 3. Meta: Business Manager, cuenta publicitaria (riesgo de tarjeta venezolana), píxel+CAPI con `bash configurar.sh meta`, luego botón "📤 Subir a Meta" (campaña PAUSADA) y optimización semanal con datos del píxel.
 4. Productos con /fusionar (meta: ~10 productos en una semana, empezando por 3 del mismo público que el planner para el pack). Diego manda los planes y Claude fabrica los archivos.
 5. Página `/regalo` (enlace en la bio de Instagram): producto gratis a cambio del correo con casilla de consentimiento ("Acepto recibir novedades"), evento Lead del píxel para públicos similares, lista para email marketing y público personalizado en Meta. El regalo debe ser del mismo público que lo que se vende.
-6. Botón "⭐ Guardar este guion" (opcional). Al probar anuncios: primero sin voz y luego "Solo voz/música" para ahorrar créditos de ElevenLabs.
+6. Botón "⭐ Guardar este guion" (opcional). Comandos del bot para cuidar créditos: /creditos (gasto de ElevenLabs; la clave necesita permiso User→Read), /ahorro on|off (no gastar: reutiliza voces y música guardadas), /cancelar (quita anuncios de la fila). Al probar anuncios: primero sin voz y luego "Solo voz/música" para ahorrar créditos de ElevenLabs.
 7. Copias de seguridad, quizá VPS de 2 GB, Binance automático vía proxy, traducción al inglés, WhatsApp al final.

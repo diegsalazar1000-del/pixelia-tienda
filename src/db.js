@@ -191,6 +191,9 @@ export const Products = {
 };
 
 export const AdJobs = {
+  /** Quita de la fila los trabajos que aún no empezaron. */
+  cancelQueued: () => db.prepare("UPDATE ad_jobs SET status = 'cancelled', updated_at = datetime('now') WHERE status = 'queued'").run().changes,
+  pending: () => db.prepare("SELECT status, COUNT(*) n FROM ad_jobs WHERE status IN ('queued','running') GROUP BY status").all(),
   enqueue(productId, options = {}) {
     const dup = db.prepare("SELECT id FROM ad_jobs WHERE product_id = ? AND status IN ('queued','running') AND options = ?").get(productId, JSON.stringify(options));
     if (dup) return { id: dup.id, duplicated: true };

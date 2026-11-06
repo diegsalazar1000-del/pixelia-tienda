@@ -107,6 +107,21 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
+// ===== Créditos de ElevenLabs =====
+async function creditos() {
+  const key = process.env.ELEVENLABS_API_KEY;
+  if (!key) return send('No hay clave de ElevenLabs configurada.');
+  try {
+    const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': key } });
+    const j = await r.json();
+    if (!r.ok) return send(`No pude leer los créditos (${esc(j.detail?.message || j.detail?.status || r.status)}).\nSi dice "missing permissions", en ElevenLabs edita la clave y activa <b>User → Read</b>. Mientras, míralos en elevenlabs.io (barra "Credits used").`);
+    const used = j.character_count || 0, lim = j.character_limit || 0, left = Math.max(0, lim - used);
+    const reset = j.next_character_count_reset_unix ? new Date(j.next_character_count_reset_unix * 1000).toLocaleDateString('es') : '—';
+    const ahorro = fs.existsSync(path.join(path.dirname(MUSIC_DIR), 'ahorro'));
+    return send(`🎙️ <b>ElevenLabs</b> · plan ${esc(j.tier || '')}\nGastados: <b>${used.toLocaleString('es')}</b> de ${lim.toLocaleString('es')} (${lim ? Math.round(used / lim * 100) : 0}%)\nQuedan: <b>${left.toLocaleString('es')}</b> ≈ ${Math.floor(left / 180)} reels con voz nueva\nSe renuevan: ${reset}\nModo ahorro: ${ahorro ? '🟢 activado' : '⚪ desactivado'}`);
+  } catch (e) { return send('No pude consultar ElevenLabs: ' + esc(e.message)); }
+}
+
 // ===== 🧬 Fusionar ideas del radar =====
 const fusions = new Map();  // propuestas recientes (token → propuesta)
 const slugify = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'producto';
@@ -216,6 +231,17 @@ async function onMessage(m) {
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  if (text.startsWith('/creditos') || text.startsWith('/créditos')) return creditos();
+  if (text.startsWith('/ahorro')) {
+    const f = path.join(path.dirname(MUSIC_DIR), 'ahorro'); const arg = text.split(/\s+/)[1];
+    if (arg === 'off' || arg === 'no') { try { fs.unlinkSync(f); } catch {} return send('💸 Modo ahorro <b>desactivado</b>: se crean voces y música nuevas con ElevenLabs cuando haga falta.'); }
+    if (arg === 'on' || arg === 'si' || arg === 'sí') { fs.writeFileSync(f, '1'); return send('🟢 Modo ahorro <b>activado</b>: no se gasta nada en ElevenLabs. Se reutilizan las voces y canciones ya creadas; si una frase no está guardada, el reel sale sin voz.\nPara desactivarlo: <code>/ahorro off</code>'); }
+    return send(`Modo ahorro: <b>${fs.existsSync(f) ? '🟢 activado' : '⚪ desactivado'}</b>\n<code>/ahorro on</code> = no gastar créditos de ElevenLabs\n<code>/ahorro off</code> = volver a crear voces y música nuevas`);
+  }
+  if (text.startsWith('/cancelar')) {
+    const n = AdJobs.cancelQueued();
+    return send(n ? `❌ Quité ${n} anuncio(s) de la fila. El que ya se está haciendo termina igual.` : 'No hay anuncios esperando en la fila (si uno ya se está haciendo, termina igual).');
+  }
   if (text.startsWith('/fusionar')) return fuse().catch((e) => send(`⚠️ No pude fusionar: ${esc(e.message)}`));
   const mb = text.match(/^\/m[uú]sica\s+buscar\s+(\S+)/i);
   if (mb) {
@@ -228,7 +254,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/musica — agregar canciones reales para los anuncios');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
 }
 
 export async function onCallback(q) {

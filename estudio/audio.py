@@ -221,9 +221,11 @@ def library_track(genre, T, seed=0):
     seg[:fi] *= np.linspace(0, 1, fi); seg[-fo:] *= np.linspace(1, 0, fo)
     return seg / (np.abs(seg).max() + 1e-9) * 0.6, path.name
 
+class SaltarVoz(Exception): pass
+
 def ai_music(g, B, seed=0, per_genre=3):
     """Con ElevenLabs: crea canciones del género hasta tener `per_genre` en la biblioteca (luego se reutilizan: ahorra créditos)."""
-    if not os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVENLABS_MUSIC", "1") == "0": return
+    if not os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVENLABS_MUSIC", "1") == "0" or ahorro(): return
     have = library(g)
     if len(have) >= per_genre and seed < len(have): return
     if len(have) >= per_genre + 1: return
@@ -308,7 +310,8 @@ def voice_durations(story, genero, tmpdir):
     out = []
     for sc in story["escenas"]:
         t = str(sc.get("voz") or "").strip()
-        out.append(round(len(tts(t, genero, tmpdir, 1.0)) / SR, 2) if t else None)
+        try: out.append(round(len(tts(t, genero, tmpdir, 1.0)) / SR, 2) if t else None)
+        except SaltarVoz: out.append(None)
     return out
 
 def voice_story(story, TL, genero, tmpdir):
@@ -318,7 +321,8 @@ def voice_story(story, TL, genero, tmpdir):
         text = str(sc.get("voz") or "").strip()
         if not text: continue
         start = max(s["start"] + 0.15, free + 0.12)
-        clip = tts(text, genero, tmpdir, 1.0)
+        try: clip = tts(text, genero, tmpdir, 1.0)
+        except SaltarVoz: continue
         room = T - 0.12 - start
         if len(clip) / SR > room:  # solo puede pasar al final: un poco más rápido y, si aún no cabe, se acorta la frase
             clip = tts(text, genero, tmpdir, 1.08)
@@ -339,6 +343,9 @@ def read_wav(path):
     return v
 
 LAST_ENGINE = {"v": ""}
+def ahorro():
+    """Modo ahorro (/ahorro on en el bot): no se gasta nada en ElevenLabs."""
+    return (MUSIC_DIR.parent / "ahorro").exists()
 def tts(text, genero, tmpdir, speed=1.0):
     if os.environ.get("ELEVENLABS_API_KEY"):  # voz natural (de pago); si falla, sigue con Piper
         try:
@@ -347,9 +354,12 @@ def tts(text, genero, tmpdir, speed=1.0):
             vid = voces.pick_voice(genero)  # incluye la voz en la clave: si cambia la voz, no se reutiliza
             cdir = MUSIC_DIR.parent / "voz-cache"; cdir.mkdir(parents=True, exist_ok=True)
             mp3 = cdir / f"{hashlib.sha1(f'{vid}|{speed}|{text}'.encode()).hexdigest()[:20]}.mp3"
-            if not mp3.exists(): voces.tts_mp3(text, genero, mp3, speed)
+            if not mp3.exists():
+                if ahorro(): raise SaltarVoz("modo ahorro: frase sin voz guardada")
+                voces.tts_mp3(text, genero, mp3, speed)
             LAST_ENGINE["v"] = "ElevenLabs"; v = decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
             return v[max(0, nz[0] - 800): nz[-1] + 2000] if len(nz) else v
+        except SaltarVoz: raise
         except Exception as e:
             print("ElevenLabs falló, uso Piper:", e)
     LAST_ENGINE["v"] = "Piper (gratis)"
