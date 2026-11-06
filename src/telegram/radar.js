@@ -5,6 +5,7 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
+import { redesListas, estadoRedes, publicarKit } from './redes.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -316,6 +317,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
 🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
 
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -337,6 +339,14 @@ async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/publicar')) {
+    if (!redesListas()) return send('Todavía no está conectada la API de Meta. En el servidor: <code>cd /opt/pixelia && bash configurar.sh redes</code>');
+    const desde = Math.max(1, Math.min(9, Number((text.match(/kit\s+(\d)/) || [])[1]) || 1));
+    let st; try { st = await estadoRedes(); } catch (e) { return send(`⚠️ La conexión con Meta falló: ${esc(e.message)}\nPuede que el token haya vencido: vuelve a correr <code>bash configurar.sh redes</code>.`); }
+    return rtg('sendMessage', { chat_id: m.chat.id, parse_mode: 'HTML',
+      text: `📤 Conectado a la página <b>${esc(st.pagina)}</b>${st.instagram ? ` y a Instagram <b>@${esc(st.instagram)}</b>` : ' (⚠️ Instagram no aparece conectado a la página)'}.\n\n¿Publico las ${10 - desde} publicaciones del kit${desde > 1 ? ` (desde la ${desde})` : ''} en ${st.instagram ? 'Instagram y ' : ''}Facebook? Van en orden, una cada ~20 segundos.`,
+      reply_markup: { inline_keyboard: [[{ text: '✅ Sí, publicar ahora', callback_data: `pub:kit:${desde}` }, { text: '❌ No', callback_data: 'x:0' }]] } });
+  }
   if (text.startsWith('/gemini')) {
     const list = Products.list().filter((p) => !p.bundle_ids).slice(0, 20);
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿Para qué producto escribo los prompts de Gemini?',
@@ -421,6 +431,13 @@ export async function onCallback(q) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
   }
+  if (action === 'pub' && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Publicando…' }).catch(() => {});
+    await rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [[{ text: '📤 Publicando…', callback_data: 'x:0' }]] } }).catch(() => {});
+    publicarKit(send, Number(opts) || 1).then((n) => send(`✅ Listo: ${n} publicaciones subidas completas. Revisa tu Instagram y fija (📌) la 1, la 2 y la 6.`))
+      .catch((e) => send(`⚠️ Publicar: ${esc(e.message)}`));
+    return;
+  }
   if (action === 'gem' && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Escribiendo prompts…' }).catch(() => {});
     return geminiPrompts(id).catch((e) => send(`⚠️ Prompts para Gemini: ${esc(e.message)}`));
@@ -490,7 +507,7 @@ export async function startRadarBot() {
   if (!token()) { console.log('[radar] RADAR_BOT_TOKEN vacío: botones del radar desactivados.'); return; }
   await rtg('deleteWebhook', {}).catch(() => {});
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
-    ['lista', 'Todos los comandos y para qué sirven'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
+    ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
     ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');

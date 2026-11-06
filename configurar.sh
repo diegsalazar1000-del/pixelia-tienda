@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh voz | probar-voz | pixabay | pexels | paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
+# Uso: bash configurar.sh redes | voz | probar-voz | pixabay | pexels | paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -36,6 +36,28 @@ case "$1" in
   meta)
     ask META_PIXEL_ID "Escribe el ID del píxel de Meta y pulsa Enter:" 0
     ask META_CAPI_TOKEN "Pega el token de la API de Conversiones (no se verá) y pulsa Enter:" 1;;
+  redes)
+    echo "Conectar Instagram + Facebook para publicar desde el bot."
+    ask META_APP_ID "Escribe el ID de la app de Meta (App ID, el número) y pulsa Enter:" 0
+    ask META_APP_SECRET "Pega la clave secreta de la app (App Secret, no se verá) y pulsa Enter:" 1
+    echo; echo "Pega el token del Explorador de la API Graph (no se verá) y pulsa Enter:"
+    read -rs TOK; echo; TOK=$(clean "$TOK" | tr -d ' ')
+    AID=$(grep '^META_APP_ID=' .env | cut -d= -f2-); ASEC=$(grep '^META_APP_SECRET=' .env | cut -d= -f2-)
+    OUT=$(docker exec -e AID="$AID" -e ASEC="$ASEC" -e TOK="$TOK" pixelia node --input-type=module -e '
+      const G = "https://graph.facebook.com/v23.0"; const j = async (u) => { const r = await fetch(u); const x = await r.json(); if (x.error) throw new Error(x.error.message); return x; };
+      try {
+        const ll = await j(`${G}/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.AID}&client_secret=${process.env.ASEC}&fb_exchange_token=${process.env.TOK}`);
+        const pages = (await j(`${G}/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${ll.access_token}`)).data || [];
+        const p = pages.find((x) => /pixelia/i.test(x.name)) || pages[0];
+        if (!p) throw new Error("el token no ve ninguna página (marca la página de Pixelia al generar el token)");
+        console.log(`OK|${p.id}|${p.access_token}|${p.instagram_business_account?.id || ""}|${p.name}`);
+      } catch (e) { console.log("ERR|" + e.message); }' 2>/dev/null)
+    case "$OUT" in
+      OK\|*) IFS='|' read -r _ PID PTOK IGID PNAME <<< "$OUT"
+        set_key META_PAGE_ID "$PID"; set_key META_PAGE_TOKEN "$PTOK"; set_key META_IG_ID "$IGID"
+        echo "   ✔ Página: $PNAME"; [ -n "$IGID" ] && echo "   ✔ Instagram conectado" || echo "   ⚠️ La página no tiene Instagram conectado: conéctalo en Facebook y repite esto.";;
+      *) echo "   ✖ No pude conectar: ${OUT#ERR|}"; exit 1;;
+    esac;;
   nueva-clave)
     PW="Pixelia-$(tr -dc 'a-z0-9' </dev/urandom | head -c 8)"
     set_key ADMIN_PASSWORD "$PW"
