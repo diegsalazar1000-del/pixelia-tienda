@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
+import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -318,7 +319,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
 🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
 
-/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -360,6 +361,7 @@ async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/comentarios')) { await send('🔎 Revisando comentarios de Instagram y Facebook…'); return revisarComentarios().then(() => send('✅ Revisado.')).catch((e) => send(`⚠️ ${esc(e.message)}`)); }
   if (text.startsWith('/publicar')) {
     if (!redesListas()) return send('Todavía no está conectada la API de Meta. En el servidor: <code>cd /opt/pixelia && bash configurar.sh redes</code>');
     const desde = Math.max(1, Math.min(9, Number((text.match(/kit\s+(\d)/) || [])[1]) || 1));
@@ -452,6 +454,14 @@ export async function onCallback(q) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
   }
+  if (action === 'cm' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // cm:d|s:i|f:<id>
+    const [, what, red, ...rest] = String(q.data).split(':'); const cid = rest.join(':');
+    try {
+      if (what === 'd') await eliminar(red, cid); else await ocultar(red, cid, false);
+      await rtg('answerCallbackQuery', { callback_query_id: q.id, text: what === 'd' ? 'Eliminado' : 'Visible otra vez' }).catch(() => {});
+      return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [[{ text: what === 'd' ? '🗑️ Eliminado' : '👁️ Visible otra vez', callback_data: 'x:0' }]] } }).catch(() => {});
+    } catch (e) { return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'No se pudo: ' + e.message.slice(0, 150), show_alert: true }).catch(() => {}); }
+  }
   if ((action === 'pr' || action === 'prok') && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: action === 'pr' ? '' : 'Publicando… (1-5 min)' }).catch(() => {});
     if (!redesListas()) return send('Falta conectar Meta: en el servidor <code>bash configurar.sh redes</code>');
@@ -542,6 +552,7 @@ Nombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);
 export async function startRadarBot() {
   if (!token()) { console.log('[radar] RADAR_BOT_TOKEN vacío: botones del radar desactivados.'); return; }
   await rtg('deleteWebhook', {}).catch(() => {});
+  startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
     ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],

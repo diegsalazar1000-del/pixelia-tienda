@@ -5,17 +5,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 
-const G = 'https://graph.facebook.com/v23.0';
+export const G = 'https://graph.facebook.com/v23.0';
 const env = (k) => process.env[k] || '';
 export const redesListas = () => !!(env('META_PAGE_TOKEN') && env('META_PAGE_ID'));
 const KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'kit-instagram.json');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function call(method, url, params = {}) {
+export async function call(method, url, params = {}) {
   const body = new URLSearchParams({ ...params, access_token: env('META_PAGE_TOKEN') });
   const r = method === 'GET' ? await fetch(`${url}?${body}`) : await fetch(url, { method, body });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.error) throw new Error(j.error?.error_user_msg || j.error?.message || `HTTP ${r.status}`);
+  if (!r.ok || j.error) { const e = new Error(j.error?.error_user_msg || j.error?.message || `HTTP ${r.status}`); e.code = j.error?.code; throw e; }
   return j;
 }
 
