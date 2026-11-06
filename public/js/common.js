@@ -88,3 +88,12 @@ function setupLang() {
   $$('[data-tp]').forEach((el) => { el.placeholder = t(el.dataset.tp); });
 }
 document.addEventListener('DOMContentLoaded', setupLang);
+
+// 💬 Enlace de soporte por Telegram en el pie de página (si el bot tiene usuario)
+fetch('/api/config').then((r) => r.json()).then((c) => {
+  if (!c.bot) return;
+  document.querySelectorAll('footer .wrap').forEach((f) => {
+    const a = document.createElement('a'); a.href = `https://t.me/${c.bot}?start=soporte`; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = '💬 Soporte por Telegram'; a.style.marginLeft = '14px'; (f.lastElementChild || f).appendChild(a);
+  });
+}).catch(() => {});

@@ -19,6 +19,26 @@ async function send(chatId, text, reply_markup) {
   return tg('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', reply_markup, link_preview_options: { is_disabled: true } });
 }
 
+// 💬 Soporte: lo que escribe el cliente te llega al admin; respondes "respondiendo" (deslizar) a ese mensaje y le llega al cliente.
+const acked = new Map();
+async function toSupport(m) {
+  const chatId = m.chat.id, who = m.from?.username ? '@' + m.from.username : (m.from?.first_name || 'Cliente');
+  const head = await tg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `💬 <b>Soporte</b> · ${esc(who)} #c${chatId}\n${m.text ? esc(m.text) : '(archivo o foto 👇)'}\n\n<i>Responde a este mensaje (deslízalo a la derecha) y se lo envío al cliente.</i>` });
+  if (!m.text) await tg('copyMessage', { chat_id: config.telegram.adminChatId, from_chat_id: chatId, message_id: m.message_id, reply_parameters: { message_id: head.message_id } }).catch(() => {});
+  if (Date.now() - (acked.get(chatId) || 0) > 10 * 60e3) {
+    acked.set(chatId, Date.now()); if (acked.size > 5000) acked.clear();
+    await send(chatId, '✅ Recibimos tu mensaje. Te respondemos por aquí lo antes posible (normalmente el mismo día). Si es sobre una compra, incluye tu número de pedido.');
+  }
+}
+async function supportReply(m) {
+  const id = ((m.reply_to_message?.text || m.reply_to_message?.caption || '').match(/#c(-?\d+)/) || [])[1];
+  if (!id) return false;
+  await tg('copyMessage', { chat_id: id, from_chat_id: m.chat.id, message_id: m.message_id });
+  await send(m.chat.id, '✅ Enviado al cliente.');
+  return true;
+}
+
 async function showCategories(chatId) {
   const cats = Products.categories();
   if (!cats.length) return send(chatId, 'Todavía no hay productos. ¡Vuelve pronto!');
@@ -92,6 +112,7 @@ async function onMessage(m) {
         return send(chatId, `✅ Pedido <code>${o.id}</code> vinculado. Te enviaré el producto aquí en cuanto se confirme el pago.`);
       }
       if (arg.startsWith('p_')) return showProduct(chatId, Products.bySlug(arg.slice(2)));
+      if (arg === 'soporte') return send(chatId, `👋 ¡Hola${m.from?.first_name ? ' ' + esc(m.from.first_name) : ''}! Este es el soporte de <b>${esc(config.storeName)}</b>.\n\nEscríbenos aquí tu pregunta (si es sobre una compra, con tu número de pedido) y te respondemos por este chat.`);
       return send(chatId, `👋 ¡Hola${m.from?.first_name ? ' ' + esc(m.from.first_name) : ''}! Bienvenido a <b>${esc(config.storeName)}</b>.\n\nProductos digitales con entrega inmediata. Paga con Telegram Stars ⭐ y recibe tu archivo aquí mismo.`, mainMenu());
     }
     case '/catalogo': return showCategories(chatId);
@@ -99,13 +120,17 @@ async function onMessage(m) {
     case '/id': return send(chatId, `Tu chat id: <code>${chatId}</code>`);
     case '/paysupport':
     case '/soporte':
-      notifyAdmin(`🆘 Soporte de ${esc(m.from?.username ? '@' + m.from.username : m.from?.first_name)} (<code>${chatId}</code>): ${esc(arg)}`);
-      return send(chatId, 'Escríbenos tu problema con el número de pedido y te responderemos lo antes posible. El soporte de Telegram no puede ayudar con compras hechas en este bot.');
+      if (arg) return toSupport({ ...m, text: arg });
+      return send(chatId, '💬 Escríbenos aquí mismo tu pregunta o problema (con tu número de pedido si es sobre una compra) y te respondemos por este chat.');
     case '/terminos':
       return send(chatId, `Términos y privacidad: ${config.baseUrl}/legal`);
   }
 
-  if (!isAdmin(chatId)) return send(chatId, 'Usa el menú 👇', mainMenu());
+  if (!isAdmin(chatId)) {
+    if (text.startsWith('/')) return send(chatId, 'Usa el menú 👇', mainMenu());
+    return toSupport(m);  // cualquier mensaje normal del cliente va a soporte
+  }
+  if (m.reply_to_message && await supportReply(m).catch((e) => { send(chatId, `⚠️ No pude enviarlo: ${esc(e.message)}`); return true; })) return;
 
   // ===== Comandos de administrador =====
   switch (cmd) {
@@ -184,7 +209,7 @@ export async function startBot() {
     { command: 'start', description: 'Inicio' },
     { command: 'catalogo', description: 'Ver productos' },
     { command: 'mispedidos', description: 'Mis compras y descargas' },
-    { command: 'paysupport', description: 'Ayuda con un pago' },
+    { command: 'paysupport', description: 'Ayuda con un pago' }, { command: 'soporte', description: 'Hablar con soporte' },
     { command: 'terminos', description: 'Términos y privacidad' },
   ] }).catch((e) => console.error(e.message));
   console.log('[bot] escuchando mensajes…');
