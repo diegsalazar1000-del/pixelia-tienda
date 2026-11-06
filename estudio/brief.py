@@ -192,6 +192,8 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     if force_open: forzar.append(f"La PRIMERA escena debe ser de tipo \"{force_open}\".")
     if force_style: forzar.append(f"Usa el estilo \"{force_style}\".")
     if force_format in FORMATOS: forzar.append(f"Usa el formato \"{force_format}\" ({FORMATOS[force_format][0]}).")
+    if os.environ.get("PIXABAY_API_KEY") or os.environ.get("PEXELS_API_KEY"):
+        forzar.append("Incluye SIEMPRE una escena \"broll\" (video real de fondo) con una búsqueda en inglés que encaje con el producto.")
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
         publico=B.get("publico", ""), paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
@@ -322,6 +324,9 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
     if not out or out[0]["tipo"] not in APERTURAS:
         out.insert(0, {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")})
     out = out[:5]
+    if (os.environ.get("PIXABAY_API_KEY") or os.environ.get("PEXELS_API_KEY")) and not any(s["tipo"] == "broll" for s in out):
+        out.insert(1 if len(out) > 1 else len(out), key_scene("broll", B, n_pages))
+        out = out[:5]
     if len(out) < 3:  # asegura algo de producto en pantalla
         if "paginas" not in [s["tipo"] for s in out]:
             out.append({"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": (B.get("textos_paginas") or [""])[:4], "voz": ""})

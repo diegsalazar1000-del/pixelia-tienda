@@ -137,6 +137,12 @@ def hook_lines(story):
     lines = [words[k:k + 3] for k in range(0, len(words), 3)][:3]
     return [{"palabras": l, **({"resaltar": 0} if sc["tipo"] == "pov" and n == 0 else {})} for n, l in enumerate(lines)] or [{"palabras": ["Nuevo"]}]
 
+def real_photo(story):
+    """Foto real de Pixabay acorde al producto (usa la búsqueda de la escena de video real del guion)."""
+    import formatos
+    q = next((s.get("busqueda") for s in story["escenas"] if s.get("busqueda")), None) or "cozy desk coffee notebook"
+    return formatos.stock_photo(q)
+
 def history(out):
     f = out / "historial.json"
     try: return json.loads(f.read_text())
@@ -207,7 +213,7 @@ def run_job(J):
             say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
             for old in out.glob("[ABC]-*.jpg"): old.unlink()
-            motor.build_static(B2, pages, phone, out, style=st)
+            motor.build_static(B2, pages, phone, out, style=st, photo=real_photo(story))
             vd = None
             if v in ("f", "m"):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
@@ -252,7 +258,7 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
         v, g = pick(opts.get("v"), opts.get("g"), story)
         B2 = json.loads(json.dumps(B)); B2["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         est = B2["estaticos"][k % 3]; est["titular"] = hook_lines(story)
-        motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
+        motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3], photo=real_photo(story) if k % 2 == 0 else None, photo_for=(k % 3,))
         vd = None
         if v in ("f", "m"):
             try: vd = audio.voice_durations(story, B2["voz"]["genero"], tmp)

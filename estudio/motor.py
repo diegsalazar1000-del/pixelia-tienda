@@ -47,7 +47,19 @@ def set_style(name, colors, pages=None):
     S.clear(); S.update(base); _bgcache.clear()
 
 _bgcache = {}
+def photo_bg(w, h, t):
+    """Foto real de fondo, recortada a la medida y oscurecida para que el texto se lea."""
+    key = ("photo", w, h)
+    if key not in _bgcache:
+        p = S["photo"]; sc = max(w * 1.08 / p.width, h * 1.08 / p.height)
+        big = p.resize((int(p.width * sc), int(p.height * sc)), Image.LANCZOS)
+        big = big.crop(((big.width - w) // 2, (big.height - h) // 2, (big.width - w) // 2 + w, (big.height - h) // 2 + h))
+        big = Image.blend(big, Image.new("RGB", (w, h), (12, 10, 18)), 0.38)
+        _bgcache[key] = big.convert("RGBA")
+    return _bgcache[key].copy()
+
 def background(w, h, colors, t):
+    if S.get("photo") is not None: return photo_bg(w, h, t)
     kind = S.get("bg", "gradient")
     if kind == "neon": return neon_bg(w, h, colors, t)
     if kind == "minimal": return minimal_bg(w, h, colors, t)
@@ -366,12 +378,15 @@ def build_reel(B, pages, phone, out_path, progress=None, style="color", only_tim
 
 
 # ---------- imágenes ----------
-def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None, sizes=None):
-    """prefix='V2' → V2-4x5.jpg… (variantes); only=[índices de B['estaticos']] a dibujar."""
+def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None, sizes=None, photo=None, photo_for=(0,)):
+    """prefix='V2' → V2-4x5.jpg… (variantes); only=[índices de B['estaticos']]; photo = foto real de fondo para los índices photo_for."""
     rng = random.Random(3); files = []; set_style(style, B["colores"], pages)
     stickers = make_stickers(B.get("stickers", ["NUEVO", "PDF"]), B["colores"])
+    base_text, base_dom = S["text"], S["domain"]
     for vi, v in enumerate(B["estaticos"]):
         if only is not None and vi not in only: continue
+        S["photo"] = photo if (photo is not None and vi in photo_for) else None; _bgcache.clear()
+        S["text"], S["domain"] = ("#FFFFFF", "#FFFFFF") if S["photo"] is not None else (base_text, base_dom)
         for name, (w, h) in {"1x1": (1080, 1080), "4x5": (1080, 1350), "9x16": (1080, 1920)}.items():
             if sizes and name not in sizes: continue
             cols = v.get("colores") or B["colores"]
@@ -411,4 +426,5 @@ def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None,
                 paste_center(cv, ps, w / 2, (h - ps.height / 2 - 18) if not story else by + 200)
             paste_center(cv, btn, w / 2, by); paste_center(cv, text_box(B["dominio"], F("Bold", 34), S["domain"]), w / 2, by + (80 if not story else 100))
             path = outdir / f"{prefix or chr(65 + vi)}-{name}.jpg"; cv.convert("RGB").save(path, quality=92); files.append(path)
+    S["photo"] = None; S["text"], S["domain"] = base_text, base_dom; _bgcache.clear()
     return files

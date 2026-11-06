@@ -246,6 +246,27 @@ def pixabay_video(query, out):
         print("Pixabay:", e)
     return None
 
+def stock_photo(query):
+    """Foto real de Pixabay (gratis, uso comercial) para fondos de imágenes. Se guarda para reutilizarla."""
+    key = os.environ.get("PIXABAY_API_KEY", "").strip()
+    if not key or not query: return None
+    BROLL_DIR.mkdir(parents=True, exist_ok=True)
+    out = BROLL_DIR / ("img-" + hashlib.sha1(query.lower().encode()).hexdigest()[:16] + ".jpg")
+    if out.exists() and out.stat().st_size > 20000: return Image.open(out).convert("RGB")
+    try:
+        for q_ in (query, " ".join(query.split()[:2])):
+            q = urllib.parse.urlencode({"key": key, "q": q_[:100], "image_type": "photo", "orientation": "vertical", "safesearch": "true", "per_page": 10})
+            with urllib.request.urlopen(urllib.request.Request(f"https://pixabay.com/api/?{q}", headers={"User-Agent": "PixeliaEstudio/1.0"}), timeout=30) as r:
+                hits = json.load(r).get("hits", [])
+            if hits: break
+        if not hits: return None
+        h = max(hits[:5], key=lambda x: x.get("likes", 0))
+        with urllib.request.urlopen(urllib.request.Request(h.get("largeImageURL") or h["webformatURL"], headers={"User-Agent": "PixeliaEstudio/1.0"}), timeout=60) as r:
+            out.write_bytes(r.read())
+        return Image.open(out).convert("RGB")
+    except Exception as e:
+        print("Pixabay foto:", e); return None
+
 class BrollReader:
     """Lee el video cuadro a cuadro a media resolución (poca memoria en el VPS)."""
     def __init__(self, path, fps, dur):
