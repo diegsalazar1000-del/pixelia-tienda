@@ -1,23 +1,148 @@
 {
   "producto": "Mi Año en Mini · Planner Digital 2027",
-  "precio": 7, "tachado": 14, "descuento": "-50%",
+  "precio": 4.99,
+  "tachado": 9.99,
+  "descuento": "-50%",
   "dominio": "pixeliadigital.app",
   "cta": "DESCÁRGALO HOY",
-  "colores": ["#FF6B4A", "#FFB23F", "#FF6FA8"],
-  "paginas": ["pag1.png", "pag9.png", "pag39.png", "pag75.png", "pag86.png", "pag98.png"],
-  "flip_textos": ["Tu 2027 en un solo archivo", "12 meses con enlaces", "53 semanas, sin relleno", "Rastreador de hábitos", "Finanzas del mes", "Reto de ahorro 52 semanas"],
+  "colores": [
+    "#FF6B4A",
+    "#FFB23F",
+    "#FF6FA8"
+  ],
+  "paginas": [
+    "pag1.png",
+    "pag9.png",
+    "pag39.png",
+    "pag75.png",
+    "pag86.png",
+    "pag98.png"
+  ],
+  "flip_textos": [
+    "Tu 2027 en un solo archivo",
+    "12 meses con enlaces",
+    "53 semanas, sin relleno",
+    "Rastreador de hábitos",
+    "Finanzas del mes",
+    "Reto de ahorro 52 semanas"
+  ],
   "movil": "movil.png",
-  "movil_texto": ["También", "en", "tu", "MÓVIL"], "movil_resaltar": 3,
-  "stickers": ["st/11-etiqueta-lo-logre.png", "st/64-star-mostaza.png", "st/66-heart-rosa.png", "st/01-etiqueta-importante.png", "st/70-flower-rosa.png", "st/72-frase-tu-puedes.png", "st/68-sun-mostaza.png"],
+  "movil_texto": [
+    "También",
+    "en",
+    "tu",
+    "MÓVIL"
+  ],
+  "movil_resaltar": 3,
+  "stickers": [
+    "st/11-etiqueta-lo-logre.png",
+    "st/64-star-mostaza.png",
+    "st/66-heart-rosa.png",
+    "st/01-etiqueta-importante.png",
+    "st/70-flower-rosa.png",
+    "st/72-frase-tu-puedes.png",
+    "st/68-sun-mostaza.png"
+  ],
   "gancho": [
-    {"palabras": ["¿Tu", "agenda"]},
-    {"palabras": ["también", "muere"]},
-    {"palabras": ["en", "FEBRERO?"], "resaltar": 1, "color": "#2E2823"}
+    {
+      "palabras": [
+        "¿Tu",
+        "agenda"
+      ]
+    },
+    {
+      "palabras": [
+        "también",
+        "muere"
+      ]
+    },
+    {
+      "palabras": [
+        "en",
+        "FEBRERO?"
+      ],
+      "resaltar": 1,
+      "color": "#2E2823"
+    }
   ],
   "segundos": 14,
   "estaticos": [
-    {"id": "V2-A-febrero", "titular": [{"palabras": ["La", "agenda", "que"]}, {"palabras": ["SÍ", "vas", "a", "usar"], "resaltar": 0}], "pagina": 2, "pagina_fondo": 1},
-    {"id": "V2-B-todo", "colores": ["#FF6FA8", "#B07CFF", "#FF6B4A"], "titular": [{"palabras": ["Metas,", "hábitos"]}, {"palabras": ["y", "FINANZAS"], "resaltar": 1}], "pagina": 3, "pagina_fondo": 4, "fase": 2.0},
-    {"id": "V2-C-oferta", "colores": ["#FFB23F", "#FF6B4A", "#FF6FA8"], "titular": [{"palabras": ["Tu", "2027"]}, {"palabras": ["por", "solo", "$7"], "resaltar": 2}], "pagina": 0, "pagina_fondo": 2, "fase": 4.0, "cta": "APROVECHAR OFERTA"}
+    {
+      "id": "V2-A-febrero",
+      "titular": [
+        {
+          "palabras": [
+            "La",
+            "agenda",
+            "que"
+          ]
+        },
+        {
+          "palabras": [
+            "SÍ",
+            "vas",
+            "a",
+            "usar"
+          ],
+          "resaltar": 0
+        }
+      ],
+      "pagina": 2,
+      "pagina_fondo": 1
+    },
+    {
+      "id": "V2-B-todo",
+      "colores": [
+        "#FF6FA8",
+        "#B07CFF",
+        "#FF6B4A"
+      ],
+      "titular": [
+        {
+          "palabras": [
+            "Metas,",
+            "hábitos"
+          ]
+        },
+        {
+          "palabras": [
+            "y",
+            "FINANZAS"
+          ],
+          "resaltar": 1
+        }
+      ],
+      "pagina": 3,
+      "pagina_fondo": 4,
+      "fase": 2.0
+    },
+    {
+      "id": "V2-C-oferta",
+      "colores": [
+        "#FFB23F",
+        "#FF6B4A",
+        "#FF6FA8"
+      ],
+      "titular": [
+        {
+          "palabras": [
+            "Tu",
+            "2027"
+          ]
+        },
+        {
+          "palabras": [
+            "por",
+            "solo",
+            "$4.99"
+          ],
+          "resaltar": 2
+        }
+      ],
+      "pagina": 0,
+      "pagina_fondo": 2,
+      "fase": 4.0,
+      "cta": "APROVECHAR OFERTA"
+    }
   ]
 }
