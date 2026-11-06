@@ -186,6 +186,35 @@ def device_frame(page, w, max_h=None, r=46, pad=26, color=None):
     ImageDraw.Draw(fr).rounded_rectangle([0, 0, fr.width - 1, fr.height - 1], radius=r, fill=color)
     fr.alpha_composite(rounded(p, int(r * .55)), (pad, pad)); return fr
 
+PAGOS = [p.strip() for p in __import__("os").environ.get("PAGOS_ANUNCIO", "PayPal,Visa,Mastercard,Binance").split(",") if p.strip()]
+
+def pay_strip(scale=1.0, dark=None):
+    """Franja 'Paga con: PayPal · Visa · Mastercard · Binance' con icono de tarjeta (sin logos de marcas)."""
+    darkbg = S.get("name") in ("neon", "tiktok")
+    fg = "#FFFFFF" if darkbg else INK
+    bg = {"neon": (27, 18, 56, 240), "tiktok": (0, 0, 0, 190)}.get(S.get("name"), (255, 255, 255, 245))
+    f1, f2 = F("Medium", 30 * scale), F("Bold", 30 * scale)
+    pills = [text_box(p, f2, fg) for p in PAGOS]
+    lead = text_box("Paga con", f1, fg)
+    ic_w, ic_h = int(54 * scale), int(36 * scale)
+    gap = int(16 * scale); dot = int(10 * scale)
+    w = ic_w + gap + lead.width + gap + sum(p.width for p in pills) + (len(pills) - 1) * (gap + dot) + int(40 * scale)
+    h = max(lead.height, ic_h) + int(20 * scale)
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=h // 2, fill=bg)
+    x = int(20 * scale); cy = h / 2
+    card = S.get("hl_fill", "#7B5CFF")  # icono de tarjeta genérica
+    d.rounded_rectangle([x, cy - ic_h / 2, x + ic_w, cy + ic_h / 2], radius=int(6 * scale), fill=card)
+    d.rectangle([x, cy - ic_h / 2 + ic_h * 0.22, x + ic_w, cy - ic_h / 2 + ic_h * 0.40], fill=(0, 0, 0, 90))
+    d.rounded_rectangle([x + ic_w * 0.12, cy + ic_h * 0.08, x + ic_w * 0.42, cy + ic_h * 0.30], radius=2, fill=(255, 255, 255, 200))
+    x += ic_w + gap
+    im.alpha_composite(lead, (x, int(cy - lead.height / 2))); x += lead.width + gap
+    for k, p in enumerate(pills):
+        im.alpha_composite(p, (x, int(cy - p.height / 2))); x += p.width
+        if k < len(pills) - 1:
+            d.ellipse([x + gap / 2, cy - dot / 2, x + gap / 2 + dot, cy + dot / 2], fill=card); x += gap + dot
+    return im
+
 def money(x): return f"${x:.2f}".replace(".00", "") if abs(x - round(x)) < 1e-9 else f"${x:.2f}"
 
 # ---------- stickers generados (sin archivos externos) ----------
@@ -322,6 +351,9 @@ def build_reel(B, pages, phone, out_path, progress=None, style="color", only_tim
             btn.alpha_composite(cta, (55, 25))
             paste_center(cv, btn, W / 2, 1270, back_out(prog(t, s4 + 0.6, s4 + 0.95)) * pulse)
             paste_center(cv, text_box(B["dominio"], F("Bold", 46), S["domain"]), W / 2, 1420, prog(t, s4 + 0.9, s4 + 1.2))
+            if PAGOS:
+                ps = pay_strip(1.35); ps = ps if ps.width <= W - 80 else ps.resize((W - 80, int(ps.height * (W - 80) / ps.width)), Image.LANCZOS)
+                paste_center(cv, ps, W / 2, 1545, back_out(prog(t, s4 + 1.0, s4 + 1.35)))
             for j, st in enumerate(stickers[:min(4, S["stickers"])]):
                 pos = [(200, 520), (880, 1150), (180, 1180), (900, 470)][j]
                 paste_center(cv, st, *pos, back_out(prog(t, s4 + 0.2 + j * 0.1, s4 + 0.5 + j * 0.1)), rot=15 * math.sin(t * 2 + j))
@@ -349,7 +381,8 @@ def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None,
             for li, line in enumerate(v["titular"]):
                 f = fit_font(line["palabras"], w - 120, size)
                 highlight_words(cv, line["palabras"], w / 2, top + 70 + li * size * 1.18, f, -10, 10, line.get("resaltar"))
-            cy = h * (0.60 if not story else 0.55); dw = int(w * (0.62 if not story else 0.78)); max_h = int(h * (0.42 if w == h else 0.40))
+            sq = w == h and bool(PAGOS)  # en cuadrado con franja de pagos, el dispositivo va algo más pequeño
+            cy = h * (0.52 if sq else 0.60 if not story else 0.55); dw = int(w * (0.56 if sq else 0.62 if not story else 0.78)); max_h = int(h * (0.34 if sq else 0.42 if w == h else 0.40))
             lay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             back = device_frame(pages[min(len(pages) - 1, v.get("pagina_fondo", 1))], dw, max_h)
             front = device_frame(pages[min(len(pages) - 1, v.get("pagina", 0))], dw, max_h)
@@ -371,6 +404,11 @@ def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None,
             btn = Image.new("RGBA", (cta.width + 80, cta.height + 34), (0, 0, 0, 0))
             ImageDraw.Draw(btn).rounded_rectangle([0, 0, btn.width - 1, btn.height - 1], radius=btn.height // 2, fill=S["cta_fill"])
             btn.alpha_composite(cta, (40, 17)); by = h - (110 if not story else 360)
+            if PAGOS:  # franja abajo del todo; el botón y el dominio suben un poco
+                ps = pay_strip(1.0); maxw = w - 60
+                if ps.width > maxw: ps = ps.resize((maxw, int(ps.height * maxw / ps.width)), Image.LANCZOS)
+                by -= ps.height + (14 if not story else 0)
+                paste_center(cv, ps, w / 2, (h - ps.height / 2 - 18) if not story else by + 200)
             paste_center(cv, btn, w / 2, by); paste_center(cv, text_box(B["dominio"], F("Bold", 34), S["domain"]), w / 2, by + (80 if not story else 100))
             path = outdir / f"{prefix or chr(65 + vi)}-{name}.jpg"; cv.convert("RGB").save(path, quality=92); files.append(path)
     return files
