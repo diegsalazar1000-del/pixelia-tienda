@@ -22,7 +22,7 @@ def prog(t, a, b): return clamp((t - a) / (b - a))
 def hexrgb(h): h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 # ---------- estilos ----------
-STYLE_NAMES = {"color": "Explosión de color", "neon": "Neón oscuro", "minimal": "Minimal elegante", "tiktok": "TikTok nativo", "impacto": "Impacto 3D"}
+STYLE_NAMES = {"color": "Explosión de color", "neon": "Neón oscuro", "minimal": "Minimal elegante", "tiktok": "TikTok nativo"}
 S = {}
 
 def bright(hexes):  # el color más vivo/claro de la paleta

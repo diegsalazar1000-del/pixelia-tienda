@@ -73,7 +73,7 @@ const packOpts = (o) => Object.entries(o).filter(([, x]) => x !== undefined && x
 
 // ===== Selector combinable (voz + música + estilo) =====
 export const GENRES = { reggaeton: 'Reggaetón', pop: 'Pop', trap: 'Trap', cumbia: 'Cumbia', electronica: 'Electrónica', lofi: 'Lo-fi', acustica: 'Acústica', base: 'Suave', 0: '🔇 Sin música' };
-export const STYLES = { ia: '🎲 La IA elige', color: '🌈 Color', neon: '🌃 Neón', minimal: '🤍 Minimal', tiktok: '📱 TikTok', impacto: '💥 Impacto 3D' };
+export const STYLES = { ia: '🎲 La IA elige', color: '🌈 Color', neon: '🌃 Neón', minimal: '🤍 Minimal', tiktok: '📱 TikTok' };
 const VOICES = { f: '👩 Femenina', m: '👨 Masculina', 0: '🔇 Sin voz' };
 const MUSIC_DIR = path.join(path.dirname(config.paths?.files || path.resolve('storage/products')), 'musica');
 const songs = (g) => { try { return fs.readdirSync(path.join(MUSIC_DIR, g)).filter((f) => /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f)).length; } catch { return 0; } };
@@ -85,7 +85,7 @@ function pickerKb(pid, sel, sug = {}) {
   return [
     Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
     ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
-    [btn('s', 'ia', STYLES.ia)], ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])), [btn('s', 'impacto', STYLES.impacto)],
+    [btn('s', 'ia', STYLES.ia)], ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])),
     [{ text: `🎬 Reel NUEVO (otro guion): ${VOICES[sel.v] || ''} · ${GENRES[sel.g] || ''}`.slice(0, 60), callback_data: `ad:${pid}:${packOpts(sel)}` }],
     [{ text: '🔊 Solo cambiar voz/música del último reel', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, a: 1 })}` }],
     [{ text: '🧪 4 variantes para probar en Meta (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
