@@ -25,6 +25,7 @@ os.environ.setdefault("ANTHROPIC_API_KEY", ENV.get("ANTHROPIC_API_KEY", ""))
 os.environ.setdefault("ANTHROPIC_MODEL", ENV.get("ANTHROPIC_MODEL", "claude-sonnet-5-5"))
 if ENV.get("ELEVENLABS_API_KEY"): os.environ.setdefault("ELEVENLABS_API_KEY", ENV["ELEVENLABS_API_KEY"])
 if ENV.get("PEXELS_API_KEY"): os.environ.setdefault("PEXELS_API_KEY", ENV["PEXELS_API_KEY"])
+if ENV.get("PIXABAY_API_KEY"): os.environ.setdefault("PIXABAY_API_KEY", ENV["PIXABAY_API_KEY"])
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
 FORMAT_NAMES = {"clasico": "Clásico", "conversacion": "💬 Chat", "vida_real": "🎬 Video real", "pantalla": "📱 Pantalla de móvil",

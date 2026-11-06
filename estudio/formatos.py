@@ -200,11 +200,16 @@ def sc_top3(cv, sc, u, d, X):
 # ---------- 🎬 video real de fondo (Pexels, gratis con licencia comercial) ----------
 BROLL_DIR = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia")) / "storage" / "broll"
 def pexels_video(query):
-    key = os.environ.get("PEXELS_API_KEY", "").strip()
-    if not key or not query: return None
+    """Video real de fondo: Pixabay (gratis) o Pexels (gratis), lo que tenga clave. Se guarda para reutilizarlo."""
+    if not query: return None
     BROLL_DIR.mkdir(parents=True, exist_ok=True)
     out = BROLL_DIR / (hashlib.sha1(query.lower().encode()).hexdigest()[:16] + ".mp4")
     if out.exists() and out.stat().st_size > 50000: return out
+    if os.environ.get("PIXABAY_API_KEY", "").strip():
+        v = pixabay_video(query, out)
+        if v: return v
+    key = os.environ.get("PEXELS_API_KEY", "").strip()
+    if not key: return None
     try:
         q = urllib.parse.urlencode({"query": query, "orientation": "portrait", "size": "medium", "per_page": 8})
         req = urllib.request.Request(f"https://api.pexels.com/v1/videos/search?{q}", headers={"Authorization": key, "User-Agent": "PixeliaEstudio/1.0"})
@@ -221,6 +226,25 @@ def pexels_video(query):
         return out
     except Exception as e:
         print("Pexels:", e); return None
+
+def pixabay_video(query, out):
+    try:
+        q = urllib.parse.urlencode({"key": os.environ["PIXABAY_API_KEY"].strip(), "q": query[:100], "video_type": "film", "safesearch": "true", "per_page": 10})
+        with urllib.request.urlopen(urllib.request.Request(f"https://pixabay.com/api/videos/?{q}", headers={"User-Agent": "PixeliaEstudio/1.0"}), timeout=30) as r:
+            hits = json.load(r).get("hits", [])
+        if not hits and " " in query:  # búsqueda más simple si no hubo resultados
+            return pixabay_video(" ".join(query.split()[:2]), out)
+        for h in hits:
+            if (h.get("duration") or 0) < 4: continue
+            vids = h.get("videos") or {}
+            # preferimos verticales; si no, uno horizontal (se recorta al centro)
+            cand = sorted([v for v in vids.values() if v.get("url") and (v.get("width") or 0) >= 640], key=lambda v: (not (v.get("height", 0) > v.get("width", 0)), abs((v.get("width") or 0) - 1280)))
+            if not cand: continue
+            with urllib.request.urlopen(urllib.request.Request(cand[0]["url"], headers={"User-Agent": "PixeliaEstudio/1.0"}), timeout=90) as r: out.write_bytes(r.read())
+            if out.stat().st_size > 50000: return out
+    except Exception as e:
+        print("Pixabay:", e)
+    return None
 
 class BrollReader:
     """Lee el video cuadro a cuadro a media resolución (poca memoria en el VPS)."""

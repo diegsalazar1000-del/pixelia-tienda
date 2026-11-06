@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda claves en .env preguntándolas una por una y reinicia la tienda.
-# Uso: bash configurar.sh voz | probar-voz | pexels | paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
+# Uso: bash configurar.sh voz | probar-voz | pixabay | pexels | paypal | binance | correo | meta | radar | admin | nueva-clave | probar-admin | gemini | probar-gemini | probar-binance | probar-correo
 cd "$(dirname "$0")"
 read -r -t 1 -n 10000 _basura 2>/dev/null || true
 clean() { printf %s "$1" | sed -e 's/\[20[01]~//g' -e 's/\x1b//g' | tr -d '~\r\n'; }
@@ -84,6 +84,9 @@ case "$1" in
   voz)
     ask ELEVENLABS_API_KEY "Pega la API key de ElevenLabs (no se verá) y pulsa Enter:" 1
     docker restart pixelia-estudio >/dev/null 2>&1 && echo "   ✔ Estudio reiniciado con la voz nueva";;
+  pixabay)
+    ask PIXABAY_API_KEY "Pega la API key de Pixabay (no se verá) y pulsa Enter:" 1
+    docker restart pixelia-estudio >/dev/null 2>&1 && echo "   ✔ Estudio reiniciado: ya puede usar videos reales de fondo";;
   pexels)
     ask PEXELS_API_KEY "Pega la API key de Pexels (no se verá) y pulsa Enter:" 1
     docker restart pixelia-estudio >/dev/null 2>&1 && echo "   ✔ Estudio reiniciado: ya puede usar videos reales de fondo";;
