@@ -70,7 +70,12 @@ def normalize(B, prod, n_pages, titles=None):
     tw = [w for w in str(prod.get("title", "")).replace("·", " ").split() if len(w) > 1][:5]
     B.setdefault("gancho", [{"palabras": tw[:2] or ["Nuevo"]}, {"palabras": (tw[2:4] or ["producto"]) + ["✨"][:0]}, {"palabras": ["Descárgalo", "HOY"], "resaltar": 1}])
     for l in B["gancho"]: l["palabras"] = [w[:14] for w in l.get("palabras", [])][:4] or ["..."]
-    clean = lambda t: " ".join(w for w in str(t).replace("·", " ").split() if not w.isdigit() and w not in ("‹", "›"))[:26]
+    def clean(t):  # título de página → texto corto: sin números, sin palabras repetidas, máx 4 palabras
+        ws = []
+        for w in str(t).replace("·", " ").split():
+            if w.isdigit() or w in ("‹", "›") or w.lower() in [x.lower() for x in ws]: continue
+            ws.append(w)
+        return " ".join(ws[:4])[:26]
     tp = [str(x)[:30] for x in B.get("textos_paginas", [])] or [clean(t) for t in (titles or [])]
     B["textos_paginas"] = (tp + [tp[-1] if tp else prod.get("title", "")[:26]] * n_pages)[:n_pages]
     B.setdefault("movil_texto", ["También", "en", "tu", "MÓVIL"]); B.setdefault("movil_resaltar", len(B["movil_texto"]) - 1)
@@ -105,3 +110,135 @@ def normalize(B, prod, n_pages, titles=None):
     B["ganchos"] = gs[:4]
     e = B.get("estilo") or {}; e["sugerido"] = e.get("sugerido") if e.get("sugerido") in ESTILOS else "color"; B["estilo"] = e
     return B
+
+
+# ===================== GUION DE CADA REEL (distinto cada vez) =====================
+ESCENAS = {
+    "gancho": "texto grande animado palabra por palabra para frenar el scroll (lineas: 2-3 líneas de 1-3 palabras)",
+    "pov": "'POV: ...' escena con la que el público se identifica, sobre una página del producto (texto ≤ 6 palabras, pagina)",
+    "problema": "título + 3 dolores cortos del cliente que aparecen tachados con ✗ (titulo ≤ 4 palabras, items ≤ 4 palabras c/u)",
+    "paginas": "el producto en tablet pasando 3-5 páginas con un texto por página (paginas: índices, textos ≤ 26 caracteres)",
+    "zoom": "acercamiento a una página para mostrar un detalle (pagina, texto ≤ 26 caracteres)",
+    "grid": "mosaico de varias páginas apareciendo, muestra cantidad/variedad (texto ≤ 26 caracteres)",
+    "incluye": "lista 'Incluye:' con 3-5 cosas que aparecen con ✓ (titulo ≤ 3 palabras, items ≤ 4 palabras)",
+    "movil": "el producto en un móvil con lluvia de stickers (palabras: 3-4 palabras, resaltar índice)",
+    "precio": "SIEMPRE la última: precio que golpea + botón (cta en MAYÚSCULAS ≤ 18 caracteres)",
+}
+APERTURAS = ["gancho", "pov", "problema"]
+
+STORY_PROMPT = """Eres guionista de Reels/TikTok que venden productos digitales en Latinoamérica. Escribe el guion de UN reel vertical de 12-20 segundos.
+Producto: {producto}
+Público: {publico}
+Páginas disponibles del producto (índice: título): {paginas}
+Tipos de escena disponibles: {escenas}
+{forzar}
+Guiones anteriores (NO repitas su orden de escenas ni sus frases): {evitar}
+
+Devuelve SOLO JSON:
+{{"concepto": "idea del reel en 1 frase",
+ "estilo": "color|neon|minimal|tiktok (el que mejor encaje con este concepto y público)",
+ "musica": "uno de: {generos}", "voz": "femenina|masculina (según quién compra)",
+ "escenas": [
+   {{"tipo": "...", ...campos del tipo..., "voz": "frase que dice la voz en esta escena"}}
+ ],
+ "copy": {{"texto": "texto principal para Meta con 3 viñetas con emoji", "titular": "≤ 40 caracteres", "descripcion": "≤ 30 caracteres"}}
+}}
+Reglas:
+- 4 a 6 escenas. La primera es de apertura (gancho, pov o problema). La última es "precio". No repitas un tipo.
+- Incluye al menos una escena que MUESTRE el producto (paginas, zoom o grid); "paginas" suele funcionar muy bien.
+- Campos por tipo: gancho→lineas [{{"palabras": [...], "resaltar": índice opcional}}]; pov→texto, pagina; problema→titulo, items; paginas→paginas, textos;
+  zoom→pagina, texto; grid→texto; incluye→titulo, items; movil→palabras, resaltar; precio→cta.
+- Los textos en pantalla deben corresponder a la página que se ve (usa los títulos de la lista).
+- "voz": español latino natural y conversacional, MÁXIMO 9 palabras por escena (se lee a ritmo normal). En "precio" di el precio de forma natural ({precio_dicho}).
+- Nada de promesas de dinero/salud, ni reseñas o testimonios inventados, ni urgencia falsa. Sin emojis en los textos de pantalla.
+- Precio {precio}, antes {tachado}.
+"""
+
+def _words(t, n): return " ".join(str(t or "").split()[:n])
+
+def precio_dicho(p):
+    try:
+        e, c = divmod(round(float(p) * 100), 100)
+        return f"{e} dólares con {c}" if c else f"{e} dólares"
+    except Exception: return str(p)
+
+def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None):
+    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    model = model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    forzar = []
+    if force_open: forzar.append(f"La PRIMERA escena debe ser de tipo \"{force_open}\".")
+    if force_style: forzar.append(f"Usa el estilo \"{force_style}\".")
+    prompt = STORY_PROMPT.format(
+        producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
+        publico=B.get("publico", ""), paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
+        escenas=json.dumps(ESCENAS, ensure_ascii=False), forzar="\n".join(forzar), evitar=json.dumps(avoid or [], ensure_ascii=False)[:1500],
+        generos=", ".join(GENEROS), precio=prod.get("price"), tachado=prod.get("compare") or "ninguno", precio_dicho=precio_dicho(prod.get("price")))
+    body = {"model": model, "max_tokens": 4000, "temperature": 1.0, "messages": [{"role": "user", "content": prompt}]}
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(),
+                                 headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=180) as r: data = json.load(r)
+    text = "".join(b.get("text", "") for b in data.get("content", [])).replace("```json", "").replace("```", "")
+    return normalize_story(json.loads(text[text.index("{"): text.rindex("}") + 1]), B, len(titles), force_open, force_style)
+
+def fallback_story(B, n_pages, force_open=None, force_style=None, seed=0):
+    """Guion sin IA (si falla la API): combina escenas al azar a partir del brief."""
+    import random
+    rng = random.Random(seed)
+    tp = B.get("textos_paginas") or ["Mira por dentro"] * n_pages
+    opens = {"gancho": {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")},
+             "pov": {"tipo": "pov", "texto": "por fin todo en orden", "pagina": 0, "voz": "Por fin, todo en orden."},
+             "problema": {"tipo": "problema", "titulo": "¿Te pasa esto?", "items": ["Olvidas pendientes", "Todo desordenado", "Sin tiempo"], "voz": "¿Te pasa esto? Tranquila, hay solución."}}
+    first = opens[force_open or rng.choice(APERTURAS)]
+    middle = [{"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": tp[:4], "voz": B.get("guion_voz", {}).get("paginas", "")},
+              {"tipo": "grid", "texto": "Todo lo que necesitas", "voz": "Todo lo que necesitas, en un solo lugar."},
+              {"tipo": "zoom", "pagina": min(1, n_pages - 1), "texto": tp[min(1, len(tp) - 1)], "voz": "Cada detalle, pensado para ti."},
+              {"tipo": "incluye", "titulo": "Incluye", "items": [t for t in tp[:4]], "voz": "Mira todo lo que incluye."},
+              {"tipo": "movil", "palabras": B.get("movil_texto", ["También", "en", "tu", "móvil"]), "resaltar": B.get("movil_resaltar"), "voz": "Y también en tu móvil."}]
+    rng.shuffle(middle)
+    middle.sort(key=lambda m: m["tipo"] != "paginas")  # las páginas pasando (lo que mejor funciona) casi siempre van
+    story = {"concepto": "guion automático", "estilo": force_style or rng.choice(ESTILOS), "musica": B["musica"]["genero"], "voz": B["voz"]["genero"],
+             "escenas": [first] + middle[: rng.choice([2, 3])] + [{"tipo": "precio", "cta": B.get("cta", "DESCÁRGALO HOY"), "voz": B.get("guion_voz", {}).get("precio", "")}],
+             "copy": (B.get("copy") or {}).get("A") or {}}
+    return normalize_story(story, B, n_pages, force_open, force_style)
+
+def normalize_story(S, B, n_pages, force_open=None, force_style=None):
+    clamp = lambda i: max(0, min(n_pages - 1, int(i))) if str(i).lstrip("-").isdigit() else 0
+    out, seen = [], set()
+    for sc in S.get("escenas") or []:
+        t = sc.get("tipo")
+        if t not in ESCENAS or t in seen or t == "precio": continue
+        seen.add(t); sc = dict(sc); sc["voz"] = _words(sc.get("voz"), 11)
+        if t == "gancho":
+            ls = [l for l in sc.get("lineas") or [] if isinstance(l, dict) and l.get("palabras")] or B["gancho"]
+            for l in ls: l["palabras"] = [str(w)[:14] for w in l["palabras"]][:4]
+            sc["lineas"] = ls[:3]
+        elif t == "pov": sc["texto"] = _words(sc.get("texto"), 7) or "por fin todo en orden"; sc["pagina"] = clamp(sc.get("pagina", 0))
+        elif t in ("problema", "incluye"):
+            sc["titulo"] = _words(sc.get("titulo") or ("¿Te pasa esto?" if t == "problema" else "Incluye"), 5)
+            sc["items"] = [_words(i, 5)[:30] for i in (sc.get("items") or []) if str(i).strip()][:5] or ["..."]
+        elif t == "paginas":
+            idx = [clamp(i) for i in (sc.get("paginas") or list(range(min(4, n_pages))))][:5]
+            idx = list(dict.fromkeys(idx)) or [0]
+            if len(idx) < 2 and n_pages > 1: idx = list(range(min(4, n_pages)))
+            tx = [str(x)[:30] for x in (sc.get("textos") or [])]
+            sc["paginas"] = idx; sc["textos"] = (tx + [(B.get("textos_paginas") or [""])[min(i, len(B.get("textos_paginas") or [""]) - 1)] for i in idx])[:len(idx)]
+        elif t in ("zoom",): sc["pagina"] = clamp(sc.get("pagina", 1)); sc["texto"] = str(sc.get("texto") or "")[:30]
+        elif t == "grid": sc["texto"] = str(sc.get("texto") or "Todo incluido")[:30]
+        elif t == "movil":
+            sc["palabras"] = [str(w)[:14] for w in (sc.get("palabras") or B.get("movil_texto") or ["En", "tu", "móvil"])][:4]
+            r = sc.get("resaltar"); sc["resaltar"] = r if isinstance(r, int) and 0 <= r < len(sc["palabras"]) else len(sc["palabras"]) - 1
+        out.append(sc)
+    if not out or out[0]["tipo"] not in APERTURAS:
+        out.insert(0, {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")})
+    out = out[:5]
+    if len(out) < 3:  # asegura algo de producto en pantalla
+        if "paginas" not in [s["tipo"] for s in out]:
+            out.append({"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": (B.get("textos_paginas") or [""])[:4], "voz": ""})
+    pr = next((s for s in S.get("escenas") or [] if s.get("tipo") == "precio"), {}) or {}
+    out.append({"tipo": "precio", "cta": str(pr.get("cta") or B.get("cta") or "DESCÁRGALO HOY").upper()[:20],
+                "voz": _words(pr.get("voz") or B.get("guion_voz", {}).get("precio", ""), 11)})
+    est = force_style or (S.get("estilo") if S.get("estilo") in ESTILOS else "color")
+    mus = S.get("musica") if S.get("musica") in GENEROS else B["musica"]["genero"]
+    voz = S.get("voz") if S.get("voz") in ("femenina", "masculina") else B["voz"]["genero"]
+    cp = S.get("copy") or (B.get("copy") or {}).get("A") or {}
+    return {"concepto": str(S.get("concepto", ""))[:200], "estilo": est, "musica": mus, "voz": voz, "escenas": out, "copy": cp}

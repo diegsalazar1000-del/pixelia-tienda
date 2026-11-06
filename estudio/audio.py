@@ -234,6 +234,53 @@ def ai_music(g, B, seed=0, per_genre=3):
     except Exception as e:
         print("Eleven Music falló (sigo con lo que hay):", e)
 
+# ---------- reels por escenas (guion de la IA) ----------
+def sfx_story(story, TL):
+    buf = np.zeros(int(TL["T"] * SR))
+    for k, (sc, s) in enumerate(zip(story["escenas"], TL["scenes"])):
+        t0, d, tp = s["start"], s["dur"], sc["tipo"]
+        if k: add(buf, whoosh(0.4, 1.0 + 0.08 * k), max(0, t0 - 0.15), 0.85)
+        if tp == "gancho":
+            for li, line in enumerate(sc.get("lineas", [])):
+                for i, _ in enumerate(line.get("palabras", [])): add(buf, pop(1 + 0.08 * i + 0.1 * li), t0 + 0.15 + li * 0.35 + i * 0.12, 0.8)
+        elif tp == "pov": add(buf, pop(0.9), t0 + 0.1, 0.8); add(buf, sparkle(), t0 + 0.4, 0.6)
+        elif tp == "problema":
+            for i, _ in enumerate(sc.get("items", [])): add(buf, pop(0.8), t0 + 0.55 + i * 0.5, 0.7); add(buf, click(), t0 + 0.68 + i * 0.5, 0.8)
+        elif tp == "incluye":
+            for i, _ in enumerate(sc.get("items", [])): add(buf, pop(1.2 + 0.08 * i), t0 + 0.5 + i * 0.45, 0.7)
+            add(buf, sparkle(), t0 + 0.5 + len(sc.get("items", [])) * 0.45, 0.6)
+        elif tp == "paginas":
+            n = len(sc.get("paginas", [])); fe = max(0.55, (d - 1.0) / max(1, n - 1))
+            for j in range(n - 1): add(buf, whoosh(0.42, 1.0 + 0.1 * j), t0 + 0.6 + j * fe, 0.8)
+        elif tp == "grid":
+            for i in range(6): add(buf, pop(1.3 + 0.05 * i), t0 + 0.2 + i * 0.16, 0.5)
+        elif tp == "zoom": add(buf, whoosh(0.8, 0.6), t0 + 0.1, 0.6)
+        elif tp == "movil":
+            add(buf, whoosh(0.5, 1.3), t0, 0.9)
+            for k2 in range(8): add(buf, pop(1.6 + 0.04 * (k2 % 5)), t0 + 0.3 + k2 * 0.22, 0.25)
+        elif tp == "precio":
+            add(buf, impact(), t0 + 0.05, 1.0); add(buf, pop(0.9), t0 + 0.35, 0.6); add(buf, pop(1.4), t0 + 0.5, 0.6)
+            add(buf, click(), t0 + 0.62, 1.0); add(buf, sparkle(), t0 + 0.65, 1.0)
+    return buf
+
+def voice_story(story, TL, genero, tmpdir):
+    """Una frase por escena, a ritmo natural. Nunca se corta: si una frase se alarga, la siguiente espera."""
+    T = TL["T"]; buf = np.zeros(int(T * SR)); spans = []; free = 0.0
+    for sc, s in zip(story["escenas"], TL["scenes"]):
+        text = str(sc.get("voz") or "").strip()
+        if not text: continue
+        start = max(s["start"] + 0.15, free + 0.12)
+        clip = tts(text, genero, tmpdir, 1.0)
+        room = T - 0.12 - start
+        if len(clip) / SR > room:  # solo puede pasar al final: un poco más rápido y, si aún no cabe, se acorta la frase
+            clip = tts(text, genero, tmpdir, 1.08)
+            if len(clip) / SR > room: clip = tts(shorten(text, room / (len(clip) / SR) * 0.95), genero, tmpdir, 1.05)
+            if len(clip) / SR > room:
+                n = int(room * SR); clip = clip[:n].copy(); f = min(n, int(0.15 * SR)); clip[-f:] *= np.linspace(1, 0, f)
+        clip = soft_compress(clip / (np.abs(clip).max() + 1e-9))
+        add(buf, clip, start); spans.append((start, start + len(clip) / SR)); free = start + len(clip) / SR
+    return buf, spans
+
 # ---------- voz (Piper) ----------
 def read_wav(path):
     with wave.open(str(path)) as w:
@@ -248,7 +295,10 @@ def tts(text, genero, tmpdir, speed=1.0):
     if os.environ.get("ELEVENLABS_API_KEY"):  # voz natural (de pago); si falla, sigue con Piper
         try:
             import voces
-            mp3 = pathlib.Path(tmpdir) / f"el_{abs(hash((text, speed, genero))) % 10**8}.mp3"
+            import hashlib
+            vid = voces.pick_voice(genero)  # incluye la voz en la clave: si cambia la voz, no se reutiliza
+            cdir = MUSIC_DIR.parent / "voz-cache"; cdir.mkdir(parents=True, exist_ok=True)
+            mp3 = cdir / f"{hashlib.sha1(f'{vid}|{speed}|{text}'.encode()).hexdigest()[:20]}.mp3"
             if not mp3.exists(): voces.tts_mp3(text, genero, mp3, speed)
             LAST_ENGINE["v"] = "ElevenLabs"; v = decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
             return v[max(0, nz[0] - 800): nz[-1] + 2000] if len(nz) else v
@@ -305,10 +355,10 @@ def voice_track(B, TL, tmpdir):
     return buf, spans
 
 # ---------- mezcla ----------
-def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=0):
+def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=0, story=None):
     """music_genre: género (usa canción real de la biblioteca si hay; si no, ritmo sintetizado) · '0' = sin música."""
     T = TL["T"]; n = int(T * SR); info = {"musica": "ninguna"}
-    sfx = sfx_track(B, TL)
+    sfx = sfx_story(story, TL) if story else sfx_track(B, TL)
     g = music_genre or "base"
     if g == "0": music = np.zeros(n)
     else:
@@ -320,10 +370,12 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
         else: info["musica"] = f"canción real: {name}"; info["archivo"] = f"{g}/{name}"
         music = music[:n] if len(music) >= n else np.concatenate([music, np.zeros(n - len(music))])
     duck = np.ones(n)
-    i0, i1 = int(TL["s4"] * SR), int((TL["s4"] + 0.8) * SR); duck[i0:i1] = np.linspace(0.55, 1, i1 - i0)
+    s4 = TL["scenes"][-1]["start"] if story else TL["s4"]
+    i0, i1 = int(s4 * SR), min(n, int((s4 + 0.8) * SR)); duck[i0:i1] = np.linspace(0.55, 1, i1 - i0)
     voice = np.zeros(n); sfx_gain = np.ones(n)
     if with_voice:
-        try: voice, spans = voice_track(B, TL, tmpdir); info["voz"] = "ok"
+        try:
+            voice, spans = voice_story(story, TL, B["voz"]["genero"], tmpdir) if story else voice_track(B, TL, tmpdir); info["voz"] = "ok"
         except Exception as e:  # si la voz falla, el anuncio sale igual (sin voz) y se avisa
             print("voz falló:", e); voice, spans = np.zeros(n), []; info["voz"] = f"error: {e}"
         for a, b in spans:  # la música baja (sin desaparecer) mientras habla la voz

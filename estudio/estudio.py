@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, audio, musica, brief as brief_mod  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -27,7 +27,7 @@ if ENV.get("ELEVENLABS_API_KEY"): os.environ.setdefault("ELEVENLABS_API_KEY", EN
 GEN_NAMES = {"reggaeton": "Reggaetón", "pop": "Pop", "trap": "Trap", "cumbia": "Cumbia", "electronica": "Electrónica", "lofi": "Lo-fi", "acustica": "Acústica", "base": "Suave", "0": "sin música"}
 VOZ_NAMES = {"f": "voz femenina", "m": "voz masculina", "0": "sin voz"}
 # 4 variantes para A/B en Meta: (estilo, tipo de gancho)
-VARIANTES = [("color", "problema"), ("tiktok", "curiosidad"), ("neon", "oferta"), ("minimal", "pov")]
+VARIANTES = [("color", "gancho"), ("tiktok", "pov"), ("neon", "problema"), ("minimal", "gancho")]  # (estilo, escena de apertura)
 
 # ---------- HTTP ----------
 def api(method, path, data=None):
@@ -118,66 +118,80 @@ def product_pages(prod, tmp):
     return pages, phone, titles
 
 # ---------- trabajo ----------
-def with_hook(B, tipo):
-    """Copia del brief con el gancho (texto en pantalla + voz) del tipo indicado."""
-    B2 = json.loads(json.dumps(B)); h = next((g for g in B.get("ganchos", []) if g.get("tipo") == tipo), None)
-    if h:
-        B2["gancho"] = h["lineas"]
-        if h.get("voz"): B2.setdefault("guion_voz", {})["gancho"] = h["voz"]
-    return B2, h or {}
+def hook_lines(story):
+    """Titular de imagen a partir de la apertura del guion (para que imagen y reel cuenten lo mismo)."""
+    sc = story["escenas"][0]
+    if sc["tipo"] == "gancho": return sc["lineas"]
+    words = (["POV:"] + sc.get("texto", "").split()) if sc["tipo"] == "pov" else sc.get("titulo", "").split()
+    lines = [words[k:k + 3] for k in range(0, len(words), 3)][:3]
+    return [{"palabras": l, **({"resaltar": 0} if sc["tipo"] == "pov" and n == 0 else {})} for n, l in enumerate(lines)] or [{"palabras": ["Nuevo"]}]
+
+def history(out):
+    f = out / "historial.json"
+    try: return json.loads(f.read_text())
+    except Exception: return []
+
+def remember(out, st):
+    h = history(out) + [{"concepto": st.get("concepto"), "orden": [e["tipo"] for e in st["escenas"]],
+                         "frases": [e.get("voz") for e in st["escenas"]][:3]}]
+    (out / "historial.json").write_text(json.dumps(h[-12:], ensure_ascii=False))
+
+def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0):
+    avoid = history(out)[-5:] + (extra_avoid or [])
+    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid)
+    except Exception as e:
+        print("guion IA falló:", e)
+        return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()))
 
 def run_job(J):
     job, prod, opts = J["job"], J["product"], J["job"]["options"] or {}
     slug = prod["slug"]; out = PIXELIA / "storage" / "anuncios" / slug; out.mkdir(parents=True, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="estudio_")
     try:
-        brief_file, tl_file = out / "brief.json", out / "timeline.json"
-        new_brief = opts.get("n") == "1" or not brief_file.exists()
-        pages = phone = None
+        brief_file, guion_file, silent = out / "brief.json", out / "guion.json", out / "reel-mudo.mp4"
+        cache = {}
         def load_pages():
-            nonlocal pages, phone
-            if pages is None: pages, phone, _ = product_pages(prod, tmp)
-            return pages, phone
-        if new_brief:
-            pages, phone, titles = product_pages(prod, tmp)
-            say(f"🎨 Analizando <b>{esc(prod['title'])}</b> y escribiendo los textos…")
+            if "p" not in cache: cache["p"] = product_pages(prod, tmp)
+            return cache["p"]
+        if opts.get("n") == "1" or not brief_file.exists():
+            pages, phone, titles = load_pages()
+            say(f"🎨 Analizando <b>{esc(prod['title'])}</b>: público, colores y textos…")
             try: B = brief_mod.make_brief(prod, len(pages), titles)
             except Exception as e:
                 print("brief IA falló:", e); B = brief_mod.normalize({}, prod, len(pages), titles)
             brief_file.write_text(json.dumps(B, ensure_ascii=False, indent=2))
-            for old in list(out.glob("reel-mudo*.mp4")) + list(out.glob("*.jpg")): old.unlink()
         else:
             B = json.loads(brief_file.read_text())
             if "ganchos" not in B: B = brief_mod.normalize(B, prod, len(B.get("textos_paginas", [])) or 6)
-        sug = {"v": "f" if B["voz"]["genero"] == "femenina" else "m", "g": B["musica"]["genero"], "s": B.get("estilo", {}).get("sugerido", "color")}
-        # primera vez: voz y música sugeridas por la IA, estilo "color" (la base que ya te gustó)
-        v = opts.get("v") or sug["v"]; g = opts.get("g") or sug["g"]; st = opts.get("s") or "color"
-        sel = {"v": v, "g": g, "s": st}
-        if opts.get("x"): return run_variants(job, prod, B, out, tmp, load_pages, v, g, sug)
-        silent = out / f"reel-mudo-{st}.mp4"
-        if not silent.exists() or not tl_file.exists():
-            pg, ph = load_pages()
-            say(f"🎬 Montando el reel · estilo {motor.STYLE_NAMES.get(st, st)} (2–6 min)…")
-            for old in out.glob("[ABC]-*.jpg"): old.unlink()
-            motor.build_static(B, pg, ph, out, style=st)
-            TL = motor.build_reel(B, pg, ph, silent, style=st); tl_file.write_text(json.dumps(TL)); new_visual = True
+        if opts.get("x"): return run_variants(job, prod, B, out, tmp, load_pages, opts)
+        audio_only = opts.get("a") == "1" and guion_file.exists() and silent.exists()
+        if audio_only:
+            G = json.loads(guion_file.read_text()); story, TL = G["story"], G["TL"]
         else:
-            TL = json.loads(tl_file.read_text())
-            prev = (out / "estilo.txt").read_text() if (out / "estilo.txt").exists() else ""
-            new_visual = prev != st or not (out / "A-4x5.jpg").exists()
-            if new_visual:
-                pg, ph = load_pages(); motor.build_static(B, pg, ph, out, style=st)
-        (out / "estilo.txt").write_text(st)
+            pages, phone, titles = load_pages()
+            fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
+            say("✍️ Escribiendo un guion nuevo para este reel…")
+            story = new_story(prod, B, titles, len(pages), out, force_style=fs)
+            st = story["estilo"]
+            say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nEstilo {motor.STYLE_NAMES.get(st, st)} · escenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
+            B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
+            for old in out.glob("[ABC]-*.jpg"): old.unlink()
+            motor.build_static(B2, pages, phone, out, style=st)
+            TL = story_mod.build(B, story, pages, phone, silent, style=st)
+            guion_file.write_text(json.dumps({"story": story, "TL": TL}, ensure_ascii=False, indent=1)); remember(out, story)
+        st = story["estilo"]
+        v = opts.get("v") or ("f" if story["voz"] == "femenina" else "m"); g = opts.get("g") or story["musica"]
         with_voice = v in ("f", "m")
         if with_voice: B["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         wav = pathlib.Path(tmp) / "audio.wav"
-        info = audio.mix(B, TL, wav, music_genre=g, with_voice=with_voice, tmpdir=tmp)
+        info = audio.mix(B, TL, wav, music_genre=g, with_voice=with_voice, tmpdir=tmp, story=story)
         final = out / f"reel-{st}_{VOZ_NAMES.get(v, 'sin voz').replace(' ', '-')}_{g}.mp4"; audio.mux(silent, wav, final)
-        # versión sin música (voz + efectos) para que Meta le ponga música de su biblioteca libre de derechos
-        wav0 = pathlib.Path(tmp) / "audio0.wav"; audio.mix(B, TL, wav0, music_genre="0", with_voice=with_voice, tmpdir=tmp)
+        wav0 = pathlib.Path(tmp) / "audio0.wav"; audio.mix(B, TL, wav0, music_genre="0", with_voice=with_voice, tmpdir=tmp, story=story)
         audio.mux(silent, wav0, out / "reel-sin-musica-para-meta.mp4")
-        deliver(prod, B, out, final, v, g, st, info, send_images=new_visual or new_brief)
-        api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(out), "reel": final.name, "product_id": prod["id"], "sel": sel, "sug": sug}})
+        deliver(prod, B, out, final, v, g, st, info, story, send_images=not audio_only)
+        sug = {"v": "f" if story["voz"] == "femenina" else "m", "g": story["musica"], "s": "ia"}
+        api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(out), "reel": final.name, "product_id": prod["id"],
+            "sel": {"v": v, "g": g, "s": opts.get("s") or "ia"}, "sug": sug}})
         auto_scout(g)
     except Exception as e:
         traceback.print_exc()
@@ -186,36 +200,41 @@ def run_job(J):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-def run_variants(job, prod, B, out, tmp, load_pages, v, g, sug):
-    """4 anuncios distintos (estilo + gancho) para probar en Meta cuál vende más."""
-    pages, phone = load_pages(); vdir = out / "variantes"; shutil.rmtree(vdir, ignore_errors=True); vdir.mkdir()
-    with_voice = v in ("f", "m")
-    if with_voice: B["voz"]["genero"] = "femenina" if v == "f" else "masculina"
-    reels, imgs, meta = [], [], []
-    for k, (st, tipo) in enumerate(VARIANTES):
-        name = f"V{k + 1}"; B2, h = with_hook(B, tipo)
-        est = B2["estaticos"][k % 3]; est["titular"] = B2["gancho"]
-        say(f"🧪 {name}/4 · {motor.STYLE_NAMES[st]} · gancho {tipo}…")
+def run_variants(job, prod, B, out, tmp, load_pages, opts):
+    """4 reels con guiones, estilos y aperturas distintos para probar en Meta cuál vende más."""
+    pages, phone, titles = load_pages(); vdir = out / "variantes"; shutil.rmtree(vdir, ignore_errors=True); vdir.mkdir()
+    reels, imgs, meta, made = [], [], [], []
+    for k, (st, opening) in enumerate(VARIANTES):
+        name = f"V{k + 1}"
+        say(f"🧪 {name}/4 · {motor.STYLE_NAMES[st]} · empieza con «{opening}»: escribiendo guion…")
+        story = new_story(prod, B, titles, len(pages), out, force_style=st, force_open=opening,
+                          extra_avoid=[{"concepto": m.get("concepto"), "orden": [e["tipo"] for e in m["escenas"]]} for m in made], seed=k + 1)
+        made.append(story); remember(out, story)
+        v = opts.get("v") or ("f" if story["voz"] == "femenina" else "m"); g = opts.get("g") or story["musica"]
+        B2 = json.loads(json.dumps(B)); B2["voz"]["genero"] = "femenina" if v == "f" else "masculina"
+        est = B2["estaticos"][k % 3]; est["titular"] = hook_lines(story)
         motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
-        silent = pathlib.Path(tmp) / f"{name}.mp4"; TL = motor.build_reel(B2, pages, phone, silent, style=st, seed=7 + k)
+        silent = pathlib.Path(tmp) / f"{name}.mp4"; TL = story_mod.build(B2, story, pages, phone, silent, style=st, seed=7 + k)
         wav = pathlib.Path(tmp) / f"{name}.wav"
-        info = audio.mix(B2, TL, wav, music_genre=g, with_voice=with_voice, tmpdir=tmp, seed=k)
+        info = audio.mix(B2, TL, wav, music_genre=g, with_voice=v in ("f", "m"), tmpdir=tmp, seed=k, story=story)
         reel = vdir / f"{name}-reel.mp4"; audio.mux(silent, wav, reel)
         reels.append(reel); imgs.append(vdir / f"{name}-4x5.jpg")
-        meta.append({"nombre": name, "estilo": motor.STYLE_NAMES[st], "tipo": tipo, "gancho": " ".join(" ".join(l["palabras"]) for l in B2["gancho"]),
-                     "texto": h.get("texto", ""), "titular": h.get("titular", ""), "musica": info["musica"]})
-    media = [{"type": "photo", "media": f"attach://i{k}", "caption": f"{m['nombre']} · {m['estilo']} · {m['tipo']}"} for k, m in enumerate(meta)]
+        meta.append({"nombre": name, "estilo": motor.STYLE_NAMES[st], "tipo": opening, "gancho": story.get("concepto", ""),
+                     "texto": (story.get("copy") or {}).get("texto", ""), "titular": (story.get("copy") or {}).get("titular", ""),
+                     "musica": info["musica"], "escenas": " → ".join(e["tipo"] for e in story["escenas"])})
+    media = [{"type": "photo", "media": f"attach://i{k}", "caption": f"{m['nombre']} · {m['estilo']}"} for k, m in enumerate(meta)]
     tg("sendMediaGroup", {"chat_id": CHAT, "media": media}, {f"i{k}": p for k, p in enumerate(imgs)})
-    vids = [{"type": "video", "media": f"attach://v{k}", "caption": f"{m['nombre']} · {m['estilo']} · gancho {m['tipo']}", "supports_streaming": True} for k, m in enumerate(meta)]
+    vids = [{"type": "video", "media": f"attach://v{k}", "caption": f"{m['nombre']} · {m['estilo']} · {m['escenas']}", "supports_streaming": True} for k, m in enumerate(meta)]
     tg("sendMediaGroup", {"chat_id": CHAT, "media": vids}, {f"v{k}": p for k, p in enumerate(reels)})
     zpath = out / f"variantes-{prod['slug'][:30]}.zip"
     with zipfile.ZipFile(zpath, "w") as z:
         for p in sorted(vdir.glob("*")): z.write(p, p.name)
         z.writestr("TEXTOS-Y-PLAN-DE-PRUEBA.txt", variants_text(prod, B, meta))
     tg("sendDocument", {"chat_id": CHAT, "caption": "📦 Las 4 variantes (imágenes 1:1, 4:5, 9:16 + reels) con textos y plan de prueba"}, {"document": zpath})
-    say(f"🧪 <b>4 variantes de {esc(prod['title'])} listas</b>\n" + "\n".join(f"• <b>{m['nombre']}</b>: {esc(m['estilo'])} · gancho {m['tipo']} — «{esc(m['gancho'])}»" for m in meta) +
+    say(f"🧪 <b>4 variantes de {esc(prod['title'])} listas</b>\n" + "\n".join(f"• <b>{m['nombre']}</b>: {esc(m['estilo'])} — {esc(m['gancho'])}" for m in meta) +
         f"\n\n📋 <b>Cómo probarlas en Meta</b>\n1. Una campaña de Ventas con 1 conjunto de anuncios y los 4 anuncios dentro.\n2. Nómbralos <code>[{esc(prod['slug'])}] V1</code> … <code>V4</code>.\n3. 3-4 días sin tocar nada. Luego apaga los 2 con el costo por clic (CPC) más alto y deja los otros.\n4. El que consiga ventas más baratas es el ganador: de ese hacemos más versiones.")
-    api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(vdir), "variantes": [m["nombre"] for m in meta], "product_id": prod["id"], "sel": {"v": v, "g": g, "s": "color"}, "sug": sug}})
+    api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(vdir), "variantes": [m["nombre"] for m in meta], "product_id": prod["id"],
+        "sel": {"v": opts.get("v") or "f", "g": opts.get("g") or B["musica"]["genero"], "s": "ia"}, "sug": {"v": "f" if B["voz"]["genero"] == "femenina" else "m", "g": B["musica"]["genero"], "s": "ia"}}})
 
 def variants_text(prod, B, meta):
     L = [f"VARIANTES PARA PROBAR · {prod['title']}", f"Enlace: https://{prod.get('dominio', 'pixeliadigital.app')}/p/{prod['slug']}",
@@ -230,7 +249,7 @@ def variants_text(prod, B, meta):
           "- Pide al bot nuevas variantes del ganador (mismo gancho, otro estilo o música)."]
     return "\n".join(L)
 
-def deliver(prod, B, out, reel, v, g, st, info, send_images=True):
+def deliver(prod, B, out, reel, v, g, st, info, story=None, send_images=True):
     if send_images:
         imgs = [out / f"{c}-4x5.jpg" for c in "ABC"]
         media = [{"type": "photo", "media": f"attach://i{k}"} for k in range(3)]
@@ -244,13 +263,14 @@ def deliver(prod, B, out, reel, v, g, st, info, send_images=True):
         z.write(reel, reel.name)
         if (out / "reel-sin-musica-para-meta.mp4").exists(): z.write(out / "reel-sin-musica-para-meta.mp4", "reel-sin-musica-para-meta.mp4")
         credit = musica.credits_for(info.get("archivo", ""))
-        z.writestr("TEXTOS-ANUNCIO.txt", copy_text(prod, B) + META_MUSIC + (f"\n\nCRÉDITO DE LA MÚSICA (ponlo al final del texto principal):\nMúsica: {credit}" if credit else ""))
+        z.writestr("TEXTOS-ANUNCIO.txt", reel_text(prod, story) + copy_text(prod, B) + META_MUSIC + (f"\n\nCRÉDITO DE LA MÚSICA (ponlo al final del texto principal):\nMúsica: {credit}" if credit else ""))
     tg("sendDocument", {"chat_id": CHAT, "caption": "📦 Todo junto: imágenes, reel y textos para Meta"}, {"document": zpath})
     sug_g = B["musica"]["genero"]
     say(f"✅ <b>Anuncios de {esc(prod['title'])}</b>\n👥 Público: {esc(B.get('publico'))}\n🌎 Países: {esc(', '.join(B.get('paises', [])))} · Edad {esc(B.get('edad', ''))}\n"
         f"🎙️ Voz sugerida: {esc(B['voz']['genero'])} — {esc(B['voz'].get('por_que', ''))}\n🎵 Ritmo sugerido: {esc(GEN_NAMES.get(sug_g, sug_g))} — {esc(B['musica'].get('por_que', ''))}\n"
-        f"🎨 Estilo sugerido: {esc(motor.STYLE_NAMES.get(B.get('estilo', {}).get('sugerido', 'color')))} — {esc(B.get('estilo', {}).get('por_que', ''))}\n\n"
-        f"Nombra los anuncios en Meta: <code>[{esc(prod['slug'])}] A</code> / B / C / reel")
+        f"🎨 Estilo de este reel: {esc(motor.STYLE_NAMES.get(st, st))}\n"
+        + (f"\n🎬 Idea del reel: {esc(story.get('concepto', ''))}" if story else "") +
+        f"\nNombra los anuncios en Meta: <code>[{esc(prod['slug'])}] A</code> / B / C / reel")
 
 META_MUSIC = """
 
@@ -258,6 +278,13 @@ MÚSICA DE META (opcional, automática)
 El archivo reel-sin-musica-para-meta.mp4 trae voz y efectos pero NO música. Al subirlo en el Administrador de anuncios,
 marca "Agregar música" → "Aplicar música automáticamente": Meta elige una canción real de su biblioteca libre de derechos.
 OJO: con tus otros reels (que ya traen música) DESACTIVA "Agregar música" en las mejoras de Advantage+, o Meta pondrá otra canción encima."""
+
+def reel_text(prod, story):
+    if not story: return ""
+    c = story.get("copy") or {}
+    return "\n".join([f"=== REEL · nombre en Meta: [{prod['slug']}] reel ===", f"Idea: {story.get('concepto', '')}",
+                      "Escenas: " + " → ".join(e["tipo"] for e in story["escenas"]), "Guion de voz: " + " / ".join(e.get("voz", "") for e in story["escenas"] if e.get("voz")),
+                      "Texto principal:", c.get("texto", ""), f"Titular: {c.get('titular', '')}", f"Descripción: {c.get('descripcion', '')}", "", ""])
 
 def copy_text(prod, B):
     lines = [f"ANUNCIOS · {prod['title']}", f"Enlace: https://{prod.get('dominio', 'pixeliadigital.app')}/p/{prod['slug']}", "",
