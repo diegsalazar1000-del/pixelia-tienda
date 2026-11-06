@@ -86,7 +86,7 @@ case "$1" in
     docker restart pixelia-estudio >/dev/null 2>&1 && echo "   ✔ Estudio reiniciado con la voz nueva";;
   probar-voz)
     echo "Generando una frase de prueba con voz femenina y masculina… (llega a @PixeliaRadarBot)"
-    docker exec pixelia-estudio python3 /pixelia/estudio/prueba_voz.py
+    docker exec pixelia-estudio python3 /pixelia/estudio/prueba_voz.py --reset
     exit 0;;
   radar)
     ask RADAR_BOT_TOKEN "Pega el token de @PixeliaRadarBot (no se verá) y pulsa Enter:" 1

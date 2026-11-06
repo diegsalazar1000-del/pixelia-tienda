@@ -243,16 +243,18 @@ def read_wav(path):
     if sr != SR: v = np.interp(np.arange(0, len(v), sr / SR), np.arange(len(v)), v)
     return v
 
+LAST_ENGINE = {"v": ""}
 def tts(text, genero, tmpdir, speed=1.0):
     if os.environ.get("ELEVENLABS_API_KEY"):  # voz natural (de pago); si falla, sigue con Piper
         try:
             import voces
             mp3 = pathlib.Path(tmpdir) / f"el_{abs(hash((text, speed, genero))) % 10**8}.mp3"
             if not mp3.exists(): voces.tts_mp3(text, genero, mp3, speed)
-            v = decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
+            LAST_ENGINE["v"] = "ElevenLabs"; v = decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
             return v[max(0, nz[0] - 800): nz[-1] + 2000] if len(nz) else v
         except Exception as e:
             print("ElevenLabs falló, uso Piper:", e)
+    LAST_ENGINE["v"] = "Piper (gratis)"
     voice = VOICES.get(genero, VOICES["femenina"]); model = VOICES_DIR / f"{voice}.onnx"
     if not model.exists(): raise RuntimeError(f"Falta la voz {voice} en {VOICES_DIR}")
     out = pathlib.Path(tmpdir) / f"voz_{abs(hash((text, speed))) % 10**8}.wav"
