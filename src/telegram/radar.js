@@ -325,6 +325,8 @@ export async function onCallback(q) {
   }
   if (String(q.from?.id) !== String(config.telegram.adminChatId)) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'No autorizado' });
   if (!['buy', 'rec', 'no'].includes(action)) return rtg('answerCallbackQuery', { callback_query_id: q.id });
+  if (action === 'buy' && Candidates.get(id)?.source === 'idea-ia')  // una idea nueva no tiene original que comprar: se recrea
+    return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Es una idea nueva: no hay original que comprar. Usa 🛠️ Recrear o Crear este producto.', show_alert: true }).catch(() => {});
   await rtg('answerCallbackQuery', { callback_query_id: q.id, text: action === 'rec' ? 'Preparando el plan (1 min)…' : 'Hecho' }).catch(() => {});
   const raw = Candidates.get(id);
   if (!raw) return send('No encontré ese producto del radar.');
@@ -337,18 +339,20 @@ export async function onCallback(q) {
   if (action === 'buy') {
     const product = createDraft(raw, { decision: 'buy' });
     await mark('🛒 Comprar · borrador creado');
+    const busca = encodeURIComponent(c.title.slice(0, 80));
+    const donde = c.url ? esc(c.url)
+      : `no tengo el enlace exacto; búscalo por su nombre en <a href="https://www.etsy.com/search?q=${busca}">Etsy</a> o <a href="https://gumroad.com/discover?query=${busca}">Gumroad</a>`;
+    const ad = c.ai.anuncio || {};
+    const anuncio = ad.gancho || ad.texto
+      ? `\n\n📣 <b>Anuncio sugerido</b>\nGancho: ${esc(ad.gancho)}\nTexto: ${esc(ad.texto)}\nTitular: ${esc(ad.titular)}`
+      : '\n\n📣 Los anuncios los crea el estudio: cuando publiques el producto te pregunto si los hago.';
     return send(`🛒 <b>Comprar para revender: ${esc(product.title)}</b>
 
-1️⃣ Cómpralo aquí: ${esc(c.url)}
-2️⃣ <b>Antes de pagar</b>, confirma que la licencia diga PLR, MRR o "Resell Rights" y guarda el comprobante.
+1️⃣ Dónde comprarlo: ${donde}
+2️⃣ <b>Antes de pagar</b>, confirma que la licencia diga PLR, MRR o "Resell Rights" y guarda el comprobante. Si no lo dice, mejor 🛠️ Recrear.
 3️⃣ Entra en ${esc(config.baseUrl)}/admin → Productos → <b>${esc(product.title)}</b> → Editar → sube el archivo → Guardar. Al guardar se publica.
 
-Ya dejé escritos el título, la descripción y el precio ($${(product.price_cents / 100).toFixed(2)}). Cámbiales la portada y el nombre para que se vean propios.
-
-📣 <b>Anuncio sugerido</b>
-Gancho: ${esc(c.ai.anuncio?.gancho)}
-Texto: ${esc(c.ai.anuncio?.texto)}
-Titular: ${esc(c.ai.anuncio?.titular)}
+Ya dejé escritos el título, la descripción y el precio ($${(product.price_cents / 100).toFixed(2)}). Cámbiales la portada y el nombre para que se vean propios.${anuncio}
 Nombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);
   }
 

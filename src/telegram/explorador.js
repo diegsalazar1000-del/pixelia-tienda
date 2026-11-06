@@ -54,8 +54,11 @@ Devuelve SOLO un JSON:
  "evidencia":"por qué es tendencia ahora: ventas, reseñas, vistas, fecha","fecha_aprox":"AAAA-MM","precio":número o 0,"categoria":"...","publico":"para quién",
  "nota":1-10 (potencial para nosotros: demanda, facilidad de crearlo, margen, fácil de anunciar),"decision":"recrear|comprar_reventa",
  "titulo_tienda":"título atractivo en español para nuestra tienda (máx 70)","frase_corta":"máx 110 caracteres","descripcion":"qué incluiría nuestra versión, 4-6 viñetas",
- "precio_sugerido":número 3-10,"emoji":"1 emoji","como_recrear":["3 ideas para hacer una versión propia MEJOR"],"derechos":"si menciona PLR/MRR dilo; si no, 'recrear con contenido propio'"}],
- "ideas":[{"titulo_tienda":"...","basada_en":"qué tendencia la inspira","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"por_que":"breve"}]}
+ "precio_sugerido":número 3-10,"emoji":"1 emoji","como_recrear":["3 ideas para hacer una versión propia MEJOR"],"derechos":"si menciona PLR/MRR dilo; si no, 'recrear con contenido propio'",
+ "anuncio":{"gancho":"frase de 3 segundos para el video","texto":"texto principal para Meta con 2-3 viñetas","titular":"máx 40 caracteres"}}],
+ "ideas":[{"titulo_tienda":"...","basada_en":"qué tendencia la inspira","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"por_que":"breve",
+  "anuncio":{"gancho":"...","texto":"...","titular":"..."}}]}
+Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
 Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí y 3-4 ideas nuevas.`;
 }
 
@@ -104,11 +107,12 @@ export async function explorar(tema = '') {
     const x = items.find((i) => hash((i.url || '') + (i.titulo || i.titulo_tienda)) === c.external_id) || {};
     const nota = Math.max(1, Math.min(10, Number(x.nota) || 5));
     const ai = { titulo: x.titulo_tienda || x.titulo, frase_corta: x.frase_corta, descripcion: x.descripcion, precio_sugerido: x.precio_sugerido, emoji: x.emoji,
-      categoria: x.categoria, decision: x.decision === 'comprar_reventa' ? 'buy' : 'recreate', como_recrear: x.como_recrear, derechos: x.derechos, idea: x.frase_corta, publico: x.publico };
+      categoria: x.categoria, decision: x.decision === 'comprar_reventa' ? 'buy' : 'recreate', como_recrear: x.como_recrear, derechos: x.derechos, idea: x.frase_corta, publico: x.publico,
+      anuncio: x.anuncio && typeof x.anuncio === 'object' ? x.anuncio : undefined };
     Candidates.update(c.id, { ai_score: nota, ai, status: 'notified' });
     const titulo = x._tipo === 'idea' ? `💡 <b>IDEA NUEVA</b> · ${esc(ai.titulo)}` : `${esc(x.emoji || '✨')} <b>${esc(ai.titulo)}</b>`;
     await say(`${titulo}\n⭐ ${nota}/10 · ${esc(x.plataforma || '')}${x.precio ? ` · visto a $${esc(x.precio)}` : ''}\n👥 ${esc(x.publico || '')}\n📈 ${esc(x.evidencia || '')}\n\n${esc(x.frase_corta || '')}\n💰 Nuestro precio: $${esc(ai.precio_sugerido || 4.99)}`,
-      { reply_markup: kb(c) }).catch(() => {});
+      { reply_markup: x._tipo === 'idea' ? { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } : kb(c) }).catch(() => {});
     sent++;
   }
   const st = state(); st.last = new Date().toISOString().slice(0, 10); fs.writeFileSync(STATE, JSON.stringify(st));
