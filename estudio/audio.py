@@ -174,6 +174,20 @@ def sparkle():
     return out
 def click():
     n = int(0.05 * SR); return osc(1800, n) * env(n, 0.001, 0.012) * 0.4
+def thud(pitch=1.0):
+    """Golpe seco y corto (algo que cae sobre la mesa)."""
+    n = int(0.35 * SR); t = np.arange(n) / SR
+    body = np.sin(2 * np.pi * np.cumsum(90 * pitch * np.exp(-t * 18) + 55 * pitch) / SR) * env(n, 0.001, 0.09)
+    return (body * 0.8 + lowpass(rng.normal(0, 1, n), 6) * env(n, 0.001, 0.03) * 0.6) * 0.8
+
+def sfx_events(TL):
+    """Efectos exactos que manda el motor visual: [tipo, segundo, volumen, tono]."""
+    buf = np.zeros(int(TL["T"] * SR))
+    for kind, t, gain, p in TL["sfx"]:
+        snd = {"pop": lambda: pop(p), "whoosh": lambda: whoosh(0.45, p), "impact": impact, "thud": lambda: thud(p),
+               "sparkle": sparkle, "click": click}.get(kind)
+        if snd: add(buf, snd(), max(0.0, t), gain)
+    return buf
 
 def sfx_track(B, TL):
     buf = np.zeros(int(TL["T"] * SR))
@@ -358,7 +372,7 @@ def voice_track(B, TL, tmpdir):
 def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=0, story=None):
     """music_genre: género (usa canción real de la biblioteca si hay; si no, ritmo sintetizado) · '0' = sin música."""
     T = TL["T"]; n = int(T * SR); info = {"musica": "ninguna"}
-    sfx = sfx_story(story, TL) if story else sfx_track(B, TL)
+    sfx = sfx_events(TL) if TL.get("sfx") else sfx_story(story, TL) if story else sfx_track(B, TL)
     g = music_genre or "base"
     if g == "0": music = np.zeros(n)
     else:
@@ -382,7 +396,7 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
             ia, ib = int(max(0, a - 0.12) * SR), int(min(T, b + 0.2) * SR)
             duck[ia:ib] = np.minimum(duck[ia:ib], 0.5); sfx_gain[ia:ib] = 0.45
         k = int(0.08 * SR); duck = np.convolve(duck, np.ones(k) / k, "same"); sfx_gain = np.convolve(sfx_gain, np.ones(k) / k, "same")
-    music_level = 1.25 if not with_voice else 1.0
+    music_level = (1.25 if not with_voice else 1.0) * TL.get("music_level", 1.0)
     out = sfx * 0.45 * sfx_gain + music * duck * music_level + voice * 1.0
     out = out / (np.abs(out).max() + 1e-9) * 0.9  # solo normaliza: nada de saturación
     with wave.open(str(out_wav), "w") as w:

@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, story as story_mod, audio, musica, brief as brief_mod  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod, impacto  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -167,6 +167,13 @@ def run_job(J):
         audio_only = opts.get("a") == "1" and guion_file.exists() and silent.exists()
         if audio_only:
             G = json.loads(guion_file.read_text()); story, TL = G["story"], G["TL"]
+        elif opts.get("s") == "impacto":
+            pages, phone, titles = load_pages(); seed = int(time.time()) % 100000
+            say("💥 Montando reel <b>Impacto 3D</b> (letras 3D, páginas que salen volando, collage y precio)… 2–5 min")
+            for old in out.glob("[ABC]-*.jpg"): old.unlink()
+            impacto.stills(B, pages, phone, out, seed=seed)
+            TL, story = impacto.build(B, pages, phone, silent, seed=seed)
+            guion_file.write_text(json.dumps({"story": story, "TL": TL}, ensure_ascii=False, indent=1))
         else:
             pages, phone, titles = load_pages()
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
@@ -251,9 +258,9 @@ def variants_text(prod, B, meta):
 
 def deliver(prod, B, out, reel, v, g, st, info, story=None, send_images=True):
     if send_images:
-        imgs = [out / f"{c}-4x5.jpg" for c in "ABC"]
+        imgs = [out / f"{c}-4x5.jpg" if (out / f"{c}-4x5.jpg").exists() else out / f"{c}-9x16.jpg" for c in "ABC"]
         media = [{"type": "photo", "media": f"attach://i{k}"} for k in range(3)]
-        media[0]["caption"] = f"🖼️ {esc(prod['title'])} · estilo {motor.STYLE_NAMES.get(st, st)} · 3 enfoques (también 1:1 y 9:16 en el ZIP)"
+        media[0]["caption"] = f"🖼️ {esc(prod['title'])} · estilo {motor.STYLE_NAMES.get(st, st)} · 3 enfoques" + ("" if st == "impacto" else " (también 1:1 y 9:16 en el ZIP)")
         tg("sendMediaGroup", {"chat_id": CHAT, "media": media}, {f"i{k}": p for k, p in enumerate(imgs)})
     tg("sendVideo", {"chat_id": CHAT, "caption": f"🎬 Reel · {motor.STYLE_NAMES.get(st, st)} · {VOZ_NAMES.get(v, v)} · {GEN_NAMES.get(g, g)}\n🎵 {info.get('musica', '')}" + (f"\n⚠️ La voz falló: {info['voz'][7:120]}" if str(info.get('voz', '')).startswith('error') else ""),
                      "supports_streaming": "true"}, {"video": reel})
