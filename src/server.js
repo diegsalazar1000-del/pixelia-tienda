@@ -18,7 +18,7 @@ import { startRadarBot, createDraft, offerAds, sendAdPicker } from './telegram/r
 import { startExplorador } from './telegram/explorador.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.mp4': 'video/mp4',
   '.pdf': 'application/pdf', '.zip': 'application/zip', '.woff2': 'font/woff2' };
 
 // Clave de acceso de cada pedido (para que nadie vea pedidos ajenos adivinando el código).
@@ -120,6 +120,12 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
 });
 on('GET', '/pedido/:id', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('order.html')); });
 on('GET', '/legal', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('legal.html')); });
+// Reels e imágenes de anuncios terminados (públicos: Instagram/Facebook los descargan desde aquí para publicarlos)
+on('GET', '/media/anuncios/:slug/:file', (req, res, { slug, file }) => {
+  const s = String(slug).replace(/[^a-z0-9-]/gi, ''), f = path.basename(decodeURIComponent(String(file)));
+  if (!/\.(mp4|jpg)$/i.test(f)) { res.writeHead(404); return res.end('No encontrado'); }
+  serveFile(res, path.join(path.dirname(config.paths.files), 'anuncios', s, f), { 'cache-control': 'public, max-age=3600' });
+});
 on('GET', '/admin', (req, res) => serveFile(res, path.join(config.paths.public, 'admin', 'index.html')));
 on('GET', '/cover/:file', (req, res, { file }) => {
   const p = Products.bySlug(file.replace(/\.svg$/, ''));

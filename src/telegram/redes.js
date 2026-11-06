@@ -32,6 +32,22 @@ export async function igFoto(imageUrl, caption) {
   return call('POST', `${G}/${ig}/media_publish`, { creation_id: c.id });
 }
 
+/** Reel en Instagram (el video tarda más en procesarse: hasta ~5 min). */
+export async function igReel(videoUrl, caption) {
+  const ig = env('META_IG_ID'); if (!ig) throw new Error('falta META_IG_ID (Instagram no está conectado a la página)');
+  const c = await call('POST', `${G}/${ig}/media`, { media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: 'true' });
+  for (let i = 0; i < 60; i++) {
+    await sleep(5000);
+    const s = await call('GET', `${G}/${c.id}`, { fields: 'status_code,status' }).catch(() => ({}));
+    if (s.status_code === 'FINISHED') return call('POST', `${G}/${ig}/media_publish`, { creation_id: c.id });
+    if (s.status_code === 'ERROR') throw new Error('Instagram no pudo procesar el video: ' + (s.status || ''));
+  }
+  throw new Error('Instagram tardó demasiado procesando el video');
+}
+
+/** Video en la página de Facebook. */
+export const fbVideo = (videoUrl, description) => call('POST', `${G}/${env('META_PAGE_ID')}/videos`, { file_url: videoUrl, description });
+
 /** Foto en la página de Facebook. */
 export const fbFoto = (imageUrl, message) => call('POST', `${G}/${env('META_PAGE_ID')}/photos`, { url: imageUrl, message });
 

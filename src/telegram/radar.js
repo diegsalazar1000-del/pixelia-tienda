@@ -5,7 +5,7 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
-import { redesListas, estadoRedes, publicarKit } from './redes.js';
+import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -86,6 +86,7 @@ function pickerKb(pid, sel, sug = {}) {
   const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
+    ...(redesListas() ? [[{ text: '📤 Publicar este reel en Instagram y Facebook', callback_data: `pr:${pid}:` }]] : []),
     [{ text: '🎬 Prompt para Gemini (clip realista gratis)', callback_data: `gem:${pid}:` }],
     [{ text: '🧠 Anuncio PRO: investiga + 3 guiones + revisión (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }],
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
@@ -327,6 +328,25 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 
 🛍️ <b>Tienda</b>: https://pixeliadigital.app · admin: https://pixeliadigital.app/admin`;
 
+// 📤 Publicar el último reel de un producto en Instagram + Facebook (con confirmación)
+function ultimoReel(pid) {
+  const p = Products.byId(Number(pid)); const j = p && AdJobs.last(p.id);
+  let r = {}; try { r = JSON.parse(j?.result || '{}'); } catch {}
+  if (!p || !r.reel) return null;
+  const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', p.slug);
+  let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(dir, 'guion.json'), 'utf8')).story || {}; } catch {}
+  const base = String(story.copy?.texto || p.short || '').trim();
+  const caption = `${base}\n\n💰 $${(p.price_cents / 100).toFixed(2)} · descarga inmediata\n👉 Link en la bio: pixeliadigital.app\n\n#productosdigitales #pixelia #descargainmediata`;
+  return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
+}
+async function previewPublicar(pid) {
+  const x = ultimoReel(pid);
+  if (!x || !x.exists) return send('No encontré un reel terminado de ese producto. Crea uno primero con /anuncios.');
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `📤 Voy a publicar el <b>último reel</b> de <b>${esc(x.p.title)}</b> en Instagram (Reels) y en la página de Facebook con este texto:\n\n${esc(x.caption)}\n\n¿Lo publico?`,
+    reply_markup: { inline_keyboard: [[{ text: '✅ Sí, publicar', callback_data: `prok:${x.p.id}:${x.job.id}` }, { text: '❌ No', callback_data: 'x:0' }]] } });
+}
+
 async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
@@ -430,6 +450,21 @@ export async function onCallback(q) {
     const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
+  }
+  if ((action === 'pr' || action === 'prok') && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: action === 'pr' ? '' : 'Publicando… (1-5 min)' }).catch(() => {});
+    if (!redesListas()) return send('Falta conectar Meta: en el servidor <code>bash configurar.sh redes</code>');
+    if (action === 'pr') return previewPublicar(id);
+    const x = ultimoReel(id);
+    if (!x || String(x.job.id) !== String(opts)) return send('Ese reel ya no es el último de este producto; toca 📤 de nuevo en el anuncio más reciente.');
+    await rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [[{ text: '📤 Publicando…', callback_data: 'x:0' }]] } }).catch(() => {});
+    (async () => {  // en segundo plano: Instagram tarda unos minutos procesando el video y el bot sigue respondiendo
+      const res = [];
+      try { await igReel(x.url, x.caption); res.push('Instagram ✅'); } catch (e) { res.push(`Instagram ❌ ${esc(e.message)}`); }
+      try { await fbVideo(x.url, x.caption); res.push('Facebook ✅'); } catch (e) { res.push(`Facebook ❌ ${esc(e.message)}`); }
+      await send(`📤 Reel de <b>${esc(x.p.title)}</b>: ${res.join(' · ')}`);
+    })().catch((e) => send(`⚠️ Publicar reel: ${esc(e.message)}`));
+    return;
   }
   if (action === 'pub' && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Publicando…' }).catch(() => {});
