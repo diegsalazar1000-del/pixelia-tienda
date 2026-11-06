@@ -107,13 +107,13 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
 const GENRE_ALIAS = { reggaeton: 'reggaeton', 'reggaetón': 'reggaeton', regueton: 'reggaeton', pop: 'pop', trap: 'trap', cumbia: 'cumbia',
   electronica: 'electronica', 'electrónica': 'electronica', edm: 'electronica', house: 'electronica', lofi: 'lofi', 'lo-fi': 'lofi',
   acustica: 'acustica', 'acústica': 'acustica', acustico: 'acustica', 'acústico': 'acustica', suave: 'base', base: 'base' };
-const MUSIC_HELP = `🎵 <b>Biblioteca de música real</b>
-Los anuncios suenan mucho mejor con canciones reales. Usa solo música <b>libre de derechos para uso comercial</b> (por ejemplo, Pixabay Music → filtra por género → Descargar). Nunca subas canciones famosas: Meta bloquea o silencia el anuncio.
+const MUSIC_HELP = `🎵 <b>Música real para los anuncios</b>
+Es automático: cuando un género tiene menos de 3 canciones, el estudio busca canciones reales con licencia para uso comercial y te manda un pedacito del coro. Tú solo tocas ✅ Usar o ❌ Descartar.
 
-Para agregar: envíame aquí el archivo MP3 y escribe en el texto (pie) el género:
-reggaeton · pop · trap · cumbia · electronica · lofi · acustica · suave
+• <code>/musica buscar reggaeton</code> — pedir sugerencias ya (géneros: reggaeton, pop, trap, cumbia, electronica, lofi, acustica, suave)
+• También puedes enviarme un MP3 libre de derechos con el género en el pie.
 
-Ideal: 2-3 canciones por género. El estudio usa la parte más movida (el coro) y alterna canciones entre variantes.`;
+Además, cada anuncio trae una versión <b>sin música</b> para que Meta le ponga una canción de su biblioteca automáticamente.`;
 
 async function saveSong(m) {
   const f = m.audio || m.document;
@@ -140,6 +140,13 @@ async function onMessage(m) {
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  const mb = text.match(/^\/m[uú]sica\s+buscar\s+(\S+)/i);
+  if (mb) {
+    const g = GENRE_ALIAS[mb[1].toLowerCase()];
+    if (!g) return send('Género no reconocido. Usa: reggaeton, pop, trap, cumbia, electronica, lofi, acustica o suave.');
+    const d = path.join(MUSIC_DIR, 'pedidos'); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, g), '');
+    return send(`🔎 Pedido: busco canciones de <b>${GENRES[g]}</b>. Te llegan en 1-3 minutos.`);
+  }
   if (text.startsWith('/musica') || text.startsWith('/música')) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
@@ -149,6 +156,31 @@ async function onMessage(m) {
 
 export async function onCallback(q) {
   const [action, id, opts] = String(q.data || '').split(':');
+  if (action === 'mus' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // ✅/❌ de una canción sugerida
+    const tok = String(opts || '').replace(/[^a-f0-9]/g, ''); const pend = path.join(MUSIC_DIR, 'pendientes');
+    let meta; try { meta = JSON.parse(fs.readFileSync(path.join(pend, `${tok}.json`), 'utf8')); } catch { meta = null; }
+    const done = (label) => rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text: label, callback_data: 'x:0' }]] } }).catch(() => {});
+    if (!meta) { await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Ya no está disponible' }).catch(() => {}); return done('—'); }
+    const src = path.join(pend, meta.file);
+    if (id === 'ok') {
+      const dir = path.join(MUSIC_DIR, meta.genre); fs.mkdirSync(dir, { recursive: true });
+      const name = `${String(meta.title || 'cancion').replace(/[^\w\- ]+/g, '').trim().slice(0, 40) || 'cancion'}-${tok}${path.extname(meta.file)}`;
+      fs.renameSync(src, path.join(dir, name));
+      if (meta.needs_credit) {
+        const cf = path.join(MUSIC_DIR, 'creditos.json'); let c = {}; try { c = JSON.parse(fs.readFileSync(cf, 'utf8')); } catch {}
+        c[`${meta.genre}/${name}`] = meta.credit; fs.writeFileSync(cf, JSON.stringify(c, null, 1));
+      }
+      await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Guardada 🎧' }).catch(() => {});
+      await done(`✅ En ${GENRES[meta.genre]} (${songs(meta.genre)})`);
+    } else {
+      try { fs.unlinkSync(src); } catch {}
+      await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Descartada' }).catch(() => {});
+      await done('❌ Descartada');
+    }
+    try { fs.unlinkSync(path.join(pend, `${tok}.json`)); } catch {}
+    return;
+  }
   if (action === 'sel' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // marcar/desmarcar en el selector
     const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});

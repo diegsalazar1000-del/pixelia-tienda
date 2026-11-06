@@ -288,7 +288,7 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
         if music is None:
             music = genre_track(g, T, (B.get("musica") or {}).get("bpm") if g != "base" else None)
             music = music / (np.sqrt((music ** 2).mean()) + 1e-9) * 0.18; info["musica"] = f"ritmo sintetizado ({g})"
-        else: info["musica"] = f"canción real: {name}"
+        else: info["musica"] = f"canción real: {name}"; info["archivo"] = f"{g}/{name}"
         music = music[:n] if len(music) >= n else np.concatenate([music, np.zeros(n - len(music))])
     duck = np.ones(n)
     i0, i1 = int(TL["s4"] * SR), int((TL["s4"] + 0.8) * SR); duck[i0:i1] = np.linspace(0.55, 1, i1 - i0)

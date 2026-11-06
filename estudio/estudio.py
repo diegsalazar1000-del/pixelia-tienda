@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, audio, brief as brief_mod  # noqa: E402
+import motor, audio, musica, brief as brief_mod  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -172,8 +172,12 @@ def run_job(J):
         wav = pathlib.Path(tmp) / "audio.wav"
         info = audio.mix(B, TL, wav, music_genre=g, with_voice=with_voice, tmpdir=tmp)
         final = out / f"reel-{st}_{VOZ_NAMES.get(v, 'sin voz').replace(' ', '-')}_{g}.mp4"; audio.mux(silent, wav, final)
+        # versión sin música (voz + efectos) para que Meta le ponga música de su biblioteca libre de derechos
+        wav0 = pathlib.Path(tmp) / "audio0.wav"; audio.mix(B, TL, wav0, music_genre="0", with_voice=with_voice, tmpdir=tmp)
+        audio.mux(silent, wav0, out / "reel-sin-musica-para-meta.mp4")
         deliver(prod, B, out, final, v, g, st, info, send_images=new_visual or new_brief)
         api("POST", f"/api/studio/jobs/{job['id']}", {"status": "done", "result": {"dir": str(out), "reel": final.name, "product_id": prod["id"], "sel": sel, "sug": sug}})
+        auto_scout(g)
     except Exception as e:
         traceback.print_exc()
         api("POST", f"/api/studio/jobs/{job['id']}", {"status": "error", "error": str(e)})
@@ -237,13 +241,22 @@ def deliver(prod, B, out, reel, v, g, st, info, send_images=True):
     with zipfile.ZipFile(zpath, "w") as z:
         for p in sorted(out.glob("[ABC]-*.jpg")): z.write(p, p.name)
         z.write(reel, reel.name)
-        z.writestr("TEXTOS-ANUNCIO.txt", copy_text(prod, B))
+        if (out / "reel-sin-musica-para-meta.mp4").exists(): z.write(out / "reel-sin-musica-para-meta.mp4", "reel-sin-musica-para-meta.mp4")
+        credit = musica.credits_for(info.get("archivo", ""))
+        z.writestr("TEXTOS-ANUNCIO.txt", copy_text(prod, B) + META_MUSIC + (f"\n\nCRÉDITO DE LA MÚSICA (ponlo al final del texto principal):\nMúsica: {credit}" if credit else ""))
     tg("sendDocument", {"chat_id": CHAT, "caption": "📦 Todo junto: imágenes, reel y textos para Meta"}, {"document": zpath})
     sug_g = B["musica"]["genero"]
     say(f"✅ <b>Anuncios de {esc(prod['title'])}</b>\n👥 Público: {esc(B.get('publico'))}\n🌎 Países: {esc(', '.join(B.get('paises', [])))} · Edad {esc(B.get('edad', ''))}\n"
         f"🎙️ Voz sugerida: {esc(B['voz']['genero'])} — {esc(B['voz'].get('por_que', ''))}\n🎵 Ritmo sugerido: {esc(GEN_NAMES.get(sug_g, sug_g))} — {esc(B['musica'].get('por_que', ''))}\n"
         f"🎨 Estilo sugerido: {esc(motor.STYLE_NAMES.get(B.get('estilo', {}).get('sugerido', 'color')))} — {esc(B.get('estilo', {}).get('por_que', ''))}\n\n"
         f"Nombra los anuncios en Meta: <code>[{esc(prod['slug'])}] A</code> / B / C / reel")
+
+META_MUSIC = """
+
+MÚSICA DE META (opcional, automática)
+El archivo reel-sin-musica-para-meta.mp4 trae voz y efectos pero NO música. Al subirlo en el Administrador de anuncios,
+marca "Agregar música" → "Aplicar música automáticamente": Meta elige una canción real de su biblioteca libre de derechos.
+OJO: con tus otros reels (que ya traen música) DESACTIVA "Agregar música" en las mejoras de Advantage+, o Meta pondrá otra canción encima."""
 
 def copy_text(prod, B):
     lines = [f"ANUNCIOS · {prod['title']}", f"Enlace: https://{prod.get('dominio', 'pixeliadigital.app')}/p/{prod['slug']}", "",
@@ -255,12 +268,28 @@ def copy_text(prod, B):
     lines += ["Reel: usa el texto del enfoque A · nombre en Meta: [" + prod["slug"] + "] reel"]
     return "\n".join(lines)
 
+def auto_scout(g, force=False):
+    """Si el género tiene menos de 3 canciones reales, busca y sugiere (máx. una vez al día por género)."""
+    if g in (None, "", "0"): return
+    if not force and len(audio.library(g)) >= 3: return
+    f = audio.MUSIC_DIR / "ultima_busqueda.json"; last = musica.load(f, {})
+    if not force and time.time() - last.get(g, 0) < 86400: return
+    last[g] = time.time(); f.parent.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(last))
+    try:
+        say(f"🔎 Buscando canciones reales y libres de derechos de <b>{esc(GEN_NAMES.get(g, g))}</b> para tus anuncios…")
+        n = musica.scout(g, tg, CHAT)
+        say(f"🎧 Escucha las {n} sugerencias y toca ✅ las que te gusten." if n else
+            f"No encontré canciones nuevas de {esc(GEN_NAMES.get(g, g))} con licencia comercial. Mientras tanto uso el ritmo sintetizado; también puedes enviarme un MP3 con el género en el pie.")
+    except Exception as e:
+        traceback.print_exc(); say(f"⚠️ La búsqueda de música falló: {esc(e)}")
+
 def main():
     print("🎬 Estudio de anuncios esperando trabajos…", flush=True)
     while True:
         try:
             J = api("POST", "/api/studio/next", {})
             if J: print("Trabajo", J["job"], J["product"]["slug"], flush=True); run_job(J); continue
+            for g in musica.pending_requests(): auto_scout(g, force=True)
         except Exception as e:
             print("Error de conexión con la tienda:", e, flush=True)
         time.sleep(10)
