@@ -293,6 +293,38 @@ Devuelve SOLO JSON: {"prompts": [{"idea": "la situación en 6-10 palabras en esp
     reply_markup: { inline_keyboard: [[{ text: '🔄 Otros 2 prompts', callback_data: `gem:${p.id}:` }]] } });
 }
 
+const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
+
+🎬 <b>Anuncios</b>
+/anuncios — crear anuncios de un producto (imágenes + reel). Al terminar te salen botones para otra variante, tutorial, comedia, Pixabay, 4 variantes, Anuncio PRO, cambiar voz/música/estilo.
+/gemini — 2 prompts listos para crear en Gemini el clip realista que abre el anuncio (cuesta menos de 1 centavo).
+📹 <b>Mandar un video</b> (ej. el de Gemini) con el nombre del producto en el mensaje → arma el anuncio con tu clip + producto + precio.
+/cancelar — quitar los anuncios que están esperando en la fila.
+
+💸 <b>Créditos</b>
+/creditos — cuántos créditos de ElevenLabs (voces y música) llevas gastados y cuántos quedan.
+/ahorro on — no gastar ElevenLabs (reutiliza voces y canciones guardadas). /ahorro off para volver.
+
+🔎 <b>Buscar productos</b>
+/explorar — buscar ya productos digitales en tendencia (gasta Claude: unos $0.40-0.70).
+/explorar <i>tema</i> — buscar de un tema, ej. <code>/explorar cursos de cocina</code>.
+/explorar mundo — productos para lo que pasa en el mundo (noticias, virales, fechas que vienen).
+/fusionar — combinar productos del radar en uno mejor o en un pack de 3.
+
+🎵 <b>Música</b>
+/musica — ver cuántas canciones hay por género.
+/musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
+🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
+
+/lista — esta lista.
+
+🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
+<code>echo inicio; cd /opt/pixelia && bash update.sh; echo fin</code>
+→ instala los cambios nuevos que hace Claude (córrelo cada vez que te diga que hay cambios).
+<code>cd /opt/pixelia && bash configurar.sh</code> → menú para guardar claves (voz, pixabay…) sin pegarlas en el chat.
+
+🛍️ <b>Tienda</b>: https://pixeliadigital.app · admin: https://pixeliadigital.app/admin`;
+
 async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
@@ -304,6 +336,7 @@ async function onMessage(m) {
   }
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
   if (text.startsWith('/gemini')) {
     const list = Products.list().filter((p) => !p.bundle_ids).slice(0, 20);
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿Para qué producto escribo los prompts de Gemini?',
@@ -336,7 +369,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -456,6 +489,10 @@ Nombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);
 export async function startRadarBot() {
   if (!token()) { console.log('[radar] RADAR_BOT_TOKEN vacío: botones del radar desactivados.'); return; }
   await rtg('deleteWebhook', {}).catch(() => {});
+  await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
+    ['lista', 'Todos los comandos y para qué sirven'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
+    ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
+    ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;
   for (;;) {
