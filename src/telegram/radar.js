@@ -85,6 +85,7 @@ function pickerKb(pid, sel, sug = {}) {
   const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
+    [{ text: '🧠 Anuncio PRO: investiga + 3 guiones + revisión (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }],
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
     [{ text: '🎓 Video tutorial (cómo se usa, con ejemplo)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }],
     [{ text: '😂 Anuncio de comedia (meme viral)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'comedia' })}` }],

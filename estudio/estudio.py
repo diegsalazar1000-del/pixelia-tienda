@@ -220,7 +220,8 @@ def run_job(J):
         else:
             B = json.loads(brief_file.read_text())
             if "ganchos" not in B: B = brief_mod.normalize(B, prod, len(B.get("textos_paginas", [])) or 6)
-        if not B.get("investigacion") and os.environ.get("AD_RESEARCH", "1") != "0":
+        pro = opts.get("q") == "1"  # botón 🧠 Anuncio PRO (gasta más Claude); lo normal sigue como antes
+        if pro and not B.get("investigacion") and os.environ.get("AD_RESEARCH", "1") != "0":
             say("🔎 Investigando en internet a quién le vende este producto y qué anuncios funcionan en su nicho (1 sola vez por producto)…")
             inv = director.investigar(prod, B)
             if inv:
@@ -234,8 +235,8 @@ def run_job(J):
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
             ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else (opts.get("f") if opts.get("f") in brief_mod.FORMATOS else None)
             stock = opts.get("p") == "1"  # botón "📸 Crear con fotos y videos de Pixabay"
-            say("📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
-            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock)
+            say("🧠 Anuncio PRO: 3 guiones, el director elige el mejor y al final reviso el video…" if pro else "📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
+            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock, single=not pro)
             st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
             say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
@@ -246,7 +247,7 @@ def run_job(J):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
                 except Exception as e: print("voz previa falló:", e)
             TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
-            if os.environ.get("AD_REVIEW", "1") != "0":
+            if pro and os.environ.get("AD_REVIEW", "1") != "0":
                 say("🔍 Revisando el video antes de mandártelo…")
                 fixed, probs = director.revisar(story, silent, TL, tmp, audio.ahorro())
                 if fixed:
