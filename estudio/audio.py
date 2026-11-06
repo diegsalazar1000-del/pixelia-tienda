@@ -69,6 +69,21 @@ def rhodes(freqs, d):
     s = sum(np.sin(2 * np.pi * f * t + 0.8 * np.sin(2 * np.pi * f * 2 * t) * np.exp(-t * 3)) for f in freqs) / len(freqs)
     return s * env(n, 0.005, d * 0.5) * (1 + 0.15 * np.sin(2 * np.pi * 5 * t)) * 0.35
 
+def guacharaca(accent=False):
+    n = int(0.11 * SR); s = rng.normal(0, 1, n); s = s - lowpass(s, 2)
+    e = np.zeros(n)
+    for k in range(5): i = int(k * 0.018 * SR); e[i:] += env(n - i, 0.001, 0.008)
+    return s * e * (0.22 if accent else 0.14)
+def accordion(freqs, d):
+    n = int(d * SR); t = np.arange(n) / SR; vib = 1 + 0.004 * np.sin(2 * np.pi * 6 * t)
+    s = sum(osc(f, n, "saw") * 0.5 + osc(f * 1.003, n, "square") * 0.3 for f in freqs) / len(freqs)
+    s = lowpass(s * vib, 6)
+    return s * np.minimum(1, t / 0.02) * np.minimum(1, (d - t) / 0.05) * 0.3
+def b808(freq, d):
+    n = int(d * SR); t = np.arange(n) / SR; f = freq * (1 + 0.5 * np.exp(-t * 30))
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR); x = np.tanh(x * 1.8)
+    return x * np.minimum(1, t / 0.003) * np.exp(-t / (d * 0.7)) * 0.75
+
 def add(buf, snd, t, gain=1.0):
     i = int(t * SR); j = min(len(buf), i + len(snd))
     if 0 <= i < len(buf): buf[i:j] += snd[: j - i] * gain
@@ -77,7 +92,8 @@ def add(buf, snd, t, gain=1.0):
 def genre_track(genre, T, bpm=None):
     out = np.zeros(int(T * SR)); g = (genre or "base").lower()
     spec = {"reggaeton": (95, ["Am", "F", "C", "G"]), "pop": (118, ["C", "G", "Am", "F"]), "electronica": (124, ["Am", "F", "C", "G"]),
-            "lofi": (80, ["Dm", "G", "C", "Am"]), "acustica": (100, ["G", "D", "Em", "C"]), "base": (118, ["Am", "Am", "C", "G"])}
+            "lofi": (80, ["Dm", "G", "C", "Am"]), "acustica": (100, ["G", "D", "Em", "C"]), "base": (118, ["Am", "Am", "C", "G"]),
+            "cumbia": (98, ["Am", "Dm", "G", "C"]), "trap": (140, ["Am", "F", "Dm", "Em"])}
     bpm_, prog_ = spec.get(g, spec["base"]); bpm = bpm or bpm_
     step = 60 / bpm / 4  # semicorchea
     bar = step * 16; nbars = int(T / bar) + 1
@@ -114,6 +130,22 @@ def genre_track(genre, T, bpm=None):
             for s in range(0, 16, 2): add(out, shaker(), t0 + s * step, 0.6)
             for s in (0, 3, 6, 8, 11, 14):  # rasgueo
                 for k, f in enumerate(ch): add(out, pluck(note(f), 0.8, 0.55), t0 + s * step + k * 0.012, 0.35)
+        elif g == "cumbia":  # guacharaca + bajo raíz/quinta + "acordeón"
+            for s in (0, 8): add(out, kick(0.2, 110, 50), t0 + s * step, 0.7)
+            for s in (4, 12): add(out, snare(0.1), t0 + s * step, 0.3)
+            for s in range(0, 16, 2): add(out, guacharaca(s % 4 == 0), t0 + s * step, 0.9)
+            fifth = root * 1.5
+            for s, f in ((0, root), (6, root), (8, fifth), (14, fifth)): add(out, bass(f, step * 2, "sine"), t0 + s * step, 0.9)
+            for k, s in enumerate((2, 6, 10, 14)): add(out, accordion([note(f) * 2 for f in ch], step * 1.6), t0 + s * step, 0.45)
+        elif g == "trap":  # medio tiempo, 808 largo, hi-hats con redobles
+            for s in (0, 10): add(out, b808(root, bar * 0.45), t0 + s * step, 1.0)
+            add(out, clap(), t0 + 8 * step, 0.8); add(out, snare(0.15), t0 + 8 * step, 0.4)
+            for s in range(16):
+                add(out, hat(), t0 + s * step, 0.55)
+                if s in (6, 14):  # redoble de hi-hat
+                    for r in range(3): add(out, hat(0.03), t0 + s * step + (r + 1) * step / 3, 0.4)
+            add(out, pad([note(f) for f in ch], bar, "tri"), t0, 0.35)
+            for k, f in enumerate(ch): add(out, pluck(note(f) * 2, 0.4, 0.7), t0 + (k * 4 + 2) * step, 0.35)
         else:  # base suave (la del primer anuncio)
             for s in (0, 4, 8, 12): add(out, kick(), t0 + s * step, 0.55)
             for s in (2, 6, 10, 14): add(out, hat(), t0 + s * step, 1.0)
@@ -158,6 +190,37 @@ def sfx_track(B, TL):
     add(buf, click(), s4 + 0.62, 1.0); add(buf, sparkle(), s4 + 0.65, 1.0)
     return buf
 
+# ---------- música REAL de la biblioteca ----------
+# Canciones libres de derechos que tú envías al bot del radar con el género en el texto (se guardan en storage/musica/<género>/).
+MUSIC_DIR = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia")) / "storage" / "musica"
+AUDIO_EXT = (".mp3", ".wav", ".m4a", ".ogg", ".aac", ".flac")
+
+def library(genre):
+    d = MUSIC_DIR / (genre or "")
+    return sorted(p for p in d.glob("*") if p.suffix.lower() in AUDIO_EXT) if d.is_dir() else []
+
+def decode(path):
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), "-ac", "1", "-ar", str(SR), "-f", "s16le", "-"],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+def library_track(genre, T, seed=0):
+    """Toma la parte con más energía (el coro / el 'drop') de una canción real del género y la recorta al largo del reel."""
+    files = library(genre)
+    if not files: return None, None
+    path = files[seed % len(files)]
+    x = decode(path); n = int(T * SR)
+    if len(x) < n: x = np.tile(x, n // max(1, len(x)) + 1)
+    hop = SR // 2; win = n
+    e = np.convolve(x[: len(x) // hop * hop].reshape(-1, hop).std(axis=1), np.ones(max(1, win // hop)), "valid")
+    lo = int(len(e) * 0.12)  # evita la intro
+    k = lo + int(np.argmax(e[lo:])) if len(e) > lo else 0
+    seg = x[k * hop: k * hop + n].copy()
+    if len(seg) < n: seg = np.concatenate([seg, np.zeros(n - len(seg))])
+    fi, fo = int(0.25 * SR), int(0.8 * SR)
+    seg[:fi] *= np.linspace(0, 1, fi); seg[-fo:] *= np.linspace(1, 0, fo)
+    return seg / (np.sqrt((seg ** 2).mean()) + 1e-9) * 0.18, path.name
+
 # ---------- voz (Piper) ----------
 def read_wav(path):
     with wave.open(str(path)) as w:
@@ -170,46 +233,81 @@ def read_wav(path):
 def tts(text, genero, tmpdir, speed=1.0):
     voice = VOICES.get(genero, VOICES["femenina"]); model = VOICES_DIR / f"{voice}.onnx"
     if not model.exists(): raise RuntimeError(f"Falta la voz {voice} en {VOICES_DIR}")
-    out = pathlib.Path(tmpdir) / f"voz_{abs(hash(text)) % 10**8}.wav"
+    out = pathlib.Path(tmpdir) / f"voz_{abs(hash((text, speed))) % 10**8}.wav"
     cmd = ["python3", "-m", "piper", "-m", str(model), "-f", str(out)]
-    r = subprocess.run(cmd + ["--length-scale", str(round(1 / speed, 2))], input=text.encode(), capture_output=True)
-    if r.returncode != 0 or not out.exists():  # versiones de piper sin esa opción
+    r = subprocess.run(cmd + ["--length-scale", str(round(1 / speed, 2)), "--noise-scale", "0.6", "--noise-w", "0.85"],
+                       input=text.encode(), capture_output=True)
+    if r.returncode != 0 or not out.exists():  # versiones de piper sin esas opciones
         subprocess.run(cmd, input=text.encode(), check=True, capture_output=True)
-    return read_wav(out)
+    v = read_wav(out)
+    nz = np.flatnonzero(np.abs(v) > 0.02)  # quita silencios de los bordes
+    return v[max(0, nz[0] - 800): nz[-1] + 2000] if len(nz) else v
+
+def shorten(text, ratio):
+    """Recorta la frase (por comas o palabras) para que quepa sin acelerar la voz."""
+    words = text.split(); keep = max(2, int(len(words) * ratio))
+    cut = " ".join(words[:keep])
+    for sep in (".", "!", "?", ",", ":"):
+        j = cut.rfind(sep)
+        if j > len(cut) * 0.5: return cut[: j + 1]
+    return cut.rstrip(",;:") + "."
 
 def voice_track(B, TL, tmpdir):
+    """Voz a ritmo NATURAL: si una frase no cabe, se acorta (no se acelera más de un 6%)."""
     v = B.get("voz", {}); g = v.get("genero", "femenina"); guion = B.get("guion_voz", {})
     buf = np.zeros(int(TL["T"] * SR)); spans = []
-    slots = [("gancho", 0.25, 2.3), ("paginas", TL["flip_start"], TL["t2_end"]), ("movil", TL["s3a"] + 0.3, TL["s4"] - 0.1), ("precio", TL["s4"] + 0.5, TL["T"] - 0.3)]
+    slots = [("gancho", 0.2, TL["flip_start"] - 0.05), ("paginas", TL["flip_start"] + 0.15, TL["s3a"] + 0.2),
+             ("movil", TL["s3a"] + 0.35, TL["s4"] + 0.25), ("precio", TL["s4"] + 0.45, TL["T"] - 0.15)]
+    free = 0
     for key, start, end in slots:
-        text = guion.get(key)
+        text = str(guion.get(key) or "").strip()
         if not text: continue
-        clip = tts(text, g, tmpdir, speed=1.12)
-        room = end - start
-        if len(clip) / SR > room:  # si no cabe, se acelera un poco más
-            clip = tts(text, g, tmpdir, speed=min(1.45, 1.12 * (len(clip) / SR) / room))
-        add(buf, clip / (np.abs(clip).max() + 1e-9) * 0.95, start); spans.append((start, start + len(clip) / SR))
+        start = max(start, free + 0.15); room = end - start
+        if room < 0.8: continue
+        clip = tts(text, g, tmpdir, 1.0)
+        for _ in range(3):
+            dur = len(clip) / SR
+            if dur <= room: break
+            if dur <= room * 1.06: clip = tts(text, g, tmpdir, 1.06); break
+            text = shorten(text, room / dur * 0.95); clip = tts(text, g, tmpdir, 1.0)
+        clip = clip[: int(room * SR)]
+        rms = np.sqrt((clip ** 2).mean()) + 1e-9
+        clip = np.tanh(clip / rms * 0.16 * 2.2) / 2.2 * 1.6  # volumen parejo + compresión suave
+        add(buf, clip, start); spans.append((start, start + len(clip) / SR)); free = start + len(clip) / SR
     return buf, spans
 
 # ---------- mezcla ----------
-def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp"):
-    T = TL["T"]; n = int(T * SR)
+def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=0):
+    """music_genre: género (usa canción real de la biblioteca si hay; si no, ritmo sintetizado) · '0' = sin música."""
+    T = TL["T"]; n = int(T * SR); info = {"musica": "ninguna"}
     sfx = sfx_track(B, TL)
-    music = genre_track(music_genre or "base", T, (B.get("musica") or {}).get("bpm") if music_genre else None)
+    g = music_genre or "base"
+    if g == "0": music = np.zeros(n)
+    else:
+        music, name = library_track(g, T, seed)
+        if music is None:
+            music = genre_track(g, T, (B.get("musica") or {}).get("bpm") if g != "base" else None)
+            music = music / (np.sqrt((music ** 2).mean()) + 1e-9) * 0.18; info["musica"] = f"ritmo sintetizado ({g})"
+        else: info["musica"] = f"canción real: {name}"
+        music = music[:n] if len(music) >= n else np.concatenate([music, np.zeros(n - len(music))])
     duck = np.ones(n)
-    i0, i1 = int(TL["s4"] * SR), int((TL["s4"] + 0.8) * SR); duck[i0:i1] = np.linspace(0.35, 1, i1 - i0)
-    voice = np.zeros(n)
+    i0, i1 = int(TL["s4"] * SR), int((TL["s4"] + 0.8) * SR); duck[i0:i1] = np.linspace(0.55, 1, i1 - i0)
+    voice = np.zeros(n); sfx_gain = np.ones(n)
     if with_voice:
-        voice, spans = voice_track(B, TL, tmpdir)
-        for a, b in spans:  # la música baja mientras habla la voz
-            ia, ib = int(max(0, a - 0.1) * SR), int(min(T, b + 0.15) * SR); duck[ia:ib] = np.minimum(duck[ia:ib], 0.32)
-        duck = lowpass(duck, int(0.05 * SR)) + duck * 0  # suaviza
-        duck[duck == 0] = 1
-    level = 0.55 if music_genre else 0.45
-    out = sfx * (0.7 if with_voice else 1.0) + music * duck * level + voice * 1.0
-    out = out / (np.abs(out).max() + 1e-9) * 0.89
+        try: voice, spans = voice_track(B, TL, tmpdir); info["voz"] = "ok"
+        except Exception as e:  # si la voz falla, el anuncio sale igual (sin voz) y se avisa
+            print("voz falló:", e); voice, spans = np.zeros(n), []; info["voz"] = f"error: {e}"
+        for a, b in spans:  # la música baja (sin desaparecer) mientras habla la voz
+            ia, ib = int(max(0, a - 0.12) * SR), int(min(T, b + 0.2) * SR)
+            duck[ia:ib] = np.minimum(duck[ia:ib], 0.5); sfx_gain[ia:ib] = 0.45
+        k = int(0.08 * SR); duck = np.convolve(duck, np.ones(k) / k, "same"); sfx_gain = np.convolve(sfx_gain, np.ones(k) / k, "same")
+    music_level = 1.25 if not with_voice else 1.0
+    out = sfx * 0.55 * sfx_gain + music * duck * music_level + voice * 0.9
+    out = np.tanh(out * 1.4) / np.tanh(1.4)  # limitador suave: más volumen sin distorsión
+    out = out / (np.abs(out).max() + 1e-9) * 0.93
     with wave.open(str(out_wav), "w") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((out * 32767).astype(np.int16).tobytes())
+    return info
 
 def mux(video, wav, out):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(wav), "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",

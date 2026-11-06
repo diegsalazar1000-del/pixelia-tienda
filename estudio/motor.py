@@ -21,6 +21,63 @@ def back_out(t, s=1.9): t -= 1; return t * t * ((s + 1) * t + s) + 1
 def prog(t, a, b): return clamp((t - a) / (b - a))
 def hexrgb(h): h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
+# ---------- estilos ----------
+STYLE_NAMES = {"color": "Explosión de color", "neon": "Neón oscuro", "minimal": "Minimal elegante", "tiktok": "TikTok nativo"}
+S = {}
+
+def bright(hexes):  # el color más vivo/claro de la paleta
+    return max(hexes, key=lambda c: sum(hexrgb(c)) + 2 * (max(hexrgb(c)) - min(hexrgb(c))))
+
+def set_style(name, colors, pages=None):
+    """Prepara el estilo visual. Todas las funciones de dibujo leen de S."""
+    b = bright(colors)
+    base = dict(name=name, colors=colors, bg="gradient", text="#FFFFFF", shadow=True, glow=False, boxed=False,
+                hl_fill=INK, hl_text="#FFFFFF", box_fill="#FFFFFF", box_text="#111111", pill_fill=INK, pill_text="#FFFFFF",
+                burst="#FFF6E0", price="#C8442B", old=INK, badge=INK, cta_fill="#FFFFFF", cta_text=INK, domain="#FFFFFF",
+                device=(36, 30, 26, 255), stickers=6, falling=14, pages=pages)
+    if name == "neon":
+        base.update(bg="neon", shadow=False, glow=True, hl_fill=b, hl_text="#0B0820", pill_fill="#1B1238", pill_text=b,
+                    burst="#1B1238", price=b, old="#FFFFFF", badge=b, cta_fill=b, cta_text="#0B0820", domain=b, device=(12, 10, 24, 255))
+    elif name == "minimal":
+        base.update(bg="minimal", text=INK, shadow=False, hl_fill=colors[0], hl_text="#FFFFFF", pill_fill="#FFFFFF", pill_text=INK,
+                    burst="#FFFFFF", price=colors[0], cta_fill=INK, cta_text="#FFFFFF", domain=INK, stickers=3, falling=6)
+    elif name == "tiktok":
+        base.update(bg="page", boxed=True, shadow=False, hl_fill="#FE2C55", pill_fill="#FFFFFF", pill_text="#111111",
+                    burst="#FFFFFF", price="#FE2C55", badge="#FE2C55", cta_fill="#FE2C55", cta_text="#FFFFFF", stickers=2, falling=6)
+    S.clear(); S.update(base); _bgcache.clear()
+
+_bgcache = {}
+def background(w, h, colors, t):
+    kind = S.get("bg", "gradient")
+    if kind == "neon": return neon_bg(w, h, colors, t)
+    if kind == "minimal": return minimal_bg(w, h, colors, t)
+    if kind == "page" and S.get("pages"): return page_bg(w, h, t)
+    return gradient_bg(w, h, colors, t)
+
+def _blobs(w, h, colors, t, base, strength, radius):
+    sw, sh = w // 4, h // 4
+    if (sw, sh) not in _grid: _grid[(sw, sh)] = np.mgrid[0:sh, 0:sw].astype(np.float32)
+    yy, xx = _grid[(sw, sh)]; img = np.empty((sh, sw, 3), np.float32); img[:] = hexrgb(base)
+    for k, c in enumerate(colors[:3]):
+        cx = sw * (0.5 + 0.38 * math.sin(t * 0.5 + k * 2.1)); cy = sh * (0.5 + 0.4 * math.cos(t * 0.37 + k * 1.7))
+        g = np.exp(-(((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * (sw * radius) ** 2)))[..., None] * strength
+        img = img * (1 - g) + np.array(hexrgb(c), np.float32) * g
+    return Image.fromarray(img.clip(0, 255).astype(np.uint8), "RGB").resize((w, h), Image.BILINEAR).convert("RGBA")
+
+def neon_bg(w, h, colors, t): return _blobs(w, h, colors, t, "#0B0820", 0.75, 0.32)
+def minimal_bg(w, h, colors, t): return _blobs(w, h, colors, t, "#F7F1EA", 0.22, 0.36)
+
+def page_bg(w, h, t):
+    """Fondo estilo TikTok: la portada del producto ampliada, desenfocada y oscurecida, con zoom lento."""
+    key = (w, h)
+    if key not in _bgcache:
+        p = S["pages"][0]; sc = max(w * 1.2 / p.width, h * 1.2 / p.height)
+        big = p.resize((int(p.width * sc), int(p.height * sc)), Image.BILINEAR).filter(ImageFilter.GaussianBlur(28))
+        big = Image.blend(big.convert("RGB"), Image.new("RGB", big.size, (10, 10, 14)), 0.55)
+        _bgcache[key] = big
+    big = _bgcache[key]; dx = (big.width - w) * (0.5 + 0.4 * math.sin(t * 0.25)); dy = (big.height - h) * (0.5 + 0.4 * math.cos(t * 0.2))
+    return big.crop((int(dx), int(dy), int(dx) + w, int(dy) + h)).convert("RGBA")
+
 _grid = {}
 def gradient_bg(w, h, colors, t):
     """Degradado diagonal en movimiento + manchas de luz (calculado a 1/4 de resolución y escalado)."""
@@ -84,19 +141,25 @@ def fit_font(words, maxw, start, minsize=48):
     return F("Bold", minsize)
 
 def highlight_words(cv, words, cx, y, font, t0, t, hl_index=None, hl_color=INK):
-    boxes = [text_box(w, font, "#FFFFFF") for w in words]
-    gap = font.size * 0.28
+    hl_color = S.get("hl_fill", hl_color)
+    boxes = [text_box(w, font, S.get("hl_text", "#FFFFFF") if i == hl_index else (S.get("box_text") if S.get("boxed") else S.get("text", "#FFFFFF")))
+             for i, w in enumerate(words)]
+    gap = font.size * (0.36 if S.get("boxed") else 0.28)
     total = sum(b.width for b in boxes) + gap * (len(boxes) - 1)
     x = cx - total / 2
     for i, b in enumerate(boxes):
         p = prog(t, t0 + i * 0.12, t0 + i * 0.12 + 0.35)
         if p > 0:
             s = back_out(p); im = b
-            if i == hl_index:
+            if i == hl_index or S.get("boxed"):
                 pad = 14; bx = Image.new("RGBA", (b.width + 2 * pad, b.height + pad), (0, 0, 0, 0))
-                ImageDraw.Draw(bx).rounded_rectangle([0, 0, bx.width - 1, bx.height - 1], radius=18, fill=hl_color)
+                ImageDraw.Draw(bx).rounded_rectangle([0, 0, bx.width - 1, bx.height - 1], radius=18 if not S.get("boxed") else 12,
+                                                     fill=hl_color if i == hl_index else S["box_fill"])
                 bx.alpha_composite(b, (pad, pad // 2)); im = bx
-            else:
+            elif S.get("glow"):
+                gl = text_box(words[i], font, S["hl_fill"]).filter(ImageFilter.GaussianBlur(16))
+                paste_center(cv, gl, x + b.width / 2, y, s * 1.03, rot=(1 - p) * -8, alpha=0.9)
+            elif S.get("shadow", True):
                 dark = Image.new("RGBA", b.size, (60, 25, 10, 0))
                 dark.putalpha(b.getchannel("A").point(lambda v: int(v * 0.45)).filter(ImageFilter.GaussianBlur(6)))
                 paste_center(cv, dark, x + b.width / 2 + 3, y + 6, s, rot=(1 - p) * -8)
@@ -114,7 +177,8 @@ def starburst(r, color, points=18, inner=0.82):
             r + 2 + (r if k % 2 == 0 else r * inner) * math.sin(k * math.pi / points)) for k in range(2 * points)]
     d.polygon(pts, fill=color); return im
 
-def device_frame(page, w, max_h=None, r=46, pad=26, color=(36, 30, 26, 255)):
+def device_frame(page, w, max_h=None, r=46, pad=26, color=None):
+    color = color or S.get("device", (36, 30, 26, 255))
     ph = int(page.height * w / page.width)
     if max_h and ph > max_h: w = int(w * max_h / ph); ph = max_h
     p = page.resize((w, ph), Image.LANCZOS)
@@ -183,8 +247,9 @@ def timeline(n_pages):
 
 
 # ---------- reel ----------
-def build_reel(B, pages, phone, out_path, progress=None):
-    colors = B["colores"]; TL = timeline(len(pages)); T = TL["T"]
+def build_reel(B, pages, phone, out_path, progress=None, style="color", only_times=None, seed=7):
+    """only_times=[t...] devuelve solo esos fotogramas (para pruebas rápidas)."""
+    colors = B["colores"]; TL = timeline(len(pages)); T = TL["T"]; set_style(style, colors, pages)
     pw = 860; pages_r = []
     for p in pages:
         ph = int(p.height * pw / p.width)
@@ -192,18 +257,18 @@ def build_reel(B, pages, phone, out_path, progress=None):
         else: pages_r.append(p.resize((pw, ph), Image.LANCZOS))
     base_size = pages_r[0].size; pages_r = [p.resize(base_size, Image.LANCZOS) for p in pages_r]
     stickers = make_stickers(B.get("stickers", ["NUEVO", "PDF", "Descarga inmediata"]), colors)
-    rng = random.Random(7)
-    falling = [(rng.uniform(80, W - 80), rng.uniform(-900, -100), rng.uniform(-40, 40), rng.uniform(300, 520), rng.choice(stickers)) for _ in range(14)]
+    rng = random.Random(seed)
+    falling = [(rng.uniform(80, W - 80), rng.uniform(-900, -100), rng.uniform(-40, 40), rng.uniform(300, 520), rng.choice(stickers)) for _ in range(S["falling"])]
     flips = B["textos_paginas"]
     while len(flips) < len(pages): flips.append(flips[-1] if flips else "")
     ff = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out_path)]
-    proc = subprocess.Popen(ff, stdin=subprocess.PIPE)
+    proc = None if only_times else subprocess.Popen(ff, stdin=subprocess.PIPE); shots = []
     n = len(pages_r); fs_, fe = TL["flip_start"], TL["flip_each"]; t2_end, s3a, s4 = TL["t2_end"], TL["s3a"], TL["s4"]
     total = int(T * FPS); f_mid = F("Bold", 64)
-    for fi in range(total):
+    for fi in ([round(x * FPS) for x in only_times] if only_times else range(total)):
         t = fi / FPS
-        cv = gradient_bg(W, H, colors, t)
+        cv = background(W, H, colors, t)
         if t < 2.3:  # gancho
             a = 1 - prog(t, 2.0, 2.3); hook = Image.new("RGBA", (W, H), (0, 0, 0, 0))
             lines_block(hook, B["gancho"], W / 2, 760 - (len(B["gancho"]) - 3) * 70, W - 120, 118, 0.1, t, 1.27)
@@ -218,13 +283,13 @@ def build_reel(B, pages, phone, out_path, progress=None):
             lay = Image.new("RGBA", (W, H), (0, 0, 0, 0)); paste_center(lay, dev, W / 2, 1060, 0.6 + 0.4 * ent, rot=4 * math.sin(t * 1.4))
             cv.alpha_composite(shadow(lay, 35, (0, 40))); cv.alpha_composite(lay)
             idx = min(len(flips) - 1, k + (1 if p > 0.5 else 0))
-            tb = text_box(flips[idx], fit_font([flips[idx]], W - 200, 64), "#FFFFFF")
+            tb = text_box(flips[idx], fit_font([flips[idx]], W - 200, 64), S["pill_text"])
             pill = Image.new("RGBA", (tb.width + 60, tb.height + 24), (0, 0, 0, 0))
-            ImageDraw.Draw(pill).rounded_rectangle([0, 0, pill.width - 1, pill.height - 1], radius=pill.height // 2, fill=INK)
+            ImageDraw.Draw(pill).rounded_rectangle([0, 0, pill.width - 1, pill.height - 1], radius=pill.height // 2, fill=S["pill_fill"])
             pill.alpha_composite(tb, (30, 12))
             pop = back_out(clamp(((t - fs_) - (idx - 1) * fe) / 0.3)) if idx > 0 else ent
             paste_center(cv, pill, W / 2, 440, max(0.01, pop))
-            for j, st in enumerate(stickers[:6]):
+            for j, st in enumerate(stickers[:S["stickers"]]):
                 sp = back_out(prog(t, 2.3 + j * 0.25, 2.7 + j * 0.25)); ang = j * 60 + t * 25
                 paste_center(cv, st, W / 2 + math.cos(math.radians(ang)) * 470, max(640, 1060 + math.sin(math.radians(ang)) * 560), sp * 0.9, rot=10 * math.sin(t * 3 + j))
         if s3a <= t < s4 + 0.3:  # móvil
@@ -238,43 +303,49 @@ def build_reel(B, pages, phone, out_path, progress=None):
             mt = B["movil_texto"]; highlight_words(cv, mt, W / 2, 300, fit_font(mt, W - 140, 84), s3a + 0.2, t, B.get("movil_resaltar"))
         if t >= s4:  # precio
             e = back_out(prog(t, s4, s4 + 0.45), 2.4)
-            paste_center(cv, starburst(300, "#FFF6E0"), W / 2, 860, e, rot=t * 20)
-            ptxt = money(B["precio"]); pr = text_box(ptxt, F("Bold", 230 if len(ptxt) <= 3 else 190), "#C8442B")
+            paste_center(cv, starburst(300, S["burst"]), W / 2, 860, e, rot=t * 20)
+            ptxt = money(B["precio"]); pr = text_box(ptxt, F("Bold", 230 if len(ptxt) <= 3 else 190), S["price"])
             paste_center(cv, pr, W / 2, 830, e)
             if B.get("tachado"):
-                old = text_box(f"antes {money(B['tachado'])}", F("Medium", 52), INK)
-                ImageDraw.Draw(old).line([(10, old.height / 2 + 4), (old.width - 10, old.height / 2 + 4)], fill="#C8442B", width=6)
+                old = text_box(f"antes {money(B['tachado'])}", F("Medium", 52), S["old"])
+                ImageDraw.Draw(old).line([(10, old.height / 2 + 4), (old.width - 10, old.height / 2 + 4)], fill=S["price"], width=6)
                 paste_center(cv, old, W / 2, 1010, back_out(prog(t, s4 + 0.3, s4 + 0.6)))
                 off = round((1 - B["precio"] / B["tachado"]) * 100)
                 if off >= 10:
-                    badge = starburst(95, INK, 12, 0.78)
-                    ImageDraw.Draw(badge).text((badge.width / 2, badge.height / 2), f"-{off}%", font=F("Bold", 50), fill="#FFFFFF", anchor="mm")
+                    badge = starburst(95, S["badge"], 12, 0.78)
+                    ImageDraw.Draw(badge).text((badge.width / 2, badge.height / 2), f"-{off}%", font=F("Bold", 50), fill="#FFFFFF" if S["name"] != "neon" else "#0B0820", anchor="mm")
                     paste_center(cv, badge, W / 2 + 270, 640, back_out(prog(t, s4 + 0.45, s4 + 0.75)), rot=-12)
             pulse = 1 + 0.05 * math.sin((t - s4) * 9)
-            cta = text_box(B["cta"], F("Bold", 58), INK)
+            cta = text_box(B["cta"], F("Bold", 58), S["cta_text"])
             btn = Image.new("RGBA", (cta.width + 110, cta.height + 50), (0, 0, 0, 0))
-            ImageDraw.Draw(btn).rounded_rectangle([0, 0, btn.width - 1, btn.height - 1], radius=btn.height // 2, fill="#FFFFFF")
+            ImageDraw.Draw(btn).rounded_rectangle([0, 0, btn.width - 1, btn.height - 1], radius=btn.height // 2, fill=S["cta_fill"])
             btn.alpha_composite(cta, (55, 25))
             paste_center(cv, btn, W / 2, 1270, back_out(prog(t, s4 + 0.6, s4 + 0.95)) * pulse)
-            paste_center(cv, text_box(B["dominio"], F("Bold", 46), "#FFFFFF"), W / 2, 1420, prog(t, s4 + 0.9, s4 + 1.2))
-            for j, st in enumerate(stickers[:4]):
+            paste_center(cv, text_box(B["dominio"], F("Bold", 46), S["domain"]), W / 2, 1420, prog(t, s4 + 0.9, s4 + 1.2))
+            for j, st in enumerate(stickers[:min(4, S["stickers"])]):
                 pos = [(200, 520), (880, 1150), (180, 1180), (900, 470)][j]
                 paste_center(cv, st, *pos, back_out(prog(t, s4 + 0.2 + j * 0.1, s4 + 0.5 + j * 0.1)), rot=15 * math.sin(t * 2 + j))
+        if only_times: shots.append(cv.convert("RGB")); continue
         proc.stdin.write(cv.convert("RGB").tobytes())
         if progress and fi % 60 == 0: progress(fi / total)
+    if only_times: return shots
     proc.stdin.close(); proc.wait()
     return TL
 
 
 # ---------- imágenes ----------
-def build_static(B, pages, phone, outdir):
-    rng = random.Random(3); files = []
+def build_static(B, pages, phone, outdir, style="color", prefix=None, only=None, sizes=None):
+    """prefix='V2' → V2-4x5.jpg… (variantes); only=[índices de B['estaticos']] a dibujar."""
+    rng = random.Random(3); files = []; set_style(style, B["colores"], pages)
     stickers = make_stickers(B.get("stickers", ["NUEVO", "PDF"]), B["colores"])
     for vi, v in enumerate(B["estaticos"]):
+        if only is not None and vi not in only: continue
         for name, (w, h) in {"1x1": (1080, 1080), "4x5": (1080, 1350), "9x16": (1080, 1920)}.items():
+            if sizes and name not in sizes: continue
             cols = v.get("colores") or B["colores"]
-            cv = gradient_bg(w, h, cols, vi * 2.0); story = name == "9x16"
-            top = 260 if story else 70; size = 96 if w == h else 104
+            cv = background(w, h, cols, vi * 2.0); story = name == "9x16"
+            top = 260 if story else 70; size = (96 if w == h else 104) * (0.8 if len(v["titular"]) >= 3 else 1)
+            head_bottom = top + 70 + (len(v["titular"]) - 0.5) * size * 1.18
             for li, line in enumerate(v["titular"]):
                 f = fit_font(line["palabras"], w - 120, size)
                 highlight_words(cv, line["palabras"], w / 2, top + 70 + li * size * 1.18, f, -10, 10, line.get("resaltar"))
@@ -286,18 +357,20 @@ def build_static(B, pages, phone, outdir):
             ph_ = device_frame(phone, int(dw * 0.30), int(max_h * 0.9), r=40, pad=12)
             paste_center(lay, ph_, w * 0.80, cy + front.height * 0.25, 1.0, rot=8)
             cv.alpha_composite(shadow(lay, 30, (0, 30))); cv.alpha_composite(lay)
-            for j, st in enumerate(stickers[:5]):
+            for j, st in enumerate(stickers[:min(5, S["stickers"])]):
                 pos = [(0.12, 0.42), (0.90, 0.47), (0.10, 0.74), (0.14, 0.60), (0.90, 0.70)][j]
-                paste_center(cv, st, w * pos[0], h * pos[1], 0.9, rot=rng.uniform(-18, 18))
-            r = int(w * 0.13); b = starburst(r, "#FFF6E0"); bd = ImageDraw.Draw(b)
+                half = st.width * 0.45 + 12; sx = max(half, min(w - half, w * pos[0]))
+                paste_center(cv, st, sx, h * pos[1], 0.9, rot=rng.uniform(-18, 18))
+            r = int(w * 0.13); b = starburst(r, S["burst"]); bd = ImageDraw.Draw(b)
             ptxt = money(B["precio"])
-            bd.text((b.width / 2, b.height / 2 - r * 0.12), ptxt, font=F("Bold", r * (0.62 if len(ptxt) <= 3 else 0.46)), fill="#C8442B", anchor="mm")
-            if B.get("tachado"): bd.text((b.width / 2, b.height / 2 + r * 0.38), f"antes {money(B['tachado'])}", font=F("Medium", r * 0.17), fill=INK, anchor="mm")
-            paste_center(cv, b, w * 0.84, h * (0.40 if w == h else 0.33), 0.9 if w == h else 1.0, rot=-10)
-            cta = text_box(v.get("cta", B["cta"]), F("Bold", 44), INK)
+            bd.text((b.width / 2, b.height / 2 - r * 0.12), ptxt, font=F("Bold", r * (0.62 if len(ptxt) <= 3 else 0.46)), fill=S["price"], anchor="mm")
+            if B.get("tachado"): bd.text((b.width / 2, b.height / 2 + r * 0.38), f"antes {money(B['tachado'])}", font=F("Medium", r * 0.17), fill=S["old"], anchor="mm")
+            by_ = max(h * (0.40 if w == h else 0.33), head_bottom + b.height * 0.42)
+            paste_center(cv, b, w * 0.84, by_, 0.9 if w == h else 1.0, rot=-10)
+            cta = text_box(v.get("cta", B["cta"]), F("Bold", 44), S["cta_text"])
             btn = Image.new("RGBA", (cta.width + 80, cta.height + 34), (0, 0, 0, 0))
-            ImageDraw.Draw(btn).rounded_rectangle([0, 0, btn.width - 1, btn.height - 1], radius=btn.height // 2, fill="#FFFFFF")
+            ImageDraw.Draw(btn).rounded_rectangle([0, 0, btn.width - 1, btn.height - 1], radius=btn.height // 2, fill=S["cta_fill"])
             btn.alpha_composite(cta, (40, 17)); by = h - (110 if not story else 360)
-            paste_center(cv, btn, w / 2, by); paste_center(cv, text_box(B["dominio"], F("Bold", 34), "#FFFFFF"), w / 2, by + (80 if not story else 100))
-            path = outdir / f"{chr(65 + vi)}-{name}.jpg"; cv.convert("RGB").save(path, quality=92); files.append(path)
+            paste_center(cv, btn, w / 2, by); paste_center(cv, text_box(B["dominio"], F("Bold", 34), S["domain"]), w / 2, by + (80 if not story else 100))
+            path = outdir / f"{prefix or chr(65 + vi)}-{name}.jpg"; cv.convert("RGB").save(path, quality=92); files.append(path)
     return files

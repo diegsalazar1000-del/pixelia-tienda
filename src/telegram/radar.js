@@ -1,5 +1,7 @@
 // Bot del RADAR: la tienda escucha los botones 🛒 🛠️ ❌ que manda n8n (long polling, sin webhooks).
 // Así n8n no necesita dirección pública: solo busca y avisa; la tienda ejecuta las decisiones.
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
 
@@ -65,8 +67,68 @@ export async function offerAds(p) {
     reply_markup: { inline_keyboard: [[{ text: '🎬 Crear anuncios', callback_data: `ad:${p.id}:` }]] } });
 }
 
-// Opciones compactas del anuncio en callback_data: "ad:<id>:v=f,g=reggaeton,n=1"
+// Opciones compactas del anuncio en callback_data: "ad:<id>:v=f,g=reggaeton,s=neon,n=1,x=4"
 const parseOpts = (s) => Object.fromEntries(String(s || '').split(',').filter(Boolean).map((kv) => kv.split('=')));
+const packOpts = (o) => Object.entries(o).filter(([, x]) => x !== undefined && x !== null && x !== '').map(([k, x]) => `${k}=${x}`).join(',');
+
+// ===== Selector combinable (voz + música + estilo) =====
+export const GENRES = { reggaeton: 'Reggaetón', pop: 'Pop', trap: 'Trap', cumbia: 'Cumbia', electronica: 'Electrónica', lofi: 'Lo-fi', acustica: 'Acústica', base: 'Suave', 0: '🔇 Sin música' };
+export const STYLES = { color: '🌈 Color', neon: '🌃 Neón', minimal: '🤍 Minimal', tiktok: '📱 TikTok' };
+const VOICES = { f: '👩 Femenina', m: '👨 Masculina', 0: '🔇 Sin voz' };
+const MUSIC_DIR = path.join(path.dirname(config.paths?.files || path.resolve('storage/products')), 'musica');
+const songs = (g) => { try { return fs.readdirSync(path.join(MUSIC_DIR, g)).filter((f) => /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f)).length; } catch { return 0; } };
+
+function pickerKb(pid, sel, sug = {}) {
+  const mark = (on, txt, star) => `${on ? '✅ ' : ''}${txt}${star ? ' ⭐' : ''}`;
+  const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
+  const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
+  return [
+    Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
+    ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
+    ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])),
+    [{ text: `▶️ Crear: ${VOICES[sel.v] || ''} · ${GENRES[sel.g] || ''} · ${STYLES[sel.s] || ''}`.slice(0, 60), callback_data: `ad:${pid}:${packOpts(sel)}` }],
+    [{ text: '🧪 4 variantes para probar en Meta (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
+    [{ text: '🔁 Textos nuevos con IA', callback_data: `ad:${pid}:${packOpts({ ...sel, n: 1 })}` }],
+  ];
+}
+
+/** Mensaje para armar otra versión del anuncio combinando voz, música y estilo. */
+const lastSug = new Map();  // sugerencias de la IA por producto (para marcar ⭐)
+export async function sendAdPicker(p, sel = {}, sug = {}) {
+  if (!token()) return;
+  lastSug.set(p.id, sug);
+  const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `${GENRES[g]} (${songs(g)})`).join(', ');
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `🎛️ <b>Arma otra versión de ${esc(p.title)}</b>\nMarca voz, música y estilo (puedes combinar) y pulsa ▶️ Crear.\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
+    reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
+}
+
+// ===== Biblioteca de música real (canciones libres de derechos enviadas al bot) =====
+const GENRE_ALIAS = { reggaeton: 'reggaeton', 'reggaetón': 'reggaeton', regueton: 'reggaeton', pop: 'pop', trap: 'trap', cumbia: 'cumbia',
+  electronica: 'electronica', 'electrónica': 'electronica', edm: 'electronica', house: 'electronica', lofi: 'lofi', 'lo-fi': 'lofi',
+  acustica: 'acustica', 'acústica': 'acustica', acustico: 'acustica', 'acústico': 'acustica', suave: 'base', base: 'base' };
+const MUSIC_HELP = `🎵 <b>Biblioteca de música real</b>
+Los anuncios suenan mucho mejor con canciones reales. Usa solo música <b>libre de derechos para uso comercial</b> (por ejemplo, Pixabay Music → filtra por género → Descargar). Nunca subas canciones famosas: Meta bloquea o silencia el anuncio.
+
+Para agregar: envíame aquí el archivo MP3 y escribe en el texto (pie) el género:
+reggaeton · pop · trap · cumbia · electronica · lofi · acustica · suave
+
+Ideal: 2-3 canciones por género. El estudio usa la parte más movida (el coro) y alterna canciones entre variantes.`;
+
+async function saveSong(m) {
+  const f = m.audio || m.document;
+  const genre = GENRE_ALIAS[String(m.caption || '').trim().toLowerCase().split(/\s+/)[0]];
+  if (!genre) return send(`¿De qué género es esta canción? Reenvíamela escribiendo en el pie uno de: reggaeton, pop, trap, cumbia, electronica, lofi, acustica, suave.`);
+  if (f.file_size > 20e6) return send('El archivo pesa más de 20 MB; Telegram no me deja bajarlo. Usa un MP3 más liviano.');
+  const info = await rtg('getFile', { file_id: f.file_id });
+  const r = await fetch(`https://api.telegram.org/file/bot${token()}/${info.file_path}`);
+  if (!r.ok) throw new Error('no pude descargar el archivo');
+  const dir = path.join(MUSIC_DIR, genre); fs.mkdirSync(dir, { recursive: true });
+  const ext = (path.extname(f.file_name || info.file_path) || '.mp3').toLowerCase();
+  const name = String(f.title || f.file_name || 'cancion').replace(/\.[a-z0-9]+$/i, '').replace(/[^\w\- ]+/g, '').trim().slice(0, 50) || 'cancion';
+  fs.writeFileSync(path.join(dir, `${name}-${Date.now() % 1e6}${ext}`), Buffer.from(await r.arrayBuffer()));
+  return send(`✅ Guardada en <b>${GENRES[genre]}</b> (${songs(genre)} canciones). Los próximos anuncios con ese ritmo la usarán.`);
+}
 
 async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
@@ -77,18 +139,31 @@ async function onMessage(m) {
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿De qué producto creo anuncios?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto');
+  if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
+  if (text.startsWith('/musica') || text.startsWith('/música')) {
+    const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
+    return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
+  }
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/musica — agregar canciones reales para los anuncios');
 }
 
 export async function onCallback(q) {
   const [action, id, opts] = String(q.data || '').split(':');
+  if (action === 'sel' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // marcar/desmarcar en el selector
+    const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
+    await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+    return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
+  }
   if (action === 'ad' && String(q.from?.id) === String(config.telegram.adminChatId)) {
     const p = Products.byId(Number(id));
     if (!p) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Producto no encontrado' });
     const options = parseOpts(opts);
     const r = AdJobs.enqueue(p.id, options);
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: r.duplicated ? 'Ya se está creando' : 'En marcha 🎬' }).catch(() => {});
-    if (!r.duplicated) await send(`🎬 Creando anuncios de <b>${esc(p.title)}</b>${options.v && options.v !== '0' ? ' · con voz' : ''}${options.g ? ' · ritmo ' + esc(options.g) : ''}.\nTe los mando aquí en unos minutos.`);
+    const desc = [options.v ? VOICES[options.v] : '', options.g ? GENRES[options.g] : '', options.s ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
+    if (!r.duplicated) await send(options.x
+      ? `🧪 Creando <b>4 variantes</b> de <b>${esc(p.title)}</b> (estilos y ganchos distintos). Tarda unos 15-25 min; te aviso al terminar.`
+      : `🎬 Creando anuncios de <b>${esc(p.title)}</b>${desc ? ' · ' + esc(desc) : ''}.\nTe los mando aquí en unos minutos.`);
     return;
   }
   if (String(q.from?.id) !== String(config.telegram.adminChatId)) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'No autorizado' });

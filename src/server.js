@@ -13,7 +13,7 @@ import { tg, tgEnabled, verifyInitData, notifyAdmin, esc } from './telegram/api.
 import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
 import { Candidates, AdJobs } from './db.js';
 import { pixelSnippet } from './meta.js';
-import { startRadarBot, createDraft, offerAds } from './telegram/radar.js';
+import { startRadarBot, createDraft, offerAds, sendAdPicker } from './telegram/radar.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
@@ -294,6 +294,8 @@ on('POST', '/api/studio/jobs/:id', async (req, res, { id }) => {
   if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
   const b = await body(req, 1e6); AdJobs.finish(Number(id), b.status === 'done' ? 'done' : 'error', b.result || {}, b.error || '');
   json(res, 200, { ok: true });
+  const r = b.result || {}; const p = r.product_id && Products.byId(Number(r.product_id));
+  if (b.status === 'done' && p) sendAdPicker(p, r.sel || {}, r.sug || {}).catch((e) => console.error('[estudio]', e.message));
 });
 on('POST', '/api/admin/products/:id/ads', async (req, res, { id }) => {
   if (!adminOk(req)) return fail(res, 401, 'Clave incorrecta');
