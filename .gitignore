@@ -5,3 +5,4 @@ storage/products/*
 !storage/products/.gitkeep
 node_modules/
 storage/anuncios/
+__pycache__/
