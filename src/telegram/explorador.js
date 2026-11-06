@@ -76,8 +76,25 @@ async function askClaude(text) {
     if (j.stop_reason !== 'pause_turn') break;
     body.messages = [...body.messages, { role: 'assistant', content: j.content }];
   }
-  const t = out.replace(/```json|```/g, '');
-  return { data: JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)), searches };
+  return { data: await parseLoose(out), searches };
+}
+
+/** Lee el JSON de la IA aunque venga con pequeños errores; si no se puede, le pide a la IA que lo corrija (sin buscar de nuevo). */
+async function parseLoose(text) {
+  const t = String(text).replace(/```json|```/g, '');
+  let s = t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1);
+  const tries = [(x) => x,
+    (x) => x.replace(/,\s*([}\]])/g, '$1'),                                   // comas sobrantes
+    (x) => x.replace(/[\u0000-\u001f]+/g, ' ').replace(/,\s*([}\]])/g, '$1'),  // saltos de línea dentro de textos
+    (x) => x.replace(/"\s*\n\s*"/g, '",\n"').replace(/}\s*{/g, '},{').replace(/]\s*"/g, '],"').replace(/,\s*([}\]])/g, '$1')]; // comas que faltan
+  for (const f of tries) { try { return JSON.parse(f(s)); } catch {} }
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+    headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || config.anthropic.model, max_tokens: 12000,
+      messages: [{ role: 'user', content: 'Corrige este JSON para que sea válido (comas, comillas, corchetes). No cambies el contenido. Devuelve SOLO el JSON:\n\n' + s.slice(0, 60000) }] }) });
+  const j = await r.json(); if (!r.ok) throw new Error('no pude leer la respuesta de la IA');
+  const fixed = (j.content || []).map((b) => b.text || '').join('').replace(/```json|```/g, '');
+  return JSON.parse(fixed.slice(fixed.indexOf('{'), fixed.lastIndexOf('}') + 1));
 }
 
 const kb = (c) => ({ inline_keyboard: [
