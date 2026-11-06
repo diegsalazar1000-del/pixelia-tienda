@@ -219,7 +219,7 @@ def library_track(genre, T, seed=0):
     if len(seg) < n: seg = np.concatenate([seg, np.zeros(n - len(seg))])
     fi, fo = int(0.25 * SR), int(0.8 * SR)
     seg[:fi] *= np.linspace(0, 1, fi); seg[-fo:] *= np.linspace(1, 0, fo)
-    return seg / (np.sqrt((seg ** 2).mean()) + 1e-9) * 0.18, path.name
+    return seg / (np.abs(seg).max() + 1e-9) * 0.6, path.name
 
 # ---------- voz (Piper) ----------
 def read_wav(path):
@@ -235,13 +235,18 @@ def tts(text, genero, tmpdir, speed=1.0):
     if not model.exists(): raise RuntimeError(f"Falta la voz {voice} en {VOICES_DIR}")
     out = pathlib.Path(tmpdir) / f"voz_{abs(hash((text, speed))) % 10**8}.wav"
     cmd = ["python3", "-m", "piper", "-m", str(model), "-f", str(out)]
-    r = subprocess.run(cmd + ["--length-scale", str(round(1 / speed, 2)), "--noise-scale", "0.6", "--noise-w", "0.85"],
+    r = subprocess.run(cmd + ["--length-scale", str(round(1 / speed, 2))],
                        input=text.encode(), capture_output=True)
     if r.returncode != 0 or not out.exists():  # versiones de piper sin esas opciones
         subprocess.run(cmd, input=text.encode(), check=True, capture_output=True)
     v = read_wav(out)
     nz = np.flatnonzero(np.abs(v) > 0.02)  # quita silencios de los bordes
     return v[max(0, nz[0] - 800): nz[-1] + 2000] if len(nz) else v
+
+def soft_compress(x, thr=0.45, ratio=2.5):
+    """Compresor limpio: solo baja los picos por encima del umbral (sin saturar como una radio)."""
+    a = np.abs(x); y = np.where(a > thr, thr + (a - thr) / ratio, a) * np.sign(x)
+    return y / (np.abs(y).max() + 1e-9) * 0.9
 
 def shorten(text, ratio):
     """Recorta la frase (por comas o palabras) para que quepa sin acelerar la voz."""
@@ -271,8 +276,7 @@ def voice_track(B, TL, tmpdir):
             if dur <= room * 1.06: clip = tts(text, g, tmpdir, 1.06); break
             text = shorten(text, room / dur * 0.95); clip = tts(text, g, tmpdir, 1.0)
         clip = clip[: int(room * SR)]
-        rms = np.sqrt((clip ** 2).mean()) + 1e-9
-        clip = np.tanh(clip / rms * 0.16 * 2.2) / 2.2 * 1.6  # volumen parejo + compresión suave
+        clip = soft_compress(clip / (np.abs(clip).max() + 1e-9))  # volumen parejo SIN distorsión
         add(buf, clip, start); spans.append((start, start + len(clip) / SR)); free = start + len(clip) / SR
     return buf, spans
 
@@ -287,7 +291,7 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
         music, name = library_track(g, T, seed)
         if music is None:
             music = genre_track(g, T, (B.get("musica") or {}).get("bpm") if g != "base" else None)
-            music = music / (np.sqrt((music ** 2).mean()) + 1e-9) * 0.18; info["musica"] = f"ritmo sintetizado ({g})"
+            music = music / (np.abs(music).max() + 1e-9) * 0.6; info["musica"] = f"ritmo sintetizado ({g})"
         else: info["musica"] = f"canción real: {name}"; info["archivo"] = f"{g}/{name}"
         music = music[:n] if len(music) >= n else np.concatenate([music, np.zeros(n - len(music))])
     duck = np.ones(n)
@@ -302,9 +306,8 @@ def mix(B, TL, out_wav, music_genre=None, with_voice=False, tmpdir="/tmp", seed=
             duck[ia:ib] = np.minimum(duck[ia:ib], 0.5); sfx_gain[ia:ib] = 0.45
         k = int(0.08 * SR); duck = np.convolve(duck, np.ones(k) / k, "same"); sfx_gain = np.convolve(sfx_gain, np.ones(k) / k, "same")
     music_level = 1.25 if not with_voice else 1.0
-    out = sfx * 0.55 * sfx_gain + music * duck * music_level + voice * 0.9
-    out = np.tanh(out * 1.4) / np.tanh(1.4)  # limitador suave: más volumen sin distorsión
-    out = out / (np.abs(out).max() + 1e-9) * 0.93
+    out = sfx * 0.45 * sfx_gain + music * duck * music_level + voice * 1.0
+    out = out / (np.abs(out).max() + 1e-9) * 0.9  # solo normaliza: nada de saturación
     with wave.open(str(out_wav), "w") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((out * 32767).astype(np.int16).tobytes())
     return info
