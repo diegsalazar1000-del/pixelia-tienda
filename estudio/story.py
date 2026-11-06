@@ -229,7 +229,7 @@ def build(B, story, pages, phone, out_path, style=None, seed=7, only_times=None,
         sc, s = story["escenas"][i], TL["scenes"][i]; u = t - s["start"]
         cv = (real_bg(i, u) if story.get("stock") and sc["tipo"] != "broll" else None) or M.background(W, H, colors, t)
         RENDER[sc["tipo"]](cv, sc, u, s["dur"], X)
-        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones", "montaje", "pasos"): subtitles(cv, sc, s, t)
+        if story.get("subtitulos") and sc["tipo"] not in ("precio", "chat", "notificaciones", "montaje", "pasos", "meme"): subtitles(cv, sc, s, t)
         if i > 0 and u < XF:  # transición: la escena anterior se aleja y se desvanece
             ps = TL["scenes"][i - 1]
             pr_ = X["bgr"].get(i - 1) if story.get("stock") else None

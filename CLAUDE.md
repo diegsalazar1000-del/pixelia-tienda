@@ -45,3 +45,8 @@
 6. Botón "⭐ Guardar este guion" (opcional). Comandos del bot para cuidar créditos: /creditos (gasto de ElevenLabs; la clave necesita permiso User→Read), /ahorro on|off (no gastar: reutiliza voces y música guardadas), /cancelar (quita anuncios de la fila). Al probar anuncios: primero sin voz y luego "Solo voz/música" para ahorrar créditos de ElevenLabs.
 7. IDEAS DE DIEGO (anotadas 6-nov): (a) anuncios inspirados en videos virales de comedia/humor: tomar el FORMATO o la idea del chiste (POV, sketch, meme) y recrearlo con nuestro producto, sin copiar clips ni audios con derechos; (b) que el explorador revise cada día las tendencias MUNDIALES (noticias, temas virales, fechas) y proponga productos que cubran una necesidad nueva que surja de ellas.
 8. Copias de seguridad, quizá VPS de 2 GB, Binance automático vía proxy, traducción al inglés, WhatsApp al final.
+
+## 2026-11-06
+- Formato "comedia" (botón 😂 Anuncio de comedia, f=comedia): escena "meme" (plantillas nadie_yo / texto_arriba / expectativa / antes), foto de reacción de Pixabay o el producto, sonidos boing + ba-dum-tss. Los memes SOLO salen en formato comedia. No copiar clips/audios virales: solo la estructura del chiste.
+- Explorador: sección "mundo" (noticias de la semana, virales, fechas próximas → necesidad → producto). Llegan como 🌍 TENDENCIA MUNDIAL (source idea-mundo, solo recrear). /explorar mundo = solo eso. Búsquedas por defecto: 10.
+- Portadas en public/img: portada-panel-financiero.jpg y portada-loteria-baby-shower.jpg (https://pixeliadigital.app/img/...).

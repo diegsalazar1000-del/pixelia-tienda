@@ -373,9 +373,71 @@ def sc_pasos(cv, sc, u, d, X):
     for k in range(n):  # puntos de progreso
         ImageDraw.Draw(cv).ellipse([W / 2 - n * 22 + k * 44, 1760, W / 2 - n * 22 + k * 44 + 22, 1782], fill=S["hl_fill"] if k <= i else (255, 255, 255, 110))
 
+# ---------- 😂 meme (comedia viral: "Nadie: / Yo:", expectativa vs realidad, POV, reacción) ----------
+MEME_ETIQUETAS = {"expectativa": ["EXPECTATIVA", "REALIDAD"], "antes": ["YO ANTES", "YO AHORA"]}
+def meme_times(sc, d):
+    n = max(1, len(sc.get("paneles", []))); w = [1.0 + 0.035 * len(p.get("texto", "")) for p in sc["paneles"]]; k = d / sum(w)
+    t, out = 0.0, []
+    for x in w: out.append((t, t + x * k)); t += x * k
+    return out
+
+def _meme_img(X, sc, j, bw, bh):
+    key = ("meme", id(sc), j); cache = X.setdefault("mont", {})
+    if key not in cache:
+        p = sc["paneles"][j]; img = None
+        if not p.get("producto") and p.get("busqueda"): img = stock_photo(p["busqueda"], pick=j)
+        if img is None:
+            pg = X["pages"][min(len(X["pages"]) - 1, int(p.get("pagina", 0)))]
+            img = Image.new("RGB", (bw, bh), (238, 234, 250))
+            dev = M.device_frame(pg, int(bw * 0.62), max_h=int(bh * 0.9)).convert("RGBA")
+            img = img.convert("RGBA"); img.alpha_composite(dev, ((bw - dev.width) // 2, (bh - dev.height) // 2)); img = img.convert("RGB")
+        sc_ = max(bw * 1.12 / img.width, bh * 1.12 / img.height)
+        cache[key] = img.resize((int(img.width * sc_), int(img.height * sc_)), Image.LANCZOS).convert("RGB")
+    return cache[key]
+
+def _crop_zoom(big, bw, bh, z):
+    cw, ch = min(big.width, int(bw * 1.12 / z * big.width / (bw * 1.12))), min(big.height, int(bh * 1.12 / z * big.height / (bh * 1.12)))
+    x, y = (big.width - cw) // 2, (big.height - ch) // 2
+    return big.crop((x, y, x + cw, y + ch)).resize((bw, bh), Image.BILINEAR)
+
+def sc_meme(cv, sc, u, d, X):
+    """Tarjeta de meme como las que se comparten: texto negro sobre blanco arriba y la foto de reacción abajo."""
+    cv.paste(Image.new("RGBA", (W, H), (255, 255, 255, 255)), (0, 0))
+    times = meme_times(sc, d); j = next((k for k, (a, b) in enumerate(times) if a <= u < b), len(times) - 1)
+    a, b = times[j]; v = u - a; p = sc["paneles"][j]; pl = sc.get("plantilla", "texto_arriba")
+    dr = ImageDraw.Draw(cv); fnt = ImageFont.truetype(str(HERE / "fonts" / "Poppins-Bold.ttf"), 66)
+    y = 170
+    if pl == "nadie_yo":  # el clásico "Nadie: / Yo: ..."
+        dr.text((80, y), "Nadie:", font=fnt, fill=(15, 15, 20)); y += 100
+    lab = MEME_ETIQUETAS.get(pl)
+    if lab:
+        t = lab[min(j, len(lab) - 1)]; f2 = ImageFont.truetype(str(HERE / "fonts" / "Poppins-Bold.ttf"), 90)
+        dr.text((W / 2, y + 50), t, font=f2, fill=(220, 30, 60) if j else (30, 120, 220), anchor="mm"); y += 130
+    txt = str(p.get("texto", ""))
+    if pl == "nadie_yo" and not txt.lower().startswith("yo"): txt = "Yo: " + txt
+    shown = txt[: max(1, int(len(txt) * clamp(v / 0.45)))]  # se escribe rápido, como un tuit
+    for line in wrap(shown, fnt, W - 160)[:4]:
+        dr.text((80, y), line, font=fnt, fill=(15, 15, 20)); y += 86
+    y = max(y + 30, 560)
+    bw, bh = W - 80, H - y - 120
+    big = _meme_img(X, sc, j, bw, bh)
+    z = 1.0 + 0.05 * clamp(v / max(0.3, b - a)) + 0.18 * (1 - ease_in_out(clamp(v / 0.18)))  # golpe de zoom al entrar
+    if p.get("zoom_dramatico") and v > (b - a) * 0.45: z += 0.35 * ease_in_out(clamp((v - (b - a) * 0.45) / 0.25))
+    fr = _crop_zoom(big, bw, bh, z).convert("RGBA")
+    m = Image.new("L", (bw, bh), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=36, fill=255)
+    cv.paste(fr, (40, y), m)
+    if p.get("producto") or j == len(sc["paneles"]) - 1:  # el remate trae el producto
+        sh = ImageFont.truetype(str(HERE / "fonts" / "Poppins-Bold.ttf"), 44)
+        tag = str(sc.get("remate") or "")[:30]
+        if tag:
+            tw = dr.textlength(tag, font=sh); bx = (W - tw) / 2 - 30
+            dr.rounded_rectangle([bx, H - 190, bx + tw + 60, H - 120], radius=35, fill=S["hl_fill"])
+            dr.text((W / 2, H - 155), tag, font=sh, fill=S.get("hl_text", "#FFFFFF"), anchor="mm")
+    if v < 0.06: cv.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(220 * (1 - v / 0.06)))))
+
 RENDERERS = {"chat": sc_chat, "notificaciones": sc_notificaciones, "scroll": sc_scroll, "escribir": sc_escribir,
-             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje, "pasos": sc_pasos}
-MIN_DUR = {"pasos": 5.0, "montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
+             "antes_despues": sc_antes_despues, "top3": sc_top3, "broll": sc_broll, "montaje": sc_montaje, "pasos": sc_pasos, "meme": sc_meme}
+MIN_DUR = {"meme": 4.0, "pasos": 5.0, "montaje": 3.0, "chat": 3.0, "notificaciones": 3.2, "scroll": 3.2, "escribir": 3.4, "antes_despues": 3.0, "top3": 4.2, "broll": 2.8}
 
 def extra_duration(sc):
     if sc["tipo"] == "chat": return chat_times(sc.get("mensajes", []))[1] + 0.6
@@ -384,4 +446,5 @@ def extra_duration(sc):
     if sc["tipo"] == "escribir": return 1.4 + 0.06 * sum(len(x) for x in sc.get("lineas", []))
     if sc["tipo"] == "montaje": return 0.95 * len(sc.get("planos", []))
     if sc["tipo"] == "pasos": return 1.7 * len(sc.get("items", []))
+    if sc["tipo"] == "meme": return 1.9 * len(sc.get("paneles", []))
     return 0

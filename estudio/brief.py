@@ -131,9 +131,10 @@ ESCENAS = {
     "broll": "video REAL de fondo (stock) con texto grande encima (busqueda: 2-4 palabras EN INGLÉS para buscar el video, de objetos/lugares, sin caras, ej. 'cozy desk coffee notebook'; lineas como en gancho)",
     "montaje": "SOLO en modo fotos reales: montaje rápido de 4-8 fotos reales, cada foto ilustra lo que se dice (planos: [{busqueda: 2-5 palabras EN INGLÉS de una foto concreta que muestre esa idea, puede ser graciosa o curiosa pero relacionada con el producto, texto: ≤ 4 palabras en pantalla, producto: true si en ese plano se ve el producto, pagina}])",
     "pasos": "TUTORIAL: explica cómo se usa el producto paso a paso con un ejemplo real (titulo ≤ 5 palabras, items: 3-5 pasos [{texto: ≤ 8 palabras, pagina: índice de la página que muestra ese paso}]); úsalo cuando la gente podría no entender qué es o cómo se usa",
+    "meme": "COMEDIA: meme como los virales (tarjeta blanca con texto negro arriba y foto de reacción abajo), 2-3 paneles que cuentan el chiste y el último remata con el producto (plantilla: nadie_yo | texto_arriba | expectativa | antes; paneles: [{texto: ≤ 70 caracteres, busqueda: 2-5 palabras EN INGLÉS de una foto de reacción graciosa SIN famosos ni marcas (ej. 'shocked cat', 'man crying laptop', 'dog sunglasses relaxed', 'woman buried in papers'), producto: true en el panel que muestra el producto, pagina, zoom_dramatico: true opcional}], remate: ≤ 28 caracteres en un botón al final)",
     "precio": "SIEMPRE la última: precio que golpea + botón (cta en MAYÚSCULAS ≤ 18 caracteres)",
 }
-APERTURAS = ["gancho", "pov", "problema", "chat", "notificaciones", "broll", "antes_despues", "montaje"]
+APERTURAS = ["meme", "gancho", "pov", "problema", "chat", "notificaciones", "broll", "antes_despues", "montaje"]
 FORMATOS = {
     "clasico": ("texto animado + producto en tablet pasando páginas", ["gancho", "paginas"]),
     "conversacion": ("empieza con un chat de WhatsApp que cuenta una historia y revela el producto", ["chat"]),
@@ -142,6 +143,7 @@ FORMATOS = {
     "tutorial": ("video tutorial: explica cómo se usa paso a paso con un ejemplo (ideal si el producto no es conocido); puede incluir el lápiz escribiendo", ["pasos", "escribir"]),
     "comparacion": ("antes / después", ["antes_despues"]),
     "lista": ("top 3 razones con números gigantes", ["top3"]),
+    "comedia": ("humor viral: toma un formato de chiste que esté pegando en TikTok/Reels (Nadie: / Yo:, expectativa vs realidad, POV exagerado, 'yo antes / yo ahora') y hazlo con el producto; abre con un meme y remata mostrando el producto", ["meme"]),
 }
 
 STORY_PROMPT = """Eres guionista de Reels/TikTok que venden productos digitales en Latinoamérica. Escribe el guion de UN reel vertical de 12-20 segundos.
@@ -169,8 +171,9 @@ Reglas:
 - Incluye al menos una escena que MUESTRE el producto (paginas, zoom o grid); "paginas" suele funcionar muy bien.
 - Campos por tipo: gancho→lineas [{{"palabras": [...], "resaltar": índice opcional}}]; pov→texto, pagina; problema→titulo, items; paginas→paginas, textos;
   zoom→pagina, texto; grid→texto; incluye→titulo, items; movil→palabras, resaltar; chat→nombre, mensajes; notificaciones→items, fecha;
-  scroll→paginas, texto; escribir→pagina, lineas, texto; antes_despues→antes, pagina, texto; top3→titulo, items; broll→busqueda, lineas; precio→cta.
+  scroll→paginas, texto; escribir→pagina, lineas, texto; antes_despues→antes, pagina, texto; top3→titulo, items; broll→busqueda, lineas; meme→plantilla, paneles, remate; precio→cta.
 - Si el producto es poco conocido o hay que explicar cómo se usa (un juego, un kit, algo nuevo), prefiere el formato "tutorial" con una escena "pasos".
+- En "comedia": el chiste es sobre una situación cotidiana del público que el producto resuelve (exagerada, autoironía, nunca burlándote del cliente ni de nadie). Inspírate en la ESTRUCTURA de memes y sketches virales, pero no copies clips, audios, frases registradas ni personajes famosos. La voz puede sonar divertida y con timing (pausas, "...").
 - El formato elegido manda: usa sus escenas clave y complétalo con 2-4 escenas que encajen (no siempre las mismas).
 - En "chat" la conversación es una escena dramatizada y cotidiana (amigas, compañeros), nunca una reseña ni un testimonio de resultados.
 - Los textos en pantalla deben corresponder a la página que se ve (usa los títulos de la lista).
@@ -278,13 +281,18 @@ def key_scene(t, B, n_pages):
                 {"busqueda": "messy desk sticky notes", "texto": "¿Todo un caos?"}, {"busqueda": "stressed woman calendar", "texto": "¿Olvidas todo?"},
                 {"busqueda": "", "texto": "Tu planner 2027", "producto": True, "pagina": 0}, {"busqueda": "hands writing planner coffee", "texto": "Todo en orden"},
                 {"busqueda": "happy woman tablet sofa", "texto": "Por fin"}]},
-            "paginas": {"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": tp[:4], "voz": B.get("guion_voz", {}).get("paginas", "")}}[t]
+            "paginas": {"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": tp[:4], "voz": B.get("guion_voz", {}).get("paginas", "")},
+            "meme": {"tipo": "meme", "plantilla": "expectativa", "remate": "Por fin lo logré", "voz": "Yo intentando organizarme... versus yo con esto.", "paneles": [
+                {"texto": "Yo jurando que este mes sí me organizo", "busqueda": "woman buried in papers stressed"},
+                {"texto": "Yo desde que tengo esto", "producto": True, "pagina": 0}]}}[t]
 
 def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_format=None, stock=False):
     clamp = lambda i: max(0, min(n_pages - 1, int(i))) if str(i).lstrip("-").isdigit() else 0
     out, seen = [], set()
+    comedia = (force_format or S.get("formato")) == "comedia"
     for sc in S.get("escenas") or []:
         t = sc.get("tipo")
+        if t == "meme" and not comedia: continue  # los memes solo en el formato comedia
         if t not in ESCENAS or (t in seen and t != "montaje") or t == "precio" or (t == "montaje" and not stock): continue
         seen.add(t); sc = dict(sc); sc["voz"] = _words(sc.get("voz"), 11)
         if t == "gancho":
@@ -331,6 +339,15 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
                 p["producto"] = bool(p.get("producto")); p["pagina"] = clamp(p.get("pagina", 0))
             if len(ps) < 3: continue
             sc["planos"] = ps
+        elif t == "meme":
+            ps = [p for p in sc.get("paneles") or [] if isinstance(p, dict) and p.get("texto")][:3]
+            for p in ps:
+                p["texto"] = noemoji(p["texto"])[:80]; p["busqueda"] = " ".join(str(p.get("busqueda") or "").split()[:6])
+                p["producto"] = bool(p.get("producto")); p["pagina"] = clamp(p.get("pagina", 0)); p["zoom_dramatico"] = bool(p.get("zoom_dramatico"))
+            if len(ps) < 2: continue
+            if not any(p["producto"] for p in ps): ps[-1]["producto"] = True
+            sc["paneles"] = ps; sc["plantilla"] = sc.get("plantilla") if sc.get("plantilla") in ("nadie_yo", "texto_arriba", "expectativa", "antes") else "texto_arriba"
+            sc["remate"] = noemoji(sc.get("remate"))[:28]
         elif t == "pasos":
             its = [i for i in sc.get("items") or [] if isinstance(i, dict) and i.get("texto")][:5]
             for i in its: i["texto"] = _words(i["texto"], 9); i["pagina"] = clamp(i.get("pagina", 0))

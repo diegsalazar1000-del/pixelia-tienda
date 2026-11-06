@@ -39,6 +39,7 @@ const state = () => { try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); }
 
 function prompt(cats, tema, ya) {
   const hoy = new Date().toISOString().slice(0, 10);
+  const soloMundo = /^mundo$/i.test(tema); if (soloMundo) tema = '';
   return `Hoy es ${hoy}. Eres buscador de oportunidades para una tienda de productos digitales en español (Latinoamérica) que vende a 3-10 USD.
 Investiga en internet (varias búsquedas en español e inglés: Etsy best sellers, TikTok Shop, TikTok/Instagram virales, Hotmart, Gumroad, Pinterest, Google Trends, artículos recientes)
 qué productos DIGITALES se están vendiendo o haciendo virales en los ÚLTIMOS 3 MESES (no clásicos de hace años).
@@ -48,6 +49,9 @@ NO repitas nada parecido a esto (ya lo tenemos o ya lo vimos): ${JSON.stringify(
 Busca VARIEDAD: cada hallazgo de una categoría y un formato distinto (video, PDF, plantilla, audio, pack…).
 Incluye cursos o videos que se vendan (la tienda los recrearía como curso propio con guion, diapositivas y ejercicios, sin copiar a la persona).
 Evita: marcas registradas, personajes, "cómo ganar dinero rápido", promesas de salud o resultados, contenido para adultos.
+TENDENCIAS DEL MUNDO: revisa también qué está pasando ESTA SEMANA en el mundo y en Latinoamérica (noticias que cambian la vida diaria, temas y retos virales, estrenos, cambios de precios o de reglas, temporada, y las fechas especiales de los próximos 30-60 días: festivos, regreso a clases, Black Friday, Navidad, San Valentín, Día de la Madre, mundiales, etc.).
+De ahí saca NECESIDADES NUEVAS que la gente tendrá y propón productos digitales que las resuelvan (ej. si sube el costo de la vida → plantilla para recortar gastos; si viene diciembre → planificador de regalos y cenas; si se viraliza un reto → kit para hacerlo).
+No te aproveches de tragedias, guerras, enfermedades ni política; nada de marcas ni personajes con derechos.
 Además de lo que encuentres, propone IDEAS NUEVAS derivadas: productos que se puedan sacar a partir de esas tendencias y que nadie esté vendiendo igual.
 Devuelve SOLO un JSON:
 {"hallazgos":[{"titulo":"nombre del producto/tipo de producto visto","url":"enlace donde lo viste","plataforma":"etsy|tiktok|instagram|hotmart|gumroad|pinterest|google|otro",
@@ -57,14 +61,16 @@ Devuelve SOLO un JSON:
  "precio_sugerido":número 3-10,"emoji":"1 emoji","como_recrear":["3 ideas para hacer una versión propia MEJOR"],"derechos":"si menciona PLR/MRR dilo; si no, 'recrear con contenido propio'",
  "anuncio":{"gancho":"frase de 3 segundos para el video","texto":"texto principal para Meta con 2-3 viñetas","titular":"máx 40 caracteres"}}],
  "ideas":[{"titulo_tienda":"...","basada_en":"qué tendencia la inspira","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"por_que":"breve",
-  "anuncio":{"gancho":"...","texto":"...","titular":"..."}}]}
+  "anuncio":{"gancho":"...","texto":"...","titular":"..."}}],
+ "mundo":[{"tendencia":"qué está pasando (noticia, tema viral o fecha que viene)","url":"fuente real","necesidad":"qué necesitará la gente por eso","cuando":"desde cuándo/hasta cuándo sirve",
+  "titulo_tienda":"...","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"anuncio":{"gancho":"...","texto":"...","titular":"..."}}]}
 Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
-Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí y 3-4 ideas nuevas.`;
+${soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas y 2-3 productos en "mundo".'}`;
 }
 
 async function askClaude(text) {
   const body = { model: process.env.EXPLORER_MODEL || 'claude-sonnet-5-5', max_tokens: 12000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(process.env.EXPLORER_SEARCHES || 8) }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(process.env.EXPLORER_SEARCHES || 10) }],
     messages: [{ role: 'user', content: text }] };
   let out = '', searches = 0;
   for (let turn = 0; turn < 5; turn++) {  // las búsquedas largas pueden "pausarse": se continúa
@@ -106,15 +112,18 @@ export async function explorar(tema = '') {
   if (!config.anthropic.key || !token()) return;
   const day = Math.floor(Date.now() / 864e5);
   const cats = [0, 1, 2, 3].map((k) => CATEGORIAS[(day * 4 + k) % CATEGORIAS.length]);  // rota categorías cada día
+  if (/^mundo$/i.test(tema)) await say('🌍 <b>Revisando las tendencias del mundo</b> (noticias, virales y fechas que vienen) para proponer productos… (2-4 min)'); else
   await say(`🌐 <b>Explorando tendencias</b>${tema ? ` sobre <i>${esc(tema)}</i>` : `: ${esc(cats.map((c) => c.split(' (')[0].split(':')[0]).join(' · '))}`}… (2-4 min)`);
   let res;
   const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
   try { res = await askClaude(prompt(cats, tema, ya)); }
   catch (e) { return say(`⚠️ El explorador falló: ${esc(e.message)}`); }
-  const { hallazgos = [], ideas = [] } = res.data || {};
+  const { hallazgos = [], ideas = [], mundo = [] } = res.data || {};
   const items = [
     ...hallazgos.map((h) => ({ ...h, _tipo: 'hallazgo' })),
     ...ideas.map((i) => ({ ...i, titulo: i.titulo_tienda, plataforma: 'idea-ia', evidencia: `Idea nueva basada en: ${i.basada_en || ''}. ${i.por_que || ''}`, decision: 'recrear', _tipo: 'idea' })),
+    ...mundo.map((m) => ({ ...m, titulo: m.titulo_tienda, plataforma: 'idea-mundo', categoria: 'tendencia mundial',
+      evidencia: `🌍 ${m.tendencia || ''}\n🧩 Necesidad: ${m.necesidad || ''}${m.cuando ? `\n🗓️ ${m.cuando}` : ''}`, decision: 'recrear', _tipo: 'mundo' })),
   ].filter((x) => x.titulo || x.titulo_tienda);
   const fresh = Candidates.addMany(items.map((x) => ({ source: String(x.plataforma || 'web').slice(0, 20), external_id: hash((x.url || '') + (x.titulo || x.titulo_tienda)),
     url: x.url || '', title: x.titulo || x.titulo_tienda, snippet: x.evidencia || '', price: Number(x.precio) || 0, currency: 'USD',
@@ -127,13 +136,14 @@ export async function explorar(tema = '') {
       categoria: x.categoria, decision: x.decision === 'comprar_reventa' ? 'buy' : 'recreate', como_recrear: x.como_recrear, derechos: x.derechos, idea: x.frase_corta, publico: x.publico,
       anuncio: x.anuncio && typeof x.anuncio === 'object' ? x.anuncio : undefined };
     Candidates.update(c.id, { ai_score: nota, ai, status: 'notified' });
-    const titulo = x._tipo === 'idea' ? `💡 <b>IDEA NUEVA</b> · ${esc(ai.titulo)}` : `${esc(x.emoji || '✨')} <b>${esc(ai.titulo)}</b>`;
+    const titulo = x._tipo === 'mundo' ? `🌍 <b>TENDENCIA MUNDIAL</b> · ${esc(ai.titulo)}` : x._tipo === 'idea' ? `💡 <b>IDEA NUEVA</b> · ${esc(ai.titulo)}` : `${esc(x.emoji || '✨')} <b>${esc(ai.titulo)}</b>`;
     await say(`${titulo}\n⭐ ${nota}/10 · ${esc(x.plataforma || '')}${x.precio ? ` · visto a $${esc(x.precio)}` : ''}\n👥 ${esc(x.publico || '')}\n📈 ${esc(x.evidencia || '')}\n\n${esc(x.frase_corta || '')}\n💰 Nuestro precio: $${esc(ai.precio_sugerido || 4.99)}`,
-      { reply_markup: x._tipo === 'idea' ? { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } : kb(c) }).catch(() => {});
+      { reply_markup: x._tipo === 'idea' || x._tipo === 'mundo' ? { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }],
+        ...(x._tipo === 'mundo' && x.url ? [[{ text: '📰 Ver la noticia/tendencia', url: x.url }]] : [])] } : kb(c) }).catch(() => {});
     sent++;
   }
   const st = state(); st.last = new Date().toISOString().slice(0, 10); fs.writeFileSync(STATE, JSON.stringify(st));
-  return say(sent ? `✅ Explorador: ${sent} oportunidades nuevas (${hallazgos.length} tendencias + ${ideas.length} ideas) · ${res.searches} búsquedas.\nToca 🛠️ Recrear en las que te gusten o usa /fusionar para combinarlas.`
+  return say(sent ? `✅ Explorador: ${sent} oportunidades nuevas (${hallazgos.length} tendencias + ${ideas.length} ideas + ${mundo.length} del mundo) · ${res.searches} búsquedas.\nToca 🛠️ Recrear en las que te gusten o usa /fusionar para combinarlas.`
     : 'El explorador no encontró nada nuevo hoy (todo lo que vio ya estaba en el radar). Prueba con /explorar y un tema, ej. <code>/explorar cursos de cocina</code>.');
 }
 

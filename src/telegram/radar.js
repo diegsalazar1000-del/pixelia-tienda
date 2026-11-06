@@ -75,7 +75,7 @@ const packOpts = (o) => Object.entries(o).filter(([, x]) => x !== undefined && x
 // ===== Selector combinable (voz + música + estilo) =====
 export const GENRES = { ia: '🎲 La IA elige', reggaeton: 'Reggaetón', pop: 'Pop', trap: 'Trap', cumbia: 'Cumbia', electronica: 'Electrónica', lofi: 'Lo-fi', acustica: 'Acústica', base: 'Suave', 0: '🔇 Sin música' };
 export const STYLES = { ia: '🎲 La IA elige', color: '🌈 Color', neon: '🌃 Neón', minimal: '🤍 Minimal', tiktok: '📱 TikTok' };
-const FORMATS = { clasico: '✨ Clásico', conversacion: '💬 Chat', vida_real: '🎬 Video real', pantalla: '📱 Pantalla móvil', tutorial: '✍️ Cómo se usa', comparacion: '🔀 Antes/después', lista: '🏆 Top 3' };
+const FORMATS = { clasico: '✨ Clásico', conversacion: '💬 Chat', vida_real: '🎬 Video real', pantalla: '📱 Pantalla móvil', tutorial: '✍️ Cómo se usa', comedia: '😂 Comedia', comparacion: '🔀 Antes/después', lista: '🏆 Top 3' };
 const VOICES = { ia: '🎲 IA', f: '👩 Mujer', m: '👨 Hombre', 0: '🔇 Sin voz' };
 const MUSIC_DIR = path.join(path.dirname(config.paths?.files || path.resolve('storage/products')), 'musica');
 const songs = (g) => { try { return fs.readdirSync(path.join(MUSIC_DIR, g)).filter((f) => /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f)).length; } catch { return 0; } };
@@ -87,6 +87,7 @@ function pickerKb(pid, sel, sug = {}) {
   return [
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
     [{ text: '🎓 Video tutorial (cómo se usa, con ejemplo)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }],
+    [{ text: '😂 Anuncio de comedia (meme viral)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'comedia' })}` }],
     [{ text: '📸 Crear con fotos y videos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }],
     [{ text: '🧪 4 variantes con formatos distintos (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
     Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
@@ -260,7 +261,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios');
 }
 
 export async function onCallback(q) {
@@ -326,7 +327,7 @@ export async function onCallback(q) {
   }
   if (String(q.from?.id) !== String(config.telegram.adminChatId)) return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'No autorizado' });
   if (!['buy', 'rec', 'no'].includes(action)) return rtg('answerCallbackQuery', { callback_query_id: q.id });
-  if (action === 'buy' && Candidates.get(id)?.source === 'idea-ia')  // una idea nueva no tiene original que comprar: se recrea
+  if (action === 'buy' && ['idea-ia', 'idea-mundo'].includes(Candidates.get(id)?.source))  // una idea nueva no tiene original que comprar: se recrea
     return rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Es una idea nueva: no hay original que comprar. Usa 🛠️ Recrear o Crear este producto.', show_alert: true }).catch(() => {});
   await rtg('answerCallbackQuery', { callback_query_id: q.id, text: action === 'rec' ? 'Preparando el plan (1 min)…' : 'Hecho' }).catch(() => {});
   const raw = Candidates.get(id);

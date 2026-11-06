@@ -244,6 +244,15 @@ def scratch():
     n = int(0.06 * SR); s = rng.normal(0, 1, n); s = s - lowpass(s, 2)
     return s * env(n, 0.002, 0.02) * 0.12
 
+def boing():
+    n = int(0.45 * SR); t = np.arange(n) / SR; f = 180 + 260 * np.exp(-t * 7) * (1 + 0.35 * np.sin(2 * np.pi * 14 * t))
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * env(n, 0.003, 0.3) * 0.35
+def rimshot():  # "ba-dum-tss" corto para el remate
+    out = np.zeros(int(0.9 * SR)); k = lambda p: np.sin(2 * np.pi * np.cumsum(np.full(int(0.18 * SR), p) * np.linspace(1, 0.5, int(0.18 * SR))) / SR) * env(int(0.18 * SR), 0.002, 0.08)
+    out[: int(0.18 * SR)] += k(160) * 0.5; i = int(0.17 * SR); out[i: i + int(0.18 * SR)] += k(120) * 0.5
+    n = int(0.55 * SR); c = rng.normal(0, 1, n); c = c - lowpass(c, 3); j = int(0.34 * SR); out[j: j + n] += c * env(n, 0.002, 0.25) * 0.16
+    return out
+
 def word_sfx(buf, words_lines, t0, anim, k0=0):
     """Un sonido por cada palabra que aparece (pop, subida, rebote, zoom o tecleo)."""
     for li, line in enumerate(words_lines):
@@ -284,6 +293,14 @@ def sfx_story(story, TL):
                 if j % 2 == 1: add(buf, impact(), t0 + ta, 0.3)
                 ws = str(sc["planos"][j].get("texto", "")).split()
                 word_sfx(buf, [ws[k:k + 3] for k in range(0, len(ws), 3)][:2], t0 + ta + 0.04, anim)
+        elif tp == "meme":
+            import formatos
+            ts = formatos.meme_times(sc, d)
+            for j, (ta, tb) in enumerate(ts):
+                add(buf, boing() if j % 2 == 0 else whoosh(0.25, 1.6), t0 + ta, 0.7)
+                for c in range(0, len(sc["paneles"][j].get("texto", "")), 3): add(buf, click(), t0 + ta + 0.45 * c / max(1, len(sc["paneles"][j].get("texto", ""))), 0.25)
+                if sc["paneles"][j].get("zoom_dramatico"): add(buf, impact(), t0 + ta + (tb - ta) * 0.45, 0.8)
+            add(buf, rimshot(), t0 + ts[-1][0] + 0.5, 0.7)
         elif tp == "pasos":
             n = max(1, len(sc.get("items", [])))
             for i in range(n): add(buf, impact(), t0 + i * d / n, 0.4); add(buf, pop(1.1 + 0.08 * i), t0 + i * d / n + 0.15, 0.7)
