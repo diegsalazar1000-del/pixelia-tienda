@@ -85,8 +85,7 @@ function pickerKb(pid, sel, sug = {}) {
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
-    ...[['clasico', 'conversacion', 'vida_real'], ['pantalla', 'tutorial'], ['comparacion', 'lista']].map((row) =>
-      row.map((f) => ({ text: FORMATS[f], callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f })}` }))),
+    [{ text: '📸 Crear con fotos y videos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }],
     [{ text: '🧪 4 variantes con formatos distintos (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
     Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
     [g('ia')], ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
@@ -104,7 +103,7 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
   lastSug.set(p.id, sug);
   const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `${GENRES[g]} (${songs(g)})`).join(', ');
   return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-    text: `🎛️ <b>Más versiones de ${esc(p.title)}</b>\n<b>🎲 Otra variante</b>: la IA elige otro formato con su voz y música. O toca un formato para probar ese (💬 Chat, 🎬 Video real…).\nO marca tú voz, música y estilo y pulsa <b>🎬 Reel nuevo</b>. <b>🔊 Solo voz/música</b> = mismo video, otro audio (1 min).\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
+    text: `🎛️ <b>Más versiones de ${esc(p.title)}</b>\n<b>🎲 Otra variante</b>: la IA elige otro formato con su voz y música. <b>📸 Pixabay</b>: el anuncio usa fotos y videos reales.\nO marca tú voz, música y estilo y pulsa <b>🎬 Reel nuevo</b>. <b>🔊 Solo voz/música</b> = mismo video, otro audio (1 min).\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
@@ -287,7 +286,7 @@ export async function onCallback(q) {
     const options = parseOpts(opts);
     const r = AdJobs.enqueue(p.id, options);
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: r.duplicated ? 'Ya se está creando' : 'En marcha 🎬' }).catch(() => {});
-    const desc = [options.f ? (FORMATS[options.f] || '🎲 otro formato') : '', options.v && options.v !== 'ia' ? VOICES[options.v] : '', options.g && options.g !== 'ia' ? GENRES[options.g] : '', options.s && options.s !== 'ia' ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
+    const desc = [options.p ? '📸 con Pixabay' : '', options.f ? (FORMATS[options.f] || '🎲 otro formato') : '', options.v && options.v !== 'ia' ? VOICES[options.v] : '', options.g && options.g !== 'ia' ? GENRES[options.g] : '', options.s && options.s !== 'ia' ? STYLES[options.s] : ''].filter(Boolean).join(' · ');
     if (!r.duplicated) await send(options.x
       ? `🧪 Creando <b>4 variantes</b> de <b>${esc(p.title)}</b> (estilos y ganchos distintos). Tarda unos 15-25 min; te aviso al terminar.`
       : `🎬 Creando anuncios de <b>${esc(p.title)}</b>${desc ? ' · ' + esc(desc) : ''}.\nTe los mando aquí en unos minutos.`);

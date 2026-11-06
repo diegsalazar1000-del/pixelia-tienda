@@ -153,12 +153,12 @@ def remember(out, st):
                          "frases": [e.get("voz") for e in st["escenas"]][:3]}]
     (out / "historial.json").write_text(json.dumps(h[-12:], ensure_ascii=False))
 
-def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0, force_format=None):
+def new_story(prod, B, titles, n_pages, out, force_style=None, force_open=None, extra_avoid=None, seed=0, force_format=None, stock=False):
     avoid = history(out)[-5:] + (extra_avoid or [])
-    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid, force_format=force_format)
+    try: return brief_mod.make_storyboard(prod, B, titles, force_open=force_open, force_style=force_style, avoid=avoid, force_format=force_format, stock=stock)
     except Exception as e:
         print("guion IA falló:", e)
-        return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()), force_format=force_format)
+        return brief_mod.fallback_story(B, n_pages, force_open=force_open, force_style=force_style, seed=seed or int(time.time()), force_format=force_format, stock=stock)
 
 def ranked_formats(prod, B, brief_file):
     """Formatos ordenados por lo que más pega con el público (se calcula una vez y se guarda en el brief)."""
@@ -206,14 +206,15 @@ def run_job(J):
         else:
             pages, phone, titles = load_pages()
             fs = opts.get("s") if opts.get("s") in motor.STYLE_NAMES else None
-            ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else (opts.get("f") if opts.get("f") in brief_mod.FORMATOS else None)
-            say("✍️ La IA está eligiendo el formato y escribiendo el guion…")
-            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff)
+            ff = next_format(prod, B, brief_file, out) if opts.get("f") == "otro" else None
+            stock = opts.get("p") == "1"  # botón "📸 Crear con fotos y videos de Pixabay"
+            say("📸 Creando con fotos y videos reales de Pixabay…" if stock else "✍️ La IA está eligiendo el formato y escribiendo el guion…")
+            story = new_story(prod, B, titles, len(pages), out, force_style=fs, force_format=ff, stock=stock)
             st = story["estilo"]; v, g = pick(opts.get("v"), opts.get("g"), story)
             say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
             for old in out.glob("[ABC]-*.jpg"): old.unlink()
-            motor.build_static(B2, pages, phone, out, style=st, photo=real_photo(story))
+            motor.build_static(B2, pages, phone, out, style=st, photo=real_photo(story) if stock else None)
             vd = None
             if v in ("f", "m"):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
@@ -258,7 +259,7 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
         v, g = pick(opts.get("v"), opts.get("g"), story)
         B2 = json.loads(json.dumps(B)); B2["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         est = B2["estaticos"][k % 3]; est["titular"] = hook_lines(story)
-        motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3], photo=real_photo(story) if k % 2 == 0 else None, photo_for=(k % 3,))
+        motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
         vd = None
         if v in ("f", "m"):
             try: vd = audio.voice_durations(story, B2["voz"]["genero"], tmp)

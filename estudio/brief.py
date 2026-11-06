@@ -185,15 +185,15 @@ def precio_dicho(p):
         return f"{e} dólares con {c}" if c else f"{e} dólares"
     except Exception: return str(p)
 
-def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None, force_format=None):
+def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None, force_format=None, stock=False):
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     model = model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
     forzar = []
     if force_open: forzar.append(f"La PRIMERA escena debe ser de tipo \"{force_open}\".")
     if force_style: forzar.append(f"Usa el estilo \"{force_style}\".")
     if force_format in FORMATOS: forzar.append(f"Usa el formato \"{force_format}\" ({FORMATOS[force_format][0]}).")
-    if os.environ.get("PIXABAY_API_KEY") or os.environ.get("PEXELS_API_KEY"):
-        forzar.append("Incluye SIEMPRE una escena \"broll\" (video real de fondo) con una búsqueda en inglés que encaje con el producto.")
+    if stock:  # botón "Crear con fotos y videos de Pixabay"
+        forzar.append("Este reel usa material REAL: incluye 1 o 2 escenas \"broll\" (video real de fondo) con búsquedas en inglés que encajen con el producto; el resto de escenas, las que mejor combinen.")
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
         publico=B.get("publico", ""), paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),
@@ -204,7 +204,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                                  headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=180) as r: data = json.load(r)
     text = "".join(b.get("text", "") for b in data.get("content", [])).replace("```json", "").replace("```", "")
-    return normalize_story(json.loads(text[text.index("{"): text.rindex("}") + 1]), B, len(titles), force_open, force_style, force_format)
+    return normalize_story(json.loads(text[text.index("{"): text.rindex("}") + 1]), B, len(titles), force_open, force_style, force_format, stock)
 
 def rank_formats(prod, B, api_key=None):
     """Los 4 formatos que más pegan con este público (para las 4 variantes)."""
@@ -225,7 +225,7 @@ def rank_formats(prod, B, api_key=None):
         if f not in got: got.append(f)
     return list(dict.fromkeys(got))[:4]
 
-def fallback_story(B, n_pages, force_open=None, force_style=None, seed=0, force_format=None):
+def fallback_story(B, n_pages, force_open=None, force_style=None, seed=0, force_format=None, stock=False):
     """Guion sin IA (si falla la API): combina escenas al azar a partir del brief."""
     import random
     rng = random.Random(seed)
@@ -246,7 +246,7 @@ def fallback_story(B, n_pages, force_open=None, force_style=None, seed=0, force_
              "escenas": [first] + middle[: rng.choice([2, 3])] + [{"tipo": "precio", "cta": B.get("cta", "DESCÁRGALO HOY"), "voz": B.get("guion_voz", {}).get("precio", "")}],
              "copy": (B.get("copy") or {}).get("A") or {}}
     if force_format: story["formato"] = force_format
-    return normalize_story(story, B, n_pages, force_open, force_style, force_format)
+    return normalize_story(story, B, n_pages, force_open, force_style, force_format, stock)
 
 def key_scene(t, B, n_pages):
     """Escena clave de cada formato con textos genéricos (si la IA no la dio)."""
@@ -265,7 +265,7 @@ def key_scene(t, B, n_pages):
             "gancho": {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")},
             "paginas": {"tipo": "paginas", "paginas": list(range(min(4, n_pages))), "textos": tp[:4], "voz": B.get("guion_voz", {}).get("paginas", "")}}[t]
 
-def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_format=None):
+def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_format=None, stock=False):
     clamp = lambda i: max(0, min(n_pages - 1, int(i))) if str(i).lstrip("-").isdigit() else 0
     out, seen = [], set()
     for sc in S.get("escenas") or []:
@@ -324,7 +324,7 @@ def normalize_story(S, B, n_pages, force_open=None, force_style=None, force_form
     if not out or out[0]["tipo"] not in APERTURAS:
         out.insert(0, {"tipo": "gancho", "lineas": B["gancho"], "voz": B.get("guion_voz", {}).get("gancho", "")})
     out = out[:5]
-    if (os.environ.get("PIXABAY_API_KEY") or os.environ.get("PEXELS_API_KEY")) and not any(s["tipo"] == "broll" for s in out):
+    if stock and not any(s["tipo"] == "broll" for s in out):
         out.insert(1 if len(out) > 1 else len(out), key_scene("broll", B, n_pages))
         out = out[:5]
     if len(out) < 3:  # asegura algo de producto en pantalla
