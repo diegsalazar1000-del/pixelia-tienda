@@ -420,18 +420,21 @@ const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true 
 function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
 const PLANES = new Map();
 /** Variantes A/B: A = último reel; B = el reel anterior (otro formato) o la imagen estática del último anuncio. */
-/** Lo que puede ir en B (A siempre es el reel nuevo): las 3 imágenes del mismo anuncio, el reel anterior o nada. */
+/** Opciones para el 3er anuncio: las 3 imágenes del mismo anuncio (cada una con sus 3 tamaños), el reel anterior o nada. */
 function opcionesB(x) {
   const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug), base = config.baseUrl.replace(/\/$/, '') + `/media/anuncios/${x.p.slug}/`;
-  const ops = ['A', 'B', 'C'].filter((c) => fs.existsSync(path.join(dir, `${c}-4x5.jpg`))).map((c) => ({ tipo: 'imagen', url: base + `${c}-4x5.jpg`, nombre: `imagen ${c}` }));
+  const ops = ['A', 'B', 'C'].filter((c) => fs.existsSync(path.join(dir, `${c}-4x5.jpg`))).map((c) => ({ tipo: 'imagen', url: base + `${c}-4x5.jpg`, nombre: `imagen ${c}`,
+    tamanos: Object.fromEntries(['4x5', '9x16', '1x1'].filter((t) => fs.existsSync(path.join(dir, `${c}-${t}.jpg`))).map((t) => [t, base + `${c}-${t}.jpg`])) }));
   let otros = []; try { otros = fs.readdirSync(dir).filter((f) => /\.mp4$/.test(f) && f !== x.file && !/sin-musica/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t); } catch {}
   if (otros[0]) ops.push({ tipo: 'video', url: base + encodeURIComponent(otros[0].f), nombre: 'reel anterior' });
-  ops.push({ tipo: 'nada', nombre: 'nada (solo A)' });
+  ops.push({ tipo: 'nada', nombre: 'nada (solo el reel)' });
   return ops;
 }
+/** 3 anuncios: reel + texto A, reel + texto B y la imagen elegida (con texto A). */
 function variantesDe(x, kB = 0) {
   const ops = opcionesB(x), b = ops[kB % ops.length];
-  return [{ tipo: 'video', url: x.url, nombre: 'reel nuevo' }, ...(b.tipo === 'nada' ? [] : [b])];
+  return [{ tipo: 'video', url: x.url, nombre: 'reel · texto A', t: 0 }, { tipo: 'video', url: x.url, nombre: 'reel · texto B', t: 1 },
+    ...(b.tipo === 'nada' ? [] : [{ ...b, t: b.tipo === 'video' ? 1 : 0 }])];
 }
 async function planCampana(x, modo = '') {
   let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug, 'guion.json'), 'utf8')).story || {}; } catch {}
@@ -463,22 +466,28 @@ async function previewCampana(pid, modo = '', kB = null) {
     if (aud) plan.publico = { ...aud, modo };
   }
   plan.kB = kB; const ops = opcionesB(x), vs = variantesDe(x, kB);
-  plan.variantes = vs.map((v, k) => ({ ...v, texto: plan.textos[k % plan.textos.length].texto, titulo: plan.textos[k % plan.textos.length].titular }));
+  plan.variantes = vs.map((v) => ({ ...v, texto: plan.textos[v.t % plan.textos.length].texto, titulo: plan.textos[v.t % plan.textos.length].titular }));
   PLANES.set(String(x.p.id), plan);
-  const chat = config.telegram.adminChatId, cap = (k, v) => `${k === 0 ? '🅰️ <b>A</b>' : '🅱️ <b>B</b>'} · ${v.tipo === 'video' ? '🎬 ' : '🖼️ '}${esc(v.nombre)} — así se va a publicar:\n\n${esc(v.texto).slice(0, 900)}`;
-  for (const [k, v] of plan.variantes.entries()) {
-    if (kB !== 0 && k === 0) continue;  // al cambiar B no se repite A
-    const m = v.tipo === 'video' ? 'sendVideo' : 'sendPhoto';
-    await rtg(m, { chat_id: chat, [v.tipo === 'video' ? 'video' : 'photo']: v.url, caption: cap(k, v), parse_mode: 'HTML' })
-      .catch(() => rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: cap(k, v) + `\n${esc(v.url)}` }));
+  const chat = config.telegram.adminChatId, L3 = ['1️⃣', '2️⃣', '3️⃣'];
+  const enviar = async (m, campo, url, caption) => rtg(m, { chat_id: chat, [campo]: url, caption: caption.slice(0, 1020), parse_mode: 'HTML' })
+    .catch(() => rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: caption + `\n${esc(url)}` }));
+  if (kB === 0 || plan.variantes.length < 3) {  // el reel una sola vez, con sus 2 textos
+    await enviar('sendVideo', 'video', x.url, `🎬 <b>Tu reel</b> va en los anuncios 1 y 2 (Reels, Historias y Feed), cada uno con un texto distinto:\n\n1️⃣ <b>Texto A</b>\n${esc(plan.variantes[0].texto).slice(0, 420)}\n\n2️⃣ <b>Texto B</b>\n${esc(plan.variantes[1].texto).slice(0, 420)}`);
   }
+  const v3 = plan.variantes[2];
+  if (v3?.tipo === 'imagen') {
+    const t = v3.tamanos || {};
+    const media = [['4x5', 'Feed (4:5)'], ['9x16', 'Historias y Reels (vertical)'], ['1x1', 'Otros lugares (cuadrada)']].filter(([k]) => t[k])
+      .map(([k, lab], i) => ({ type: 'photo', media: t[k], ...(i === 0 ? { caption: `3️⃣ <b>${esc(v3.nombre)}</b> con sus ${Object.keys(t).length} tamaños (Meta pone cada uno donde va) + texto A`, parse_mode: 'HTML' } : { caption: lab }) }));
+    await rtg('sendMediaGroup', { chat_id: chat, media }).catch(() => enviar('sendPhoto', 'photo', v3.url, `3️⃣ <b>${esc(v3.nombre)}</b> + texto A`));
+  } else if (v3?.tipo === 'video') await enviar('sendVideo', 'video', v3.url, `3️⃣ <b>${esc(v3.nombre)}</b> + texto B`);
   const pub = plan.publico, sig = ops[(kB + 1) % ops.length];
   await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML',
-    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : ''}${esc(x.p.title)}</b>\n\n🅰️ A: <b>el reel nuevo</b>\n🅱️ B: <b>${esc(plan.variantes[1]?.nombre || 'ninguno (solo A)')}</b>\n` +
+    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : ''}${esc(x.p.title)}</b>\n\n` + plan.variantes.map((v, i) => `${L3[i]} ${esc(v.nombre)}${v.tipo === 'imagen' ? ' (3 tamaños)' : ''}`).join('\n') + `\n\nMeta le da más dinero al que mejor funcione.\n` +
       (aud ? `👥 ${esc(aud.etiqueta)}` : `👥 ${esc(pub.generos || 'todos')}, ${pub.edad_min || 24}-${pub.edad_max || 45} años · 🌎 8 países`) +
       `\n\nSe crea <b>EN PAUSA</b> (no gasta nada) hasta que toques ▶️ Activar. Elige cuánto al día:`,
     reply_markup: { inline_keyboard: [(aud ? [1, 2, 3] : [2, 3, 5]).map((u) => ({ text: `✅ $${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })),
-      [{ text: `🔄 Cambiar B por: ${sig.nombre}`.slice(0, 60), callback_data: `cpv:${x.p.id}:${(kB + 1) % ops.length}${modo ? '.' + modo : ''}` }],
+      [{ text: `🔄 Cambiar el 3º por: ${sig.nombre}`.slice(0, 60), callback_data: `cpv:${x.p.id}:${(kB + 1) % ops.length}${modo ? '.' + modo : ''}` }],
       [{ text: '🔁 Otros textos', callback_data: aud ? `rm:${x.p.id}:${modo}` : `cp:${x.p.id}:` }, { text: '❌ Cancelar', callback_data: 'x:0' }]] } });
 }
 async function previewPublicar(pid) {

@@ -28,7 +28,7 @@ export function recetaDe(slug, cual = 'ultimo') {
 /** Recetas de las variantes A/B al crear la campaña (se guardan en la campaña). */
 export function recetasVariantes(p, variantes) {
   return variantes.map((v, k) => ({
-    ...(v.tipo === 'imagen' ? { formato: 'imagen', concepto: '', estilo: '', gancho: '' } : recetaDe(p.slug, k === 0 ? 'ultimo' : 'anterior')),
+    ...(v.tipo === 'imagen' ? { formato: 'imagen', concepto: String(v.nombre || ''), estilo: '', gancho: '' } : recetaDe(p.slug, /anterior/.test(v.nombre || '') ? 'anterior' : 'ultimo')),
     tipo: v.tipo, texto1: String(v.texto || '').split('\n')[0].slice(0, 140), titular: v.titulo || '' }));
 }
 

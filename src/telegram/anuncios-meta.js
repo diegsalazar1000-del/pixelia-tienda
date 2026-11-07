@@ -77,17 +77,35 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     targeting_automation: { advantage_audience: 0 }, ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });
-  const ads = [];
+  const ads = [], videos = {};
   for (const [k, v] of variantes.entries()) {
     const letra = 'ABCD'[k];
-    await say(`⏳ 3/4 Subiendo el anuncio ${letra} (${v.tipo === 'video' ? 'reel' : 'imagen'})…`);
+    await say(`⏳ 3/4 Subiendo el anuncio ${k + 1} (${v.nombre || (v.tipo === 'video' ? 'reel' : 'imagen')})…`);
     const cta = { type: p.price_cents ? 'SHOP_NOW' : 'DOWNLOAD', value: { link } };
     let spec;
-    if (v.tipo === 'video') { const vid = await subirVideo(act, v.url, `${nombre} ${letra}`);
+    if (v.tipo === 'video') { const vid = videos[v.url] ||= await subirVideo(act, v.url, `${nombre} ${letra}`);  // el mismo reel se sube 1 sola vez
       spec = { video_data: { video_id: vid.id, image_url: vid.thumb, message: v.texto, title: v.titulo.slice(0, 40), call_to_action: cta } };
-    } else { const hash = await subirImagen(act, v.url);
+    }
+    const actor = { page_id: env('META_PAGE_ID'), ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}) };
+    let cr = null;
+    if (v.tipo !== 'video' && v.tamanos && Object.keys(v.tamanos).length > 1) {  // 🖼️ una imagen con sus tamaños: cada lugar usa el suyo
+      try {
+        const hs = {}; for (const [t, u] of Object.entries(v.tamanos)) hs[t] = await subirImagen(act, u);
+        const reglas = [], imgs = [];
+        if (hs['9x16']) { imgs.push({ hash: hs['9x16'], adlabels: [{ name: 'vertical' }] });
+          reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'instagram'], facebook_positions: ['story', 'facebook_reels'], instagram_positions: ['story', 'reels'] }, image_label: { name: 'vertical' }, priority: 1 }); }
+        if (hs['1x1']) { imgs.push({ hash: hs['1x1'], adlabels: [{ name: 'cuadrada' }] });
+          reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'messenger', 'audience_network'], facebook_positions: ['right_hand_column', 'marketplace', 'search'] }, image_label: { name: 'cuadrada' }, priority: 2 }); }
+        imgs.push({ hash: hs['4x5'] || Object.values(hs)[0], adlabels: [{ name: 'feed' }] });
+        reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'instagram', 'messenger', 'audience_network'] }, image_label: { name: 'feed' }, priority: reglas.length + 1 });
+        cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: actor,
+          asset_feed_spec: { images: imgs, bodies: [{ text: v.texto }], titles: [{ text: v.titulo.slice(0, 40) }], link_urls: [{ website_url: link }],
+            call_to_action_types: [cta.type], ad_formats: ['SINGLE_IMAGE'], asset_customization_rules: reglas } });
+      } catch (e) { console.error('[meta] imagen con tamaños falló, uso solo la 4:5:', e.message); cr = null; }
+    }
+    if (!cr && v.tipo !== 'video') { const hash = await subirImagen(act, v.tamanos?.['4x5'] || v.url);
       spec = { link_data: { image_hash: hash, link, message: v.texto, name: v.titulo.slice(0, 40), call_to_action: cta } }; }
-    const cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: { page_id: env('META_PAGE_ID'), ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}), ...spec } });
+    if (!cr) cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: { ...actor, ...spec } });
     const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${letra} · ${v.nombre || v.tipo}`, adset_id: set.id, creative: { creative_id: cr.id }, status: 'PAUSED' });
     ads.push({ letra, id: ad.id, nombre: v.nombre || v.tipo });
   }
