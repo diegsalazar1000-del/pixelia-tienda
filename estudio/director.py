@@ -21,7 +21,12 @@ def _claude(content, max_tokens=4000, tools=None, timeout=240):
         body["messages"] = body["messages"] + [{"role": "assistant", "content": data["content"]}]
     import re
     out = re.sub(r"</?cite[^>]*>", "", out).replace("```json", "").replace("```", "")
-    return json.loads(out[out.index("{"): out.rindex("}") + 1], strict=False)  # acepta saltos de línea dentro de textos (HTML de los diseños)
+    t = out[out.index("{"): out.rindex("}") + 1]
+    try: return json.loads(t, strict=False)  # acepta saltos de línea dentro de textos (HTML de los diseños)
+    except json.JSONDecodeError:
+        t = re.sub(r",\s*([}\]])", r"\1", t)  # comas sobrantes antes de } o ]
+        t = re.sub(r"}\s*{", "},{", t)        # objetos seguidos sin coma
+        return json.loads(t, strict=False)
 
 NEUTRO = ("Español NEUTRO latinoamericano (se vende en varios países): nada de modismos de un solo país (ni 'chévere', 'pana', 'güey', 'chido', 'parce', 'bacán', 'vale'), "
           "sin voseo, tuteo cálido. Palabras que se entiendan igual en México, Colombia, Venezuela, Argentina, Chile, Perú y EE. UU. latino.")

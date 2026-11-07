@@ -18,7 +18,7 @@ SIZES = {"4x5": (1080, 1350), "1x1": (1080, 1080), "9x16": (1080, 1920)}
 FUENTES = {"Anton": "anton/Anton-Regular.ttf", "Bebas Neue": "bebasneue/BebasNeue-Regular.ttf", "Archivo Black": "archivoblack/ArchivoBlack-Regular.ttf",
            "Montserrat": "montserrat/Montserrat[wght].ttf", "Poppins": None, "Inter": "inter/Inter[opsz,wght].ttf", "Space Grotesk": "spacegrotesk/SpaceGrotesk[wght].ttf",
            "Playfair Display": "playfairdisplay/PlayfairDisplay[wght].ttf", "DM Serif Display": "dmserifdisplay/DMSerifDisplay-Regular.ttf", "Lora": None,
-           "Caveat": "caveat/Caveat[wght].ttf", "Pacifico": "pacifico/Pacifico-Regular.ttf", "Permanent Marker": "permanentmarker/PermanentMarker-Regular.ttf",
+           "Caveat": "caveat/Caveat[wght].ttf", "Pacifico": "pacifico/Pacifico-Regular.ttf", "Permanent Marker": "apache/permanentmarker/PermanentMarker-Regular.ttf",
            "Fredoka": "fredoka/Fredoka[wdth,wght].ttf", "Righteous": "righteous/Righteous-Regular.ttf"}
 
 def chrome():
@@ -39,7 +39,7 @@ def fuentes_css():
         p = FONTDIR / src.split("/")[-1].replace("[", "_").replace("]", "_").replace(",", "_")
         if not p.exists():
             try:
-                url = "https://raw.githubusercontent.com/google/fonts/main/ofl/" + urllib.request.quote(src)
+                url = "https://raw.githubusercontent.com/google/fonts/main/" + ("" if src.startswith("apache/") else "ofl/") + urllib.request.quote(src)
                 with urllib.request.urlopen(url, timeout=30) as r: data = r.read()
                 if len(data) > 10000: p.write_bytes(data)
             except Exception as e: print("letra", fam, e)
