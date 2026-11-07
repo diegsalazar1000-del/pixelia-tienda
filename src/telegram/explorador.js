@@ -7,23 +7,31 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { Candidates, Products } from '../db.js';
 
-const CATEGORIAS = [
-  'planners, agendas y trackers digitales (con un enfoque nuevo o un nicho concreto)',
-  'finanzas personales, ahorro y control de deudas',
+const CATEGORIAS = [  // rota 4 por día; la mayoría NO son planners (pedido de Diego: buscar de TODO)
+  'manualidades de papel imprimibles: papercraft, autómatas y juguetes de cartón (con motorcito o mecanismo), robots y maquetas para armar',
+  'kits STEM imprimibles para niños: experimentos, circuitos sencillos, robótica de cartón, ciencia en casa',
+  'mascotas: imprimibles, registros de salud y vacunas, guías de entrenamiento, juguetes y accesorios para hacer en casa',
+  'presets de Lightroom, LUTs para video y filtros para celular',
+  'recursos de Photoshop, Procreate y Canva: acciones, pinceles, mockups, texturas, plantillas editables',
+  'packs de prompts y flujos para herramientas de IA NUEVAS de este mes (ChatGPT, Gemini, Midjourney, CapCut, Canva IA…)',
+  'recursos para programas y apps que acaban de salir o se están poniendo de moda (plantillas, atajos, guías rápidas)',
+  'archivos para cortadoras e impresoras 3D: SVG para Cricut, cortes láser, STL sencillos',
+  'juegos imprimibles: escape room en casa, búsquedas del tesoro, trivias, juegos para fiestas y para parejas',
+  'libros para colorear, láminas decorativas (wall art), stickers digitales y para imprimir',
   'mini cursos y cursos en video prácticos (enseñar a hacer algo concreto)',
-  'plantillas de Notion, Canva o Excel/Google Sheets',
-  'ebooks y guías prácticas cortas',
-  'presets, filtros, LUTs y packs de efectos para fotos y videos',
-  'packs de prompts y recursos de IA',
-  'imprimibles y fichas de trabajo (niños, maestros, terapia, hogar)',
-  'audios digitales: meditaciones, afirmaciones, música libre para contenido',
-  'kits para emprendedores y pequeños negocios (catálogos, menús, contratos, plantillas de redes)',
-  'recetarios y planes de comidas o entrenamiento (sin promesas de salud)',
-  'patrones y archivos para manualidades: crochet, costura, bordado, SVG para Cricut, láminas',
-  'recursos para creadores de contenido: plantillas de reels, ganchos, calendarios de contenido',
-  'material educativo: idiomas, flashcards, material didáctico, preparación de exámenes',
+  'ebooks y guías prácticas cortas de un problema concreto',
+  'audios: meditaciones, afirmaciones, efectos de sonido y música libre para contenido',
+  'kits para emprendedores y pequeños negocios (catálogos, menús, contratos, plantillas de redes, hojas de cálculo de inventario)',
+  'recursos para creadores de contenido: plantillas de reels, ganchos, calendarios, overlays y transiciones',
+  'material educativo: idiomas, flashcards, material didáctico para maestros, preparación de exámenes',
   'bodas, fiestas y eventos: invitaciones editables, juegos, kits imprimibles',
-  'mascotas, maternidad y familia: guías, registros, imprimibles',
+  'maternidad, bebés y familia: rutinas, actividades Montessori, registros',
+  'recetarios, planes de comidas y de entrenamiento (sin promesas de salud)',
+  'patrones de crochet, costura, bordado y punto de cruz',
+  'hogar y DIY: planos de muebles sencillos, organización de espacios, jardinería y huerto en casa',
+  'viajes: guías, itinerarios editables, checklists de equipaje y presupuesto de viaje',
+  'plantillas de Notion, Excel/Google Sheets y GoodNotes con un uso nuevo (no planners genéricos)',
+  'planners, trackers y finanzas (solo si es un enfoque o nicho muy distinto a lo que ya tenemos)',
 ];
 
 const token = () => config.radar.token;
@@ -44,12 +52,12 @@ function prompt(cats, tema, ya) {
 Investiga en internet (varias búsquedas en español e inglés: Etsy best sellers, TikTok Shop, TikTok/Instagram virales, Hotmart, Gumroad, Pinterest, Google Trends, artículos recientes)
 qué productos DIGITALES se están vendiendo o haciendo virales en los ÚLTIMOS 3 MESES (no clásicos de hace años).
 ${tema ? `Tema pedido: ${tema}.` : `Céntrate en estas categorías: ${cats.join('; ')}.`}
-Planners y finanzas también valen, pero solo si es algo distinto a lo que ya tenemos.
+VARIEDAD OBLIGATORIA: ya tenemos planners, trackers de hábitos y finanzas, así que como MÁXIMO 1 hallazgo de planners/agendas/trackers/finanzas por búsqueda; el resto de OTROS mundos (manualidades de papel y juguetes de cartón con mecanismo, kits STEM, mascotas, presets, Photoshop/Procreate, prompts y recursos para programas o IA nuevas, SVG/3D, juegos imprimibles, cursos, audios, negocios, educación…). Piensa también en lo que salió NUEVO este mes (programas, apps, IA) y qué recursos digitales está comprando la gente para usarlos.
 NO repitas nada parecido a esto (ya lo tenemos o ya lo vimos): ${JSON.stringify(ya)}.
 Busca VARIEDAD: cada hallazgo de una categoría y un formato distinto (video, PDF, plantilla, audio, pack…).
 Incluye cursos o videos que se vendan (la tienda los recrearía como curso propio con guion, diapositivas y ejercicios, sin copiar a la persona).
 Evita: marcas registradas, personajes, "cómo ganar dinero rápido", promesas de salud o resultados, contenido para adultos.
-PLR / MRR EN INGLÉS PARA REHACER (el mercado en español está mucho menos lleno: esa es nuestra ventaja): busca en Etsy, Gumroad, Payhip, Stan Store y tiendas PLR productos digitales en INGLÉS, específicos y bien hechos (planners, trackers, plantillas, ebooks, kits, imprimibles, también cosas DIFERENTES y nuevas que estén pegando), cuya licencia diga CLARAMENTE que puedes MODIFICARLOS, ponerles TU MARCA y REVENDERLOS (PLR o "PLR + MRR" con rebranding). Descarta los "mega bundles" de miles de páginas a $1-5, los que solo permiten uso personal o revender sin modificar, y los de licencia dudosa. Para cada uno di cómo lo haríamos MEJOR en español (qué agregar) y si conviene una versión que se calcula sola en Excel/Google Sheets.
+PLR / MRR EN INGLÉS PARA REHACER (el mercado en español está mucho menos lleno: esa es nuestra ventaja): busca en Etsy, Gumroad, Payhip, Stan Store y tiendas PLR productos digitales en INGLÉS, específicos y bien hechos de CUALQUIER categoría (kits imprimibles, papercraft, juegos, recursos de diseño, prompts, cursos, ebooks, plantillas para negocios, mascotas, educación… máximo 1 planner/tracker/finanzas), cuya licencia diga CLARAMENTE que puedes MODIFICARLOS, ponerles TU MARCA y REVENDERLOS (PLR o "PLR + MRR" con rebranding). Descarta los "mega bundles" de miles de páginas a $1-5, los que solo permiten uso personal o revender sin modificar, y los de licencia dudosa. Para cada uno di cómo lo haríamos MEJOR en español (qué agregar) y si conviene una versión que se calcula sola en Excel/Google Sheets.
 TENDENCIAS DEL MUNDO: revisa también qué está pasando ESTA SEMANA en el mundo y en Latinoamérica (noticias que cambian la vida diaria, temas y retos virales, estrenos, cambios de precios o de reglas, temporada, y las fechas especiales de los próximos 30-60 días: festivos, regreso a clases, Black Friday, Navidad, San Valentín, Día de la Madre, mundiales, etc.).
 De ahí saca NECESIDADES NUEVAS que la gente tendrá y propón productos digitales que las resuelvan (ej. si sube el costo de la vida → plantilla para recortar gastos; si viene diciembre → planificador de regalos y cenas; si se viraliza un reto → kit para hacerlo).
 No te aproveches de tragedias, guerras, enfermedades ni política; nada de marcas ni personajes con derechos.
@@ -68,7 +76,7 @@ Devuelve SOLO un JSON:
  "plr":[{"titulo":"nombre original en inglés","url":"enlace real a la página del producto","plataforma":"etsy|gumroad|payhip|…","precio":número,"licencia":"lo que dice la licencia, resumido (≤ 25 palabras)","modificar":true,"marca_propia":true,"revender":true,
   "por_que":"señales de que se vende o pega (reseñas, ventas, novedad)","titulo_tienda":"cómo se llamaría nuestra versión en español","mejoras":"qué le agregaríamos para hacerlo mejor","excel":true|false,"publico":"...","precio_sugerido":número,"emoji":"...","nota":1-10}]}
 Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
-${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas, solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas, 2-3 productos en "mundo" y 2-3 en "plr".'}`;
+${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas (máximo 1 planner/tracker/finanzas), solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas, 2-3 productos en "mundo" y 2-3 en "plr".'}`;
 }
 
 export async function askClaude(text) {
