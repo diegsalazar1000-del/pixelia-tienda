@@ -78,10 +78,37 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });
   const ads = [], videos = {};
+  let setImgs = null;
   for (const [k, v] of variantes.entries()) {
     const letra = 'ABCD'[k];
     await say(`⏳ 3/4 Subiendo el anuncio ${k + 1} (${v.nombre || (v.tipo === 'video' ? 'reel' : 'imagen')})…`);
     const cta = { type: p.price_cents ? 'SHOP_NOW' : 'DOWNLOAD', value: { link } };
+    if (v.tipo === 'imagenes') {  // 🖼️×3 varias imágenes y textos en UN anuncio: Meta prueba las combinaciones (creativo dinámico, va en su propio conjunto)
+      setImgs = await api('POST', `${act}/adsets`, { name: `${nombre} · imágenes`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
+        optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting, is_dynamic_creative: true });
+      // cada imagen con sus 3 tamaños: 4:5 → Feed, vertical → Historias/Reels, cuadrada → otros lugares; Meta elige la mejor imagen en cada lugar
+      const imgs = [];
+      for (const it of v.items) for (const [t, u] of Object.entries(it.tamanos || { '4x5': it.url })) imgs.push({ hash: await subirImagen(act, u), nombre: it.nombre, t });
+      const base = { bodies: (v.textos || [v.texto]).map((text) => ({ text })), titles: (v.titulos || [v.titulo]).map((t) => ({ text: String(t).slice(0, 40) })),
+        link_urls: [{ website_url: link }], call_to_action_types: [cta.type], ad_formats: ['SINGLE_IMAGE'] };
+      const actor = { page_id: env('META_PAGE_ID'), ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}) };
+      const lab = { '4x5': 'feed', '9x16': 'vertical', '1x1': 'cuadrada' };
+      const reglas = [
+        ...(imgs.some((i) => i.t === '9x16') ? [{ customization_spec: { publisher_platforms: ['facebook', 'instagram'], facebook_positions: ['story', 'facebook_reels'], instagram_positions: ['story', 'reels'] }, image_label: { name: 'vertical' } }] : []),
+        ...(imgs.some((i) => i.t === '1x1') ? [{ customization_spec: { publisher_platforms: ['facebook', 'messenger', 'audience_network'], facebook_positions: ['right_hand_column', 'marketplace', 'search'] }, image_label: { name: 'cuadrada' } }] : []),
+        { customization_spec: { publisher_platforms: ['facebook', 'instagram', 'messenger', 'audience_network'] }, image_label: { name: 'feed' } }].map((r, i) => ({ ...r, priority: i + 1 }));
+      let cr;
+      try {
+        cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: actor,
+          asset_feed_spec: { ...base, images: imgs.map((i) => ({ hash: i.hash, adlabels: [{ name: lab[i.t] || 'feed' }] })), asset_customization_rules: reglas } });
+      } catch (e) {  // si Meta no acepta tamaños por lugar en este modo, van solo las 4:5 (Meta adapta las Historias)
+        console.error('[meta] imágenes con tamaños:', e.message); await say('ℹ️ Meta no aceptó los 3 tamaños en el anuncio de imágenes; van las 4:5 y Meta las adapta a Historias.');
+        cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: actor, asset_feed_spec: { ...base, images: imgs.filter((i) => i.t === '4x5').map((i) => ({ hash: i.hash })) } });
+      }
+      const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${letra} · ${v.nombre}`, adset_id: setImgs.id, creative: { creative_id: cr.id }, status: 'PAUSED' });
+      ads.push({ letra, id: ad.id, nombre: v.nombre, dinamico: true, imagenes: Object.fromEntries(imgs.map((i) => [i.hash, i.nombre])), textos: v.textos || [v.texto] });
+      continue;
+    }
     let spec;
     if (v.tipo === 'video') { const vid = videos[v.url] ||= await subirVideo(act, v.url, `${nombre} ${letra}`);  // el mismo reel se sube 1 sola vez
       spec = { video_data: { video_id: vid.id, image_url: vid.thumb, message: v.texto, title: v.titulo.slice(0, 40), call_to_action: cta } };
@@ -110,11 +137,11 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     ads.push({ letra, id: ad.id, nombre: v.nombre || v.tipo });
   }
   await say('⏳ 4/4 Listo, revisando…');
-  return { camp: camp.id, set: set.id, ads, moneda: c.currency, intereses: aud.length ? [publico.etiqueta || 'interesados reales'] : ints.map((i) => i.name),
+  return { camp: camp.id, set: set.id, sets: [set.id, setImgs?.id].filter(Boolean), ads, moneda: c.currency, intereses: aud.length ? [publico.etiqueta || 'interesados reales'] : ints.map((i) => i.name),
     url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${act.replace('act_', '')}&selected_campaign_ids=${camp.id}` };
 }
 
-export async function activar(ids) { for (const id of [...(ids.ads || []).map((a) => a.id), ids.ad, ids.set, ids.camp].filter(Boolean)) await api('POST', id, { status: 'ACTIVE' }); }
+export async function activar(ids) { for (const id of [...new Set([...(ids.ads || []).map((a) => a.id), ids.ad, ...(ids.sets || []), ids.set, ids.camp].filter(Boolean))]) await api('POST', id, { status: 'ACTIVE' }); }
 export const pausarAnuncio = (adId) => api('POST', adId, { status: 'PAUSED' });
 export const cambiarPresupuesto = (campId, usd) => api('POST', campId, { daily_budget: Math.round(usd * 100) });
 /** Resultados por anuncio (A/B) de los últimos 7 días. */
@@ -188,4 +215,19 @@ export async function horasAnuncios(campIds) {
     for (const x of r.data || []) { const k = parseInt(String(x.hourly_stats_aggregated_by_audience_time_zone || ''), 10); if (k >= 0 && k < 24) { h[k].impresiones += Number(x.impressions || 0); h[k].clics += Number(x.clicks || 0); } }
   }
   return h;
+}
+
+/** En el anuncio de varias imágenes: qué imagen y qué texto consiguieron más visitas (últimos 7 días). */
+export async function desgloseDinamico(ad) {
+  const out = {};
+  for (const [b, campo] of [['image_asset', 'imagenes'], ['body_asset', 'textos']]) {
+    const r = await api('GET', `${ad.id}/insights`, { fields: 'spend,impressions,actions', breakdowns: b, date_preset: 'last_7d' }).catch(() => ({ data: [] }));
+    const filas = (r.data || []).map((x) => {
+      const a = x[b] || {}, nombre = campo === 'imagenes' ? (ad.imagenes || {})[a.hash] || 'imagen' : (() => { const i = (ad.textos || []).findIndex((t) => String(t).slice(0, 40) === String(a.text || '').slice(0, 40)); return i >= 0 ? `texto ${'AB'[i] || i + 1}` : 'texto'; })();
+      return { nombre, gasto: Number(x.spend || 0), vistas: Number(x.impressions || 0), visitas: Number((x.actions || []).find((y) => y.action_type === 'landing_page_view')?.value || 0) };
+    });
+    const g = {}; for (const f of filas) { const o = (g[f.nombre] ||= { nombre: f.nombre, gasto: 0, vistas: 0, visitas: 0 }); o.gasto += f.gasto; o.vistas += f.vistas; o.visitas += f.visitas; }
+    out[campo] = Object.values(g);
+  }
+  return out;
 }

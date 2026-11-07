@@ -7,7 +7,7 @@ import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
-import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio, crearPublicos, tamanos, crearSimilares } from './anuncios-meta.js';
+import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio, crearPublicos, tamanos, crearSimilares, desgloseDinamico } from './anuncios-meta.js';
 import { registrar, resumen, resumenTexto, recetasVariantes } from './aprendizaje.js';
 import { startCalendario, leccion, onCalendario, estadoCalendario, marcarPublicado } from './calendario.js';
 import { Subscribers, Orders } from '../db.js';
@@ -395,6 +395,15 @@ export async function reporteCampanas(chat) {
       else rec = 'A y B van parecidos: déjalos correr.';
     }
     if (tot.v >= 20 && tot.g / Math.max(1, tot.v) < 0.25) { rec += ' Las visitas salen baratas: puedes subir el presupuesto.'; rows.push([{ text: `⬆️ Subir a $${Math.min(10, c.presupuesto + 2)}/día`, callback_data: `cpx:${c.n}:b${Math.min(10, c.presupuesto + 2)}` }]); }
+    for (const ad of (c.ads || []).filter((a) => a.dinamico)) {  // anuncio con varias imágenes: cuál imagen y cuál texto ganaron
+      const d = await desgloseDinamico(ad).catch(() => null); if (!d) continue;
+      const mejor = (xs) => xs.filter((x) => x.vistas >= 100).sort((a, b) => (a.visitas ? a.gasto / a.visitas : 1e9) - (b.visitas ? b.gasto / b.visitas : 1e9));
+      const fila = (x) => `${esc(x.nombre)}: ${x.visitas} visitas${x.visitas ? ` · $${(x.gasto / x.visitas).toFixed(2)} c/u` : ''}`;
+      const im = mejor(d.imagenes), tx = mejor(d.textos);
+      if (im.length || tx.length) lines.push(`🖼️ Dentro de "${esc(ad.nombre)}":\n${im.map(fila).join('\n')}${tx.length ? '\n' + tx.map(fila).join('\n') : ''}${im[0] ? `\n🏆 Mejor imagen: ${esc(im[0].nombre)}` : ''}${tx[0] ? ` · mejor texto: ${esc(tx[0].nombre)}` : ''}`);
+      try { registrar({ ...c, ads: [...(c.ads || []), ...im.map((x, i) => ({ letra: 'img', id: `${ad.id}:${x.nombre}` }))], recetas: [...(c.recetas || []), ...im.map((x) => ({ formato: 'imagen', concepto: x.nombre, tipo: 'imagen' }))] },
+        im.map((x) => ({ id: `${ad.id}:${x.nombre}`, gasto: x.gasto, visitas: x.visitas, clics: 0, vistas: x.vistas }))); } catch {}
+    }
     rows.push([{ text: '👀 Ver en Meta', url: c.url }, { text: '⏸️ Pausar campaña', callback_data: `cpa:${c.n}:pause` }]);
     if (lp_rm(c)) rows.push([{ text: '🎯 Crear remarketing de este producto', callback_data: `rm:${c.pid}:i` }]);
     await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: `📈 <b>Reporte · ${esc(c.titulo)}</b> (7 días)\nTotal: ${tot.g.toFixed(2)} ${esc(c.moneda || '')} · ${tot.v} visitas a la página · ${tot.k} clics\n${lines.join('\n') || 'Sin datos todavía.'}\n\n🧠 ${esc(rec)}`, reply_markup: { inline_keyboard: rows } });
@@ -420,17 +429,18 @@ const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true 
 function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
 const PLANES = new Map();
 /** Variantes A/B: A = último reel; B = el reel anterior (otro formato) o la imagen estática del último anuncio. */
-/** Opciones para el 3er anuncio: las 3 imágenes del mismo anuncio (cada una con sus 3 tamaños), el reel anterior o nada. */
+/** Opciones para el 3er anuncio: las 3 imágenes juntas (Meta elige la mejor), una sola imagen con sus tamaños, el reel anterior o nada. */
 function opcionesB(x) {
   const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug), base = config.baseUrl.replace(/\/$/, '') + `/media/anuncios/${x.p.slug}/`;
-  const ops = ['A', 'B', 'C'].filter((c) => fs.existsSync(path.join(dir, `${c}-4x5.jpg`))).map((c) => ({ tipo: 'imagen', url: base + `${c}-4x5.jpg`, nombre: `imagen ${c}`,
+  const una = ['A', 'B', 'C'].filter((c) => fs.existsSync(path.join(dir, `${c}-4x5.jpg`))).map((c) => ({ tipo: 'imagen', url: base + `${c}-4x5.jpg`, nombre: `solo imagen ${c}`,
     tamanos: Object.fromEntries(['4x5', '9x16', '1x1'].filter((t) => fs.existsSync(path.join(dir, `${c}-${t}.jpg`))).map((t) => [t, base + `${c}-${t}.jpg`])) }));
+  const ops = una.length > 1 ? [{ tipo: 'imagenes', nombre: `las ${una.length} imágenes (Meta prueba cuál y con qué texto)`, items: una.map((u) => ({ url: u.url, nombre: u.nombre.replace('solo ', ''), tamanos: u.tamanos })) }, ...una] : una;
   let otros = []; try { otros = fs.readdirSync(dir).filter((f) => /\.mp4$/.test(f) && f !== x.file && !/sin-musica/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t); } catch {}
   if (otros[0]) ops.push({ tipo: 'video', url: base + encodeURIComponent(otros[0].f), nombre: 'reel anterior' });
   ops.push({ tipo: 'nada', nombre: 'nada (solo el reel)' });
   return ops;
 }
-/** 3 anuncios: reel + texto A, reel + texto B y la imagen elegida (con texto A). */
+/** 1️⃣ reel + texto A · 2️⃣ reel + texto B · 3️⃣ las imágenes con los 2 textos (o lo que elija con 🔄). */
 function variantesDe(x, kB = 0) {
   const ops = opcionesB(x), b = ops[kB % ops.length];
   return [{ tipo: 'video', url: x.url, nombre: 'reel · texto A', t: 0 }, { tipo: 'video', url: x.url, nombre: 'reel · texto B', t: 1 },
@@ -466,7 +476,8 @@ async function previewCampana(pid, modo = '', kB = null) {
     if (aud) plan.publico = { ...aud, modo };
   }
   plan.kB = kB; const ops = opcionesB(x), vs = variantesDe(x, kB);
-  plan.variantes = vs.map((v) => ({ ...v, texto: plan.textos[v.t % plan.textos.length].texto, titulo: plan.textos[v.t % plan.textos.length].titular }));
+  plan.variantes = vs.map((v) => ({ ...v, texto: plan.textos[v.t % plan.textos.length].texto, titulo: plan.textos[v.t % plan.textos.length].titular,
+    ...(v.tipo === 'imagenes' ? { textos: plan.textos.map((t) => t.texto), titulos: plan.textos.map((t) => t.titular) } : {}) }));
   PLANES.set(String(x.p.id), plan);
   const chat = config.telegram.adminChatId, L3 = ['1️⃣', '2️⃣', '3️⃣'];
   const enviar = async (m, campo, url, caption) => rtg(m, { chat_id: chat, [campo]: url, caption: caption.slice(0, 1020), parse_mode: 'HTML' })
@@ -475,7 +486,10 @@ async function previewCampana(pid, modo = '', kB = null) {
     await enviar('sendVideo', 'video', x.url, `🎬 <b>Tu reel</b> va en los anuncios 1 y 2 (Reels, Historias y Feed), cada uno con un texto distinto:\n\n1️⃣ <b>Texto A</b>\n${esc(plan.variantes[0].texto).slice(0, 420)}\n\n2️⃣ <b>Texto B</b>\n${esc(plan.variantes[1].texto).slice(0, 420)}`);
   }
   const v3 = plan.variantes[2];
-  if (v3?.tipo === 'imagen') {
+  if (v3?.tipo === 'imagenes') {
+    await rtg('sendMediaGroup', { chat_id: chat, media: v3.items.map((it, i) => ({ type: 'photo', media: it.url, ...(i === 0 ? { caption: `3️⃣ <b>Un solo anuncio con estas ${v3.items.length} imágenes (cada una con sus 3 tamaños: Feed, Historias/Reels y cuadrada) y los textos A y B</b>. Meta va mostrando cada combinación y le da más a la que mejor funciona. En el reporte del lunes te digo qué imagen y qué texto ganaron.`, parse_mode: 'HTML' } : { caption: it.nombre }) })) })
+      .catch(() => send('3️⃣ ' + esc(v3.nombre)));
+  } else if (v3?.tipo === 'imagen') {
     const t = v3.tamanos || {};
     const media = [['4x5', 'Feed (4:5)'], ['9x16', 'Historias y Reels (vertical)'], ['1x1', 'Otros lugares (cuadrada)']].filter(([k]) => t[k])
       .map(([k, lab], i) => ({ type: 'photo', media: t[k], ...(i === 0 ? { caption: `3️⃣ <b>${esc(v3.nombre)}</b> con sus ${Object.keys(t).length} tamaños (Meta pone cada uno donde va) + texto A`, parse_mode: 'HTML' } : { caption: lab }) }));
@@ -483,7 +497,7 @@ async function previewCampana(pid, modo = '', kB = null) {
   } else if (v3?.tipo === 'video') await enviar('sendVideo', 'video', v3.url, `3️⃣ <b>${esc(v3.nombre)}</b> + texto B`);
   const pub = plan.publico, sig = ops[(kB + 1) % ops.length];
   await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML',
-    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : ''}${esc(x.p.title)}</b>\n\n` + plan.variantes.map((v, i) => `${L3[i]} ${esc(v.nombre)}${v.tipo === 'imagen' ? ' (3 tamaños)' : ''}`).join('\n') + `\n\nMeta le da más dinero al que mejor funcione.\n` +
+    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : ''}${esc(x.p.title)}</b>\n\n` + plan.variantes.map((v, i) => `${L3[i]} ${esc(v.nombre)}${v.tipo === 'imagen' ? ' (3 tamaños)' : v.tipo === 'imagenes' ? ' + textos A y B' : ''}`).join('\n') + `\n\nMeta le da más dinero al que mejor funcione.\n` +
       (aud ? `👥 ${esc(aud.etiqueta)}` : `👥 ${esc(pub.generos || 'todos')}, ${pub.edad_min || 24}-${pub.edad_max || 45} años · 🌎 8 países`) +
       `\n\nSe crea <b>EN PAUSA</b> (no gasta nada) hasta que toques ▶️ Activar. Elige cuánto al día:`,
     reply_markup: { inline_keyboard: [(aud ? [1, 2, 3] : [2, 3, 5]).map((u) => ({ text: `✅ $${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })),
