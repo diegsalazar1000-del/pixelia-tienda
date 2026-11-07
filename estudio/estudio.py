@@ -207,7 +207,7 @@ def clip_story(prod, B, titles, n_pages, out, clip, tmp, force_style=None):
     dur = formatos.clip_duration(clip)
     cola = director.cola_muda(clip, dur)  # final mudo y quieto de Veo
     info = director.describir_clip(clip, dur, tmp, cola) or {}
-    pant = info.get("pantalla") if isinstance(info.get("pantalla"), dict) else None
+    pant = info.get("pantalla") if isinstance(info.get("pantalla"), dict) and os.environ.get("CLIP_PANTALLA") == "1" else None  # pantalla mágica APAGADA (a Diego le pareció artificial)
     try:
         q = [[float(a) * 3, float(b) * 3] for a, b in pant["esquinas"]][:4] if pant else None  # 360x640 → 1080x1920
         if q and len(q) == 4 and (max(x for x, _ in q) - min(x for x, _ in q)) > 150 and (max(y for _, y in q) - min(y for _, y in q)) > 100: pant = {"q": q, "tipo": pant.get("tipo", "")}
