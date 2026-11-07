@@ -73,7 +73,7 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
   const targeting = aud.length ? {  // 🎯 remarketing / similares: el público ya está definido, sin intereses ni edad estrecha
     geo_locations: { countries: PAISES }, age_min: 18, age_max: 65, targeting_automation: { advantage_audience: 0 },
     custom_audiences: aud.map((id) => ({ id })), ...((publico.excluir || []).filter(Boolean).length ? { excluded_custom_audiences: publico.excluir.filter(Boolean).map((id) => ({ id })) } : {}) } : { geo_locations: { countries: PAISES }, age_min: Math.max(18, Number(publico.edad_min) || 24), age_max: Math.min(65, Number(publico.edad_max) || 45),
-    ...(publico.generos === 'mujeres' || !publico.generos ? { genders: [2] } : publico.generos === 'hombres' ? { genders: [1] } : {}),
+    ...(publico.generos === 'mujeres' ? { genders: [2] } : publico.generos === 'hombres' ? { genders: [1] } : {}),  // sin indicación = todos
     targeting_automation: { advantage_audience: 0 }, ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });

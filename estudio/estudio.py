@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, story as story_mod, audio, musica, brief as brief_mod, director, formatos  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod, director, formatos, creativos  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -288,7 +288,9 @@ def run_job(J):
             say(f"🎬 <b>{esc(story.get('concepto') or 'Reel nuevo')}</b>\nFormato: {esc(FORMAT_NAMES.get(story.get('formato'), story.get('formato')))} · estilo {motor.STYLE_NAMES.get(st, st)}\nEscenas: {' → '.join(e['tipo'] for e in story['escenas'])}\nMontando (2–6 min)…")
             B2 = json.loads(json.dumps(B)); B2["estaticos"][0]["titular"] = hook_lines(story)
             for old in out.glob("[ABC]-*.jpg"): old.unlink()
-            motor.build_static(B2, pages, phone, out, style=st, photo=clip_frame(story, tmp) if story["escenas"][0]["tipo"] == "clip" else real_photo(story) if stock else None)
+            try: creativos.disenar(prod, B2, story, pages, phone, out, tmp, say=say)  # 🎨 imágenes diseñadas por la IA según la categoría
+            except Exception as e:
+                print("creativos IA:", e); motor.build_static(B2, pages, phone, out, style=st, photo=clip_frame(story, tmp) if story["escenas"][0]["tipo"] == "clip" else real_photo(story) if stock else None)
             vd = None
             if v in ("f", "m"):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
@@ -350,7 +352,8 @@ def run_variants(job, prod, B, out, tmp, load_pages, opts):
         v, g = pick(opts.get("v"), opts.get("g"), story)
         B2 = json.loads(json.dumps(B)); B2["voz"]["genero"] = "femenina" if v == "f" else "masculina"
         est = B2["estaticos"][k % 3]; est["titular"] = hook_lines(story)
-        motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
+        try: creativos.disenar(prod, B2, story, pages, phone, vdir, tmp, prefixes=(name,))
+        except Exception as e: print("creativos IA:", e); motor.build_static(B2, pages, phone, vdir, style=st, prefix=name, only=[k % 3])
         vd = None
         if v in ("f", "m"):
             try: vd = audio.voice_durations(story, B2["voz"]["genero"], tmp)

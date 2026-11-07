@@ -1,6 +1,6 @@
 # Estudio de anuncios de Pixelia: Python + ffmpeg + poppler + voces Piper (todo local y gratis)
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg poppler-utils curl ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg poppler-utils curl ca-certificates chromium fonts-noto-color-emoji \
  && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir pillow numpy piper-tts
 ARG HF=https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_MX
