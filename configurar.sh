@@ -64,7 +64,8 @@ case "$1" in
     OUT=$(docker exec -e AID="$AID" -e ASEC="$ASEC" -e TOK="$TOK" pixelia node --input-type=module -e '
       const G = "https://graph.facebook.com/v23.0"; const j = async (u) => { const r = await fetch(u); const x = await r.json(); if (x.error) throw new Error(x.error.message); return x; };
       try {
-        const ll = await j(`${G}/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.AID}&client_secret=${process.env.ASEC}&fb_exchange_token=${process.env.TOK}`);
+        let ll; try { ll = await j(`${G}/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.AID}&client_secret=${process.env.ASEC}&fb_exchange_token=${process.env.TOK}`); }
+        catch { ll = { access_token: process.env.TOK }; }  // token de usuario del sistema: ya es permanente
         const pages = (await j(`${G}/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${ll.access_token}`)).data || [];
         const p = pages.find((x) => /pixelia/i.test(x.name)) || pages[0];
         if (!p) throw new Error("el token no ve ninguna página (marca la página de Pixelia al generar el token)");
