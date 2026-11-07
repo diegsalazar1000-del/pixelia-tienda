@@ -85,6 +85,8 @@
 
 - 👑 Modo dueño (7-nov): abrir la tienda con ?soy=dueno (una vez por dispositivo) guarda cookie pxd=1 → el píxel no envía nada, las visitas no cuentan en product_views y los pedidos quedan con orders.prueba=1 (fuera de ventas, ingresos, "comprados juntos" y pedido de reseñas). ?soy=cliente lo quita. Los 4 pedidos de prueba del 6-nov se marcaron 'rejected' a mano.
 
+- ❌ Black Friday 2026: Diego decidió NO hacer nada este año ("estamos crudos"). No proponer packs ni campañas de Black Friday.
+
 ## Pendientes al 7-nov (Diego puede preguntar "¿qué tenemos pendiente para hoy?")
 - [en curso 6-nov noche] Primer anuncio del tracker de hábitos: /anuncios → reel → 📊 campaña $3/día → Activar.
 - Sábado 7-nov: APAGAR el anuncio de prueba ("¡Queremos crear lo próximo contigo!", creado a mano en la cuenta nueva; Diego lo dejó encendido la noche del 6 para no tocar tanto la cuenta nueva). Compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).
