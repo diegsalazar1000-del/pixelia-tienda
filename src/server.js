@@ -18,6 +18,7 @@ import { startRadarBot, createDraft, offerAds, sendAdPicker } from './telegram/r
 import { startExplorador } from './telegram/explorador.js';
 import { Reviews } from './db.js';
 import { readToken, targets, notifyReview, startReviews, GIFT_SLUGS } from './resenas.js';
+import { startSecuencia, darDeBaja } from './correos.js';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.mp4': 'video/mp4',
@@ -132,6 +133,11 @@ const REGALOS = {
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
 };
 // ⭐ Reseñas reales con enlace firmado
+on('GET', '/baja', (req, res, _, url) => {  // darse de baja de los correos (enlace firmado)
+  const ok = darDeBaja(url.searchParams.get('t'));
+  res.writeHead(ok ? 200 : 400, { 'content-type': 'text/html; charset=utf-8' });
+  res.end(`<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#07060f;color:#eee;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h2>${ok ? '✅ Listo, ya no te enviaremos correos' : 'Enlace no válido'}</h2><p style="color:#a29fc0">${ok ? 'Tus descargas y tu cupón siguen funcionando. Si cambias de idea, vuelve cuando quieras 💜' : 'Escríbenos por Telegram desde la tienda y te ayudamos.'}</p><p><a style="color:#b9a6ff" href="/">Ir a la tienda</a></p></div>`);
+});
 on('GET', '/resena', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('resena.html')); });
 on('GET', '/api/resena', (req, res, _p, url) => {
   const ts = targets(readToken(url.searchParams.get('t')));
@@ -496,4 +502,4 @@ if (binanceAutoVerify()) setInterval(async () => {
   }
 }, 60_000);
 
-if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); startReviews(); }
+if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); startReviews(); startSecuencia(); }

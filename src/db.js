@@ -319,7 +319,7 @@ export const Reviews = {
   approved: (pid, limit = 30) => db.prepare(`SELECT name, stars, text, source, created_at FROM reviews WHERE product_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT ?`).all(pid, limit),
   summary: (pid) => db.prepare(`SELECT COUNT(*) n, ROUND(AVG(stars),1) avg FROM reviews WHERE product_id = ? AND status = 'approved'`).get(pid),
   ordersToAsk: () => db.prepare(`SELECT * FROM orders WHERE status='paid' AND review_asked=0 AND paid_at < datetime('now','-2 days') AND paid_at > datetime('now','-10 days')`).all(),
-  subsToAsk: () => db.prepare(`SELECT * FROM subscribers WHERE review_asked=0 AND source LIKE 'regalo:%' AND created_at < datetime('now','-1 day') AND created_at > datetime('now','-7 days')`).all(),
+  subsToAsk: () => db.prepare(`SELECT * FROM subscribers WHERE review_asked=0 AND COALESCE(unsub,0)=0 AND source LIKE 'regalo:%' AND created_at < datetime('now','-1 day') AND created_at > datetime('now','-7 days')`).all(),
   markOrderAsked: (id) => db.prepare('UPDATE orders SET review_asked=1 WHERE id=?').run(id),
   markSubAsked: (email) => db.prepare('UPDATE subscribers SET review_asked=1 WHERE email=?').run(email),
 };

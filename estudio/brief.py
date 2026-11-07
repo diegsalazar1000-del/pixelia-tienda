@@ -1,5 +1,5 @@
 """Brief creativo con IA: a partir del producto, Claude decide público, colores, textos, voz y música."""
-import json, os, urllib.request
+import pathlib, json, os, urllib.request
 
 GENEROS = ["reggaeton", "pop", "electronica", "lofi", "acustica", "cumbia", "trap"]
 ESTILOS = ["color", "neon", "minimal", "tiktok"]
@@ -199,6 +199,13 @@ def precio_dicho(p):
         return f"{e} dólares con {c}" if c else f"{e} dólares"
     except Exception: return str(p)
 
+def aprendizaje(campo="texto"):
+    """Lo que aprendimos de los anuncios en Meta (lo escribe la tienda en data/aprendizaje-resumen.json cada lunes)."""
+    try:
+        d = json.loads((pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia")) / "data" / "aprendizaje-resumen.json").read_text())
+        return d.get(campo) or ("" if campo == "texto" else [])
+    except Exception: return "" if campo == "texto" else []
+
 def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=None, api_key=None, model=None, force_format=None, stock=False, extra=None):
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     model = model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
@@ -214,6 +221,8 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     if not float(prod.get("price") or 0):
         forzar.append("ES UN REGALO GRATIS (se descarga dejando el correo en pixeliadigital.app/regalo). El cierre invita a COMENTAR una palabra clave corta en mayúsculas relacionada (ej. AHORRO o NAVIDAD) y a descargarlo gratis; en 'precio' di 'gratis' y usa cta 'DESCÁRGALO GRATIS'. Genera curiosidad y ganas de compartirlo/guardarlo.")
     if extra: forzar.append(extra)
+    ap = aprendizaje()
+    if ap: forzar.append("APRENDIZAJE DE NUESTRAS CAMPAÑAS REALES (úsalo para decidir gancho, formato y tono; no copies frases literales):\n" + ap)
     prompt = STORY_PROMPT.format(
         producto=json.dumps({k: prod.get(k) for k in ("title", "short", "description")}, ensure_ascii=False)[:1500],
         publico=B.get("publico", ""), investigacion=json.dumps({k: (B.get("investigacion") or {}).get(k) for k in ("publico_real", "anuncios")}, ensure_ascii=False)[:3000] if B.get("investigacion") else "no disponible", paginas=json.dumps({i: t for i, t in enumerate(titles)}, ensure_ascii=False),

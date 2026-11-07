@@ -67,9 +67,12 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
   await say(`⏳ 1/4 Creando la campaña (objetivo: visitas a la página)…`);
   const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION',
     daily_budget: Math.round(presupuesto * 100), bid_strategy: 'LOWEST_COST_WITHOUT_CAP' });
-  await say('⏳ 2/4 Armando el público (países, edad, intereses)…');
-  const ints = await idsIntereses((publico.intereses?.length ? publico.intereses : interesesPara(p)).slice(0, 8));
-  const targeting = { geo_locations: { countries: PAISES }, age_min: Math.max(18, Number(publico.edad_min) || 24), age_max: Math.min(65, Number(publico.edad_max) || 45),
+  await say(publico.audiencias?.length ? '⏳ 2/4 Armando el público (tus interesados reales)…' : '⏳ 2/4 Armando el público (países, edad, intereses)…');
+  const aud = (publico.audiencias || []).filter(Boolean);
+  const ints = aud.length ? [] : await idsIntereses((publico.intereses?.length ? publico.intereses : interesesPara(p)).slice(0, 8));
+  const targeting = aud.length ? {  // 🎯 remarketing / similares: el público ya está definido, sin intereses ni edad estrecha
+    geo_locations: { countries: PAISES }, age_min: 18, age_max: 65, targeting_automation: { advantage_audience: 0 },
+    custom_audiences: aud.map((id) => ({ id })), ...((publico.excluir || []).filter(Boolean).length ? { excluded_custom_audiences: publico.excluir.filter(Boolean).map((id) => ({ id })) } : {}) } : { geo_locations: { countries: PAISES }, age_min: Math.max(18, Number(publico.edad_min) || 24), age_max: Math.min(65, Number(publico.edad_max) || 45),
     ...(publico.generos === 'mujeres' || !publico.generos ? { genders: [2] } : publico.generos === 'hombres' ? { genders: [1] } : {}),
     targeting_automation: { advantage_audience: 0 }, ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
@@ -89,7 +92,7 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     ads.push({ letra, id: ad.id, nombre: v.nombre || v.tipo });
   }
   await say('⏳ 4/4 Listo, revisando…');
-  return { camp: camp.id, set: set.id, ads, moneda: c.currency, intereses: ints.map((i) => i.name),
+  return { camp: camp.id, set: set.id, ads, moneda: c.currency, intereses: aud.length ? [publico.etiqueta || 'interesados reales'] : ints.map((i) => i.name),
     url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${act.replace('act_', '')}&selected_campaign_ids=${camp.id}` };
 }
 
@@ -144,4 +147,17 @@ export async function tamanos(ids) {
     if (r) out[k] = { nombre: r.name, min: r.approximate_count_lower_bound, max: r.approximate_count_upper_bound };
   }
   return out;
+}
+
+/** 👥 Públicos similares (lookalike 1%) a partir de los interesados reales, en los mismos países. Meta pide ~100 personas en el público de origen. */
+export async function crearSimilares(ids) {
+  const act = env('META_AD_ACCOUNT'), res = {}, errores = [];
+  for (const [clave, nombre] of [['regalo', 'bajaron el regalo'], ['vieron', 'vieron un producto'], ['compradores', 'compradores']]) {
+    if (!ids[clave] || ids['sim_' + clave]) { if (ids['sim_' + clave]) res['sim_' + clave] = ids['sim_' + clave]; continue; }
+    try {
+      res['sim_' + clave] = (await api('POST', `${act}/customaudiences`, { name: `Pixelia · Similares a quienes ${nombre} (1%)`, subtype: 'LOOKALIKE', origin_audience_id: ids[clave],
+        lookalike_spec: { type: 'similarity', ratio: 0.01, location_spec: { geo_locations: { countries: PAISES } } } })).id;
+    } catch (e) { errores.push(`${nombre}: ${/at least|100|too small|pequeñ/i.test(e.message) ? 'todavía tiene muy poca gente (Meta pide ~100)' : e.message}`); }
+  }
+  return { ids: res, errores };
 }

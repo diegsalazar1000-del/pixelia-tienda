@@ -255,7 +255,7 @@ async function start() {
   CFG = await api('/api/config'); checkoutWeb();
   if (UPSELL?.email && $('#email')) $('#email').value = UPSELL.email;
   // cupón guardado de una visita anterior
-  let saved = ''; try { saved = localStorage.getItem('px_coupon') || ''; } catch {}
+  let saved = ''; try { saved = QS.get('cupon') || localStorage.getItem('px_coupon') || ''; if (QS.get('cupon')) localStorage.setItem('px_coupon', saved); } catch {}  // ?cupon= viene del correo
   if (saved && !P.pack && !UPSELL) applyCoupon(saved).then(() => { const w = $('#welcome'); if (w) w.remove(); }).catch(() => { try { localStorage.removeItem('px_coupon'); } catch {} });
 }
 start();

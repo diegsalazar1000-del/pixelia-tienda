@@ -194,7 +194,8 @@ def ranked_formats(prod, B, brief_file):
     if not B.get("formatos_rank"):
         B["formatos_rank"] = brief_mod.rank_formats(prod, B)
         brief_file.write_text(json.dumps(B, ensure_ascii=False, indent=2))
-    return B["formatos_rank"]
+    ganadores = [f for f in brief_mod.aprendizaje("formatos_ganadores") if f in brief_mod.FORMATOS]  # lo que ganó en Meta va primero
+    return list(dict.fromkeys(ganadores + B["formatos_rank"]))
 
 def next_format(prod, B, brief_file, out):
     """'Otra variante': el siguiente formato mejor valorado que no se usó en los últimos reels."""
@@ -459,6 +460,9 @@ def main():
             J = api("POST", "/api/studio/next", {})
             if J: print("Trabajo", J["job"], J["product"]["slug"], flush=True); run_job(J); continue
             for g in musica.pending_requests(): auto_scout(g, force=True)
+            try:
+                import tarjetas; tarjetas.pendientes(PIXELIA)  # tarjeta del consejo de la semana (calendario de Instagram)
+            except Exception as e: print("tarjetas:", e, flush=True)
         except Exception as e:
             print("Error de conexión con la tienda:", e, flush=True)
         time.sleep(10)

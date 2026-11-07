@@ -71,7 +71,7 @@ Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
 ${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas, solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas, 2-3 productos en "mundo" y 2-3 en "plr".'}`;
 }
 
-async function askClaude(text) {
+export async function askClaude(text) {
   const body = { model: process.env.EXPLORER_MODEL || 'claude-sonnet-5-5', max_tokens: 12000,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(process.env.EXPLORER_SEARCHES || 10) }],
     messages: [{ role: 'user', content: text }] };
