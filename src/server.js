@@ -112,6 +112,9 @@ function renderPage(name, vars = {}) {
   return html.replace(/\{\{(\w+)\}\}/g, (_, k) => all[k] ?? '');
 }
 
+/** Modo dueño: cookie pxd=1 (se pone con ?soy=dueno). Sus visitas y compras no cuentan en estadísticas. */
+const esDueno = (req) => /(^|;\s*)pxd=1/.test(req.headers.cookie || '');
+
 const routes = [];
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
@@ -121,7 +124,7 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
   const p = Products.bySlug(slug);
   if (!p || !p.active) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }
   const pp = publicProduct(p);
-  if (!/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '')) Products.view(p.id);
+  if (!/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '') && !esDueno(req) && !/[?&]soy=dueno/.test(req.url)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
@@ -222,7 +225,7 @@ on('POST', '/api/orders', async (req, res) => {
   if (b.bump && !pr.upsell_of) { const bi = bumpInfo(p); if (bi && bi.slug === b.bump) { pr.cents += Math.round(bi.bumpPrice * 100); extra.bump_id = Products.bySlug(bi.slug).id; } }
   if (b.method === 'paypal') {
     if (!paypalEnabled()) return fail(res, 400, 'PayPal no está activo');
-    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'paypal', amount_cents: pr.cents, currency: 'USD', lang: b.lang, ...extra });
+    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'paypal', amount_cents: pr.cents, currency: 'USD', lang: b.lang, prueba: esDueno(req), ...extra });
     try {
       const paypalId = await createPaypalOrder(o, p);
       Orders.update(o.id, { provider_ref: paypalId });
@@ -231,7 +234,7 @@ on('POST', '/api/orders', async (req, res) => {
   }
   if (b.method === 'binance') {
     if (!binanceEnabled()) return fail(res, 400, 'Binance no está activo');
-    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'binance', amount_cents: uniqueAmount(pr.cents), currency: 'USDT', lang: b.lang, ...extra });
+    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'binance', amount_cents: uniqueAmount(pr.cents), currency: 'USDT', lang: b.lang, prueba: esDueno(req), ...extra });
     return json(res, 200, { id: o.id, key: orderKey(o.id), amount: (o.amount_cents / 100).toFixed(2), payId: config.binance.payId });
   }
   return fail(res, 400, 'Método de pago no válido');

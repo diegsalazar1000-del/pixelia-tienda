@@ -105,7 +105,8 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN bundle_ids TEXT DEFAULT ''",   // pack: ids de los productos incluidos, ej "3,5,8"
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",
-  "ALTER TABLE orders ADD COLUMN bump_id INTEGER",                  // "agrega también" en el pago (2º producto con descuento)      // pedido original cuando es "completa tu pack"
+  "ALTER TABLE orders ADD COLUMN bump_id INTEGER",
+  "ALTER TABLE orders ADD COLUMN prueba INTEGER DEFAULT 0",          // compra hecha en "modo dueño" (no cuenta en estadísticas)                  // "agrega también" en el pago (2º producto con descuento)      // pedido original cuando es "completa tu pack"
 ]) { try { db.exec(sql); } catch {} }
 
 // Suscriptores: dejan su correo a cambio de un cupón de primera compra
@@ -176,7 +177,7 @@ export const Products = {
   bumpFor(p) {
     const ok = (x) => x && x.id !== p.id && x.active && !x.bundle_ids && x.price_cents > 0 && (x.file_name || x.external_url);
     const co = db.prepare(`SELECT o2.product_id id, COUNT(*) n FROM orders o1 JOIN orders o2 ON o1.email = o2.email AND o1.email != '' AND o2.product_id != o1.product_id
-      WHERE o1.product_id = ? AND o1.status = 'paid' AND o2.status = 'paid' GROUP BY o2.product_id ORDER BY n DESC LIMIT 5`).all(p.id);
+      WHERE o1.product_id = ? AND o1.status = 'paid' AND o2.status = 'paid' AND o1.prueba = 0 AND o2.prueba = 0 GROUP BY o2.product_id ORDER BY n DESC LIMIT 5`).all(p.id);
     for (const r of co) { const x = Products.byId(r.id); if (ok(x)) return x; }
     const all = Products.list().filter(ok);
     return all.find((x) => x.category === p.category) || all.sort((a, b) => b.sales - a.sales)[0] || null;
@@ -193,9 +194,9 @@ export const Products = {
         CAST(julianday('now') - julianday(COALESCE(p.launched_at, p.created_at)) AS INTEGER) AS days_live,
         (SELECT COALESCE(SUM(views),0) FROM product_views v WHERE v.product_id = p.id AND v.day >= date('now', :since)) AS views,
         (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id AND o.created_at >= datetime('now', :since)) AS checkouts,
-        (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id AND o.status = 'paid' AND o.paid_at >= datetime('now', :since)) AS sales,
+        (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id AND o.status = 'paid' AND o.prueba = 0 AND o.paid_at >= datetime('now', :since)) AS sales,
         (SELECT COALESCE(SUM(CASE WHEN o.currency = 'XTR' THEN o.amount_cents * 1.3 ELSE o.amount_cents END),0) FROM orders o
-          WHERE o.product_id = p.id AND o.status = 'paid' AND o.paid_at >= datetime('now', :since)) AS revenue_cents,
+          WHERE o.product_id = p.id AND o.status = 'paid' AND o.prueba = 0 AND o.paid_at >= datetime('now', :since)) AS revenue_cents,
         p.sales AS sales_total
       FROM products p WHERE p.active = 1 ORDER BY sales DESC, views DESC`).all({ since });
   },
@@ -258,10 +259,10 @@ export const Candidates = {
 
 export const Orders = {
   create(o) {
-    const id = newOrderId(); actividad('pago');
-    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
-      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null);
+    const id = newOrderId(); if (!o.prueba) actividad('pago');
+    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id, prueba)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
+      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null, o.prueba ? 1 : 0);
     return Orders.get(id);
   },
   get: (id) => db.prepare('SELECT * FROM orders WHERE id = ?').get(String(id || '').toUpperCase()),
@@ -294,7 +295,7 @@ export const Orders = {
   amountTaken: (cents) => !!db.prepare(`SELECT 1 FROM orders WHERE method='binance' AND status IN ('pending','review')
     AND amount_cents = ? AND created_at > datetime('now','-2 days')`).get(cents),
   stats: () => db.prepare(`SELECT COUNT(*) orders, COALESCE(SUM(CASE WHEN currency!='XTR' THEN amount_cents END),0) usd_cents,
-    COALESCE(SUM(CASE WHEN currency='XTR' THEN amount_cents END),0) stars FROM orders WHERE status='paid'`).get(),
+    COALESCE(SUM(CASE WHEN currency='XTR' THEN amount_cents END),0) stars FROM orders WHERE status='paid' AND prueba=0`).get(),
 };
 
 // ===== Reseñas reales (verificadas): se piden después de comprar o de descargar un regalo; el admin modera =====
@@ -319,7 +320,7 @@ export const Reviews = {
   setStatus: (id, s) => db.prepare('UPDATE reviews SET status = ? WHERE id = ?').run(s, id),
   approved: (pid, limit = 30) => db.prepare(`SELECT name, stars, text, source, created_at FROM reviews WHERE product_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT ?`).all(pid, limit),
   summary: (pid) => db.prepare(`SELECT COUNT(*) n, ROUND(AVG(stars),1) avg FROM reviews WHERE product_id = ? AND status = 'approved'`).get(pid),
-  ordersToAsk: () => db.prepare(`SELECT * FROM orders WHERE status='paid' AND review_asked=0 AND paid_at < datetime('now','-2 days') AND paid_at > datetime('now','-10 days')`).all(),
+  ordersToAsk: () => db.prepare(`SELECT * FROM orders WHERE status='paid' AND prueba=0 AND review_asked=0 AND paid_at < datetime('now','-2 days') AND paid_at > datetime('now','-10 days')`).all(),
   subsToAsk: () => db.prepare(`SELECT * FROM subscribers WHERE review_asked=0 AND COALESCE(unsub,0)=0 AND source LIKE 'regalo:%' AND created_at < datetime('now','-1 day') AND created_at > datetime('now','-7 days')`).all(),
   markOrderAsked: (id) => db.prepare('UPDATE orders SET review_asked=1 WHERE id=?').run(id),
   markSubAsked: (email) => db.prepare('UPDATE subscribers SET review_asked=1 WHERE email=?').run(email),

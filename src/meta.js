@@ -8,10 +8,12 @@ const sha = (v) => crypto.createHash('sha256').update(String(v).trim().toLowerCa
 export function pixelSnippet() {
   const id = config.meta.pixelId;
   if (!id) return '<script>window.fbq=function(){};</script>';
-  return `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  // Modo dueño: ?soy=dueno guarda una cookie y el píxel no envía nada desde ese navegador (?soy=cliente la quita).
+  const dueno = `<script>(function(){try{var q=location.search;if(/[?&]soy=dueno/.test(q))document.cookie='pxd=1;path=/;max-age=31536000;samesite=lax';if(/[?&]soy=cliente/.test(q))document.cookie='pxd=;path=/;max-age=0';if(/(^|; )pxd=1/.test(document.cookie)){window.PXD=1;window.fbq=function(){};}}catch(e){}})();</script>`;
+  return dueno + `<script>!function(f,b,e,v,n,t,s){if(f.fbq||f.PXD)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
 if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','${id.replace(/\D/g, '')}');fbq('track','PageView');</script>`;
+if(!window.PXD){fbq('init','${id.replace(/\D/g, '')}');fbq('track','PageView');}</script>`;
 }
 
 /** Envía la compra por el servidor (con el mismo event_id que el píxel para no contarla dos veces). */
