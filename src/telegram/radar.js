@@ -260,7 +260,7 @@ function clipOptions(pid, cid) {
 // 🎬 Prompts para Gemini (Veo): el clip realista que abre el anuncio. Diego lo pega en la app de Gemini y nos manda el video.
 const GEMINI_EJEMPLOS = `Vertical 9:16 video, realistic, handheld smartphone look. Night, small kitchen table lit by a warm lamp. A Latina woman in her early 30s, wearing a hoodie, is surrounded by crumpled receipts, bills and an open wallet with only a few coins. Her phone keeps buzzing with notifications. She drops her head on the table in comic frustration, then looks straight at the camera and says in neutral Latin American Spanish: "¿En qué se me fue el sueldo… otra vez?" Then she slowly turns a laptop toward the camera; the screen glows with a colorful dashboard of charts, out of focus. She raises an eyebrow and smiles, relieved. Natural sounds: phone buzzing, paper rustling, a soft sigh. No on-screen text, no logos, no brand names.
 
-Vertical 9:16 video, realistic, handheld party footage feel. A cheerful baby shower in a living room decorated with pastel pink, blue and beige balloons and a small cake. A group of women friends of different ages sit around a table holding printed game boards and using beans as markers, laughing. One woman reads a card aloud in a playful voice, everyone leans in with suspense. Suddenly the pregnant guest of honor jumps up, raises her board and shouts in neutral Latin American Spanish: "¡LOTERÍA!" Everyone screams and laughs, one friend throws beans in the air. Warm natural daylight, joyful atmosphere. Natural sounds: laughter, cheering, chairs moving. No on-screen text, no logos, no brand names.`;
+Vertical 9:16 video, realistic, handheld party footage feel. A cheerful baby shower in a living room decorated with pastel pink, blue and beige balloons and a small cake. A group of women friends of different ages sit around a table holding printed game boards and using beans as markers, laughing. One woman reads a card aloud in a playful voice, everyone leans in with suspense. Suddenly the pregnant guest of honor jumps up, raises her board and shouts in neutral Latin American Spanish: "¡LOTERÍA!" Everyone screams, laughs and hugs her, then they all freeze smiling at the camera. Warm natural daylight, joyful atmosphere. Natural sounds: laughter, cheering, chairs moving. No on-screen text, no logos, no brand names.`;
 
 async function geminiPrompts(pid) {
   const p = Products.byId(Number(pid));
@@ -275,13 +275,16 @@ Producto: ${JSON.stringify({ titulo: p.title, frase: p.short, descripcion: Strin
 Público: ${JSON.stringify(B.publico || '')} ${B.investigacion ? 'Investigación real: ' + JSON.stringify(B.investigacion.publico_real || {}).slice(0, 1500) : ''}
 Así de buenos tienen que ser (estos dos funcionaron perfecto, mismo nivel de detalle y estructura):
 ${GEMINI_EJEMPLOS}
-Reglas:
-- Prompt en INGLÉS (Veo lo entiende mejor) pero lo que se dice va entre comillas en español NEUTRO latinoamericano, 1 frase corta y natural (sin modismos de un país).
-- Siempre "Vertical 9:16 video, realistic". Una sola escena continua, personas latinas reales y diversas, lugar y luz concretos, cámara (handheld, close-up…).
-- En los primeros 2 segundos pasa algo que frena el scroll (gesto exagerado, sorpresa, frustración cómica, grito de alegría).
-- Cuenta una mini historia: el problema o momento que vive ESTE público → reacción fuerte → termina en un momento que conecte con el producto (alivio, celebración, una pantalla o papel brillando DESENFOCADO).
-- Nunca muestres el producto en detalle ni texto legible (la IA de video escribe mal): pantallas y papeles desenfocados.
-- Termina siempre con "Natural sounds: …" y "No on-screen text, no logos, no brand names."
+Reglas (Veo se equivoca cuando pasan muchas cosas: menos es más):
+- Prompt en INGLÉS (Veo lo entiende mejor); lo que se dice va entre comillas en español NEUTRO latinoamericano, 1 frase corta y natural (sin modismos de un país).
+- Empieza con "Vertical 9:16 video, realistic, 8 seconds, one single continuous shot, no cuts." Cámara FIJA o un acercamiento lento (slow push-in); nada de movimientos bruscos.
+- Máximo 2 ACCIONES simples y una sola emoción fuerte (ej. suspira frustrada → sonríe aliviada). 1 o 2 personas como máximo.
+- PROHIBIDO lo que Veo hace mal: lanzar u objetos volando, vaciar o derramar cosas, monedas o líquidos cayendo, abrir/cerrar tapas, manos manipulando objetos pequeños, texto o números legibles, pantallas nítidas, cambios de ropa o de lugar.
+- Describe el ESTADO FIJO de cada objeto y di que no cambia (ej. "an open glass jar without a lid that stays still on the table the whole time"). Describe el lugar con 3-4 detalles concretos y añade "the room and furniture stay exactly the same".
+- Si aparece algo parecido al producto, que sea un PROP simple y DESENFOCADO o visto de lado, parecido a lo real: describe solo su forma y colores (ej. para un reto de ahorro "a printed letter-size sheet with a grid of small pastel circles, some colored in"; para un planner "a pastel printed planner page"; para una plantilla de Excel "a laptop screen softly glowing with colorful charts, out of focus"). Nunca texto legible.
+- En los primeros 2 segundos pasa algo que frena el scroll (gesto exagerado, cara de sorpresa, frustración cómica, mirada a cámara).
+- TERMINA en una pose quieta y feliz que dure el último segundo (para cortar ahí y que entre nuestro producto real).
+- Termina siempre con "Natural sounds: …", "Consistent lighting and objects throughout." y "No on-screen text, no logos, no brand names."
 - Los 2 prompts deben ser situaciones MUY distintas entre sí (lugar, personas, emoción; uno puede ser cómico).
 - No repitas ideas parecidas a estas anteriores: ${JSON.stringify(hist.slice(-8).map((h) => h.idea))}
 Devuelve SOLO JSON: {"prompts": [{"idea": "la situación en 6-10 palabras en español", "gancho": "texto corto (≤ 5 palabras) que pondremos encima", "prompt": "..."}]}`, 3000);
