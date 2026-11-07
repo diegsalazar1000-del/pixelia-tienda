@@ -26,3 +26,5 @@ data/ig-pendientes/
 data/horarios.json
 estudio/fonts/web/
 data/creativos/
+data/gasto-claude.jsonl
+data/gasto-recargas.json
