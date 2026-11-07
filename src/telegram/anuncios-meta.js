@@ -110,3 +110,38 @@ export async function resultados(campId) {
   const r = await api('GET', `${campId}/insights`, { fields: 'spend,impressions,reach,clicks,cpc,ctr,actions', date_preset: 'last_7d' });
   return r.data?.[0] || null;
 }
+
+// ===== 🎯 Públicos de interesados reales (según lo que hacen en la web y en Instagram/Facebook) =====
+const DIAS = (d) => d * 86400;
+const evento = (pixel, ev, dias) => ({ event_sources: [{ id: pixel, type: 'pixel' }], retention_seconds: DIAS(dias), filter: { operator: 'and', filters: [{ field: 'event', operator: 'eq', value: ev }] } });
+export function definicionesPublicos() {
+  const px = env('META_PIXEL_ID'), ig = env('META_IG_ID'), page = env('META_PAGE_ID'), out = [];
+  if (px) {
+    out.push({ clave: 'vieron', nombre: 'Pixelia · Vieron un producto (30 días)', rule: { inclusions: { operator: 'or', rules: [evento(px, 'ViewContent', 30)] } } });
+    out.push({ clave: 'regalo', nombre: 'Pixelia · Bajaron el regalo (90 días)', rule: { inclusions: { operator: 'or', rules: [evento(px, 'Lead', 90)] } } });
+    out.push({ clave: 'casi', nombre: 'Pixelia · Empezaron a pagar y no compraron (14 días)', rule: { inclusions: { operator: 'or', rules: [evento(px, 'InitiateCheckout', 14)] }, exclusions: { operator: 'or', rules: [evento(px, 'Purchase', 14)] } } });
+    out.push({ clave: 'compradores', nombre: 'Pixelia · Compradores (180 días)', rule: { inclusions: { operator: 'or', rules: [evento(px, 'Purchase', 180)] } } });
+  }
+  if (ig) out.push({ clave: 'ig', nombre: 'Pixelia · Interactuaron en Instagram (365 días)', rule: { inclusions: { operator: 'or', rules: [{ event_sources: [{ id: ig, type: 'ig_business' }], retention_seconds: DIAS(365), filter: { operator: 'and', filters: [{ field: 'event', operator: 'eq', value: 'ig_business_profile_all' }] } }] } } });
+  if (page) out.push({ clave: 'fb', nombre: 'Pixelia · Interactuaron en Facebook (365 días)', rule: { inclusions: { operator: 'or', rules: [{ event_sources: [{ id: page, type: 'page' }], retention_seconds: DIAS(365), filter: { operator: 'and', filters: [{ field: 'event', operator: 'eq', value: 'page_engaged' }] } }] } } });
+  return out;
+}
+/** Crea los públicos que falten; devuelve {clave: id}. */
+export async function crearPublicos(existentes = {}) {
+  const act = env('META_AD_ACCOUNT'), res = { ...existentes }, errores = [];
+  for (const d of definicionesPublicos()) {
+    if (res[d.clave]) continue;
+    try { res[d.clave] = (await api('POST', `${act}/customaudiences`, { name: d.nombre, rule: d.rule, prefill: true, ...(d.clave === 'ig' || d.clave === 'fb' ? {} : {}) })).id; }
+    catch (e) { errores.push(`${d.nombre}: ${e.message}`); }
+  }
+  return { ids: res, errores };
+}
+/** Tamaño aproximado de cada público (Meta da rangos; < 1000 suele mostrarse como "menos de 1000"). */
+export async function tamanos(ids) {
+  const out = {};
+  for (const [k, id] of Object.entries(ids)) {
+    const r = await api('GET', id, { fields: 'name,approximate_count_lower_bound,approximate_count_upper_bound,operation_status' }).catch(() => null);
+    if (r) out[k] = { nombre: r.name, min: r.approximate_count_lower_bound, max: r.approximate_count_upper_bound };
+  }
+  return out;
+}

@@ -215,7 +215,9 @@ function binanceSteps(o) {
       <li>Abre Binance → <b>Pay</b> → <b>Enviar</b>.</li>
       <li>Envía <b>exactamente</b> este importe en USDT (los céntimos identifican tu pedido):
         <div class="copy"><b>${o.amount} USDT</b><button data-c="${o.amount}">${t('copy')}</button></div></li>
-      <li>Al Binance Pay ID:<div class="copy"><b>${escH(o.payId)}</b><button data-c="${escH(o.payId)}">${t('copy')}</button></div></li>
+      <li>Al Binance Pay ID:<div class="copy"><b>${escH(o.payId)}</b><button data-c="${escH(o.payId)}">${t('copy')}</button></div>
+        <div class="bqr" style="margin-top:10px;text-align:center"><img src="/binance-qr.jpg" alt="QR de Binance Pay" style="width:190px;max-width:70%;border-radius:14px;background:#fff;padding:8px" onerror="this.parentNode.remove()">
+        <div style="font-size:.82rem;color:var(--mut)">o escanéalo desde Binance → Pay → Escanear</div></div></li>
       <li>Copia el <b>ID de orden</b> que te muestra Binance y pégalo aquí:</li>
     </ol>
     <div class="field" style="margin-top:10px"><input id="ref" placeholder="ID de orden de Binance" inputmode="numeric"></div>

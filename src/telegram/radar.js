@@ -7,7 +7,8 @@ import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
-import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio } from './anuncios-meta.js';
+import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio, crearPublicos, tamanos } from './anuncios-meta.js';
+import { Subscribers, Orders } from '../db.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -325,9 +326,9 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 🎵 <b>Música</b>
 /musica — ver cuántas canciones hay por género.
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
-🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
+🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.\n🔳 Mandar la foto de tu QR de Binance Pay escribiendo <code>qr binance</code> → sale al pagar con Binance.
 
-/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B) y qué te recomiendo (llega solo cada lunes).\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B), embudo de interesados y qué te recomiendo (llega solo cada lunes).\n/publicos — crea en Meta los públicos de interesados reales (web, Instagram y Facebook).\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -350,7 +351,23 @@ function ultimoReel(pid) {
   return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
 }
 // 📊 Campañas en Meta (todo en pausa hasta que Diego toca Activar)
+const PUB_F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'publicos.json');
+const pubIds = () => { try { return JSON.parse(fs.readFileSync(PUB_F, 'utf8')); } catch { return {}; } };
+/** Embudo de los últimos 7 días con datos de la tienda: quién bajó el regalo y qué hizo después. */
+function embudo() {
+  const desde = Date.now() - 7 * 86400e3, subs = Subscribers.list(5000).filter((x) => Date.parse(x.created_at + 'Z') > desde);
+  const mails = new Set(subs.map((x) => x.email));
+  const ords = Orders.recent(2000).filter((o) => o.email && mails.has(String(o.email).toLowerCase()));
+  const iniciaron = new Set(ords.map((o) => o.email.toLowerCase())), pagaron = new Set(ords.filter((o) => o.status === 'paid').map((o) => o.email.toLowerCase()));
+  return `🧲 <b>Embudo (7 días)</b>: ${subs.length} correos nuevos → ${iniciaron.size} entraron a comprar → ${pagaron.size} compraron${subs.length ? ` (${Math.round(100 * iniciaron.size / subs.length)}% muy interesados)` : ''}`;
+}
+async function textoPublicos() {
+  const ids = pubIds(); if (!Object.keys(ids).length) return '';
+  const t = await tamanos(ids).catch(() => ({}));
+  return '🎯 <b>Interesados reales en Meta</b>\n' + Object.values(t).map((x) => `• ${esc(x.nombre.replace('Pixelia · ', ''))}: ${x.max > 0 ? (x.min < 1000 ? 'menos de 1.000' : `${x.min}-${x.max}`) : 'aún vacío'}`).join('\n');
+}
 export async function reporteCampanas(chat) {
+  await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: [embudo(), await textoPublicos()].filter(Boolean).join('\n\n') }).catch(() => {});
   const all = camps().map((c, n) => ({ ...c, n })).filter((c) => c.estado === 'activa');
   if (!all.length) return false;
   for (const c of all) {
@@ -431,7 +448,7 @@ async function previewPublicar(pid) {
     reply_markup: { inline_keyboard: [[{ text: '✅ Sí, publicar', callback_data: `prok:${x.p.id}:${x.job.id}` }, { text: '❌ No', callback_data: 'x:0' }]] } });
 }
 
-async function onMessage(m) {
+export async function onMessage(m) {
   if (String(m.chat?.id) !== String(config.telegram.adminChatId)) return;
   const text = (m.text || '').trim();
   if (text.startsWith('/anuncios')) {
@@ -440,9 +457,23 @@ async function onMessage(m) {
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿De qué producto creo anuncios?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `ad:${p.id}:` }]) } });
   }
+  if ((m.photo || (m.document && /^image\//i.test(m.document.mime_type || ''))) && /binance|qr/i.test(m.caption || '')) {  // QR de Binance Pay para el pago
+    const f = m.photo ? m.photo[m.photo.length - 1] : m.document;
+    const info = await rtg('getFile', { file_id: f.file_id });
+    const r = await fetch(`https://api.telegram.org/file/bot${token()}/${info.file_path}`);
+    fs.writeFileSync(path.join(path.dirname(MUSIC_DIR), 'binance-qr.jpg'), Buffer.from(await r.arrayBuffer()));
+    return send(`✅ QR de Binance guardado. Ya aparece al pagar con Binance: ${esc(config.baseUrl)}/binance-qr.jpg`);
+  }
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/publicos') || text.startsWith('/públicos')) {
+    if (!adsListos()) return send('Falta conectar la cuenta publicitaria.');
+    await send('🎯 Creando en Meta los públicos de interesados reales (vieron un producto, bajaron el regalo, empezaron a pagar, compraron, interactuaron en Instagram y Facebook)…');
+    const r = await crearPublicos(pubIds()).catch((e) => ({ ids: pubIds(), errores: [e.message] }));
+    fs.mkdirSync(path.dirname(PUB_F), { recursive: true }); fs.writeFileSync(PUB_F, JSON.stringify(r.ids));
+    return send(`✅ ${Object.keys(r.ids).length} públicos listos en tu cuenta publicitaria. Se llenan solos con el píxel y con quien interactúa en tus redes.\n\n${await textoPublicos()}${r.errores.length ? `\n\n⚠️ ${esc(r.errores.join('\n'))}` : ''}\n\nCuando tengan gente, los usamos para mostrarles los productos de pago (los más calientes primero).`);
+  }
   if (text.startsWith('/reporte')) return reporteCampanas(m.chat.id).then((ok) => ok || send('No hay campañas activas todavía.')).catch((e) => send(`⚠️ ${esc(e.message)}`));
   if (text.startsWith('/campanas') || text.startsWith('/campañas')) {
     const all = camps().map((c, n) => ({ ...c, n })).filter((c) => c.estado !== 'borrada').slice(-8);
@@ -693,7 +724,7 @@ export async function startRadarBot() {
   startReporteSemanal();
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
-    ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
+    ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
     ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
