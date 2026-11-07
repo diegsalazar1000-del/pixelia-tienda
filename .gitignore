@@ -15,3 +15,5 @@ storage/anuncios/
 storage/voces-elevenlabs.json
 data/explorador.json
 storage/clips/
+data/campanas.json
+data/comentarios.json

@@ -7,6 +7,7 @@ import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
+import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES } from './anuncios-meta.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -88,6 +89,7 @@ function pickerKb(pid, sel, sug = {}) {
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
   return [
     ...(redesListas() ? [[{ text: '📤 Publicar este reel en Instagram y Facebook', callback_data: `pr:${pid}:` }]] : []),
+    ...(adsListos() ? [[{ text: '📊 Crear campaña de anuncios (queda en pausa)', callback_data: `cp:${pid}:` }]] : []),
     [{ text: '🎬 Prompt para Gemini (clip realista gratis)', callback_data: `gem:${pid}:` }],
     [{ text: '🧠 Anuncio PRO: investiga + 3 guiones + revisión (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }],
     [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
@@ -322,7 +324,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
 🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
 
-/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -344,6 +346,20 @@ function ultimoReel(pid) {
     : `${base}\n\n🎁 GRATIS · descárgalo en el link de la bio: pixeliadigital.app/regalo\n💬 ¿Lo quieres? Coméntalo y compártelo con quien lo necesite\n\n#gratis #regalo #pixelia #productosdigitales`;
   return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
 }
+// 📊 Campañas en Meta (todo en pausa hasta que Diego toca Activar)
+const CAMP_F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'campanas.json');
+const camps = () => { try { return JSON.parse(fs.readFileSync(CAMP_F, 'utf8')); } catch { return []; } };
+const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true }); fs.writeFileSync(CAMP_F, JSON.stringify(c.slice(-50), null, 1)); };
+function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
+async function previewCampana(pid) {
+  const x = ultimoReel(pid);
+  if (!x || !x.exists) return send('Primero crea un reel de ese producto (/anuncios) y luego toca 📊.');
+  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `📊 <b>Campaña para ${esc(x.p.title)}</b> (se crea EN PAUSA, no gasta hasta que la actives)\n\n` +
+      `🎯 Objetivo: visitas a ${esc(destino(x.p))}\n🌎 Países: ${PAISES.join(', ')}\n👩 Mujeres de 24 a 45 años\n💡 Intereses: ${esc(interesesPara(x.p).join(', '))}\n` +
+      `🎬 Anuncio: tu último reel + este texto:\n<i>${esc(x.caption.slice(0, 300))}</i>\n\n¿Cuánto al día?`,
+    reply_markup: { inline_keyboard: [[2, 3, 5].map((u) => ({ text: `$${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })), [{ text: '❌ No', callback_data: 'x:0' }]] } });
+}
 async function previewPublicar(pid) {
   const x = ultimoReel(pid);
   if (!x || !x.exists) return send('No encontré un reel terminado de ese producto. Crea uno primero con /anuncios.');
@@ -364,6 +380,18 @@ async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/campanas') || text.startsWith('/campañas')) {
+    const all = camps().map((c, n) => ({ ...c, n })).filter((c) => c.estado !== 'borrada').slice(-8);
+    if (!all.length) return send('Aún no hay campañas. Crea un reel y toca 📊 Crear campaña.');
+    for (const c of all) {
+      const r = await resultados(c.camp).catch(() => null);
+      const clics = r ? Number(r.clicks || 0) : 0, gasto = r ? Number(r.spend || 0) : 0;
+      await rtg('sendMessage', { chat_id: m.chat.id, parse_mode: 'HTML',
+        text: `📊 <b>${esc(c.titulo)}</b> · ${c.estado === 'activa' ? '▶️ activa' : '⏸️ en pausa'} · $${c.presupuesto}/día\nÚltimos 7 días: gasto ${gasto.toFixed(2)} ${esc(c.moneda || '')} · ${r?.impressions || 0} vistas · ${clics} clics${clics ? ` · ${(gasto / clics).toFixed(2)} por clic` : ''}`,
+        reply_markup: { inline_keyboard: [[{ text: '👀 Ver en Meta', url: c.url }], c.estado === 'activa' ? [{ text: '⏸️ Pausar', callback_data: `cpa:${c.n}:pause` }] : [{ text: '▶️ Activar', callback_data: `cpa:${c.n}:act` }, { text: '🗑️ Borrar', callback_data: `cpa:${c.n}:del` }]] } });
+    }
+    return;
+  }
   if (text.startsWith('/comentarios')) { await send('🔎 Revisando comentarios de Instagram y Facebook…'); return revisarComentarios().then(() => send('✅ Revisado.')).catch((e) => send(`⚠️ ${esc(e.message)}`)); }
   if (text.startsWith('/publicar')) {
     if (!redesListas()) return send('Todavía no está conectada la API de Meta. En el servidor: <code>cd /opt/pixelia && bash configurar.sh redes</code>');
@@ -456,6 +484,32 @@ export async function onCallback(q) {
     const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
+  }
+  if ((action === 'cp' || action === 'cpb' || action === 'cpa') && String(q.from?.id) === String(config.telegram.adminChatId)) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+    if (!adsListos()) return send('Falta conectar la cuenta publicitaria: <code>bash configurar.sh redes</code> con el token de Pixelia Bot.');
+    if (action === 'cp') return previewCampana(id);
+    if (action === 'cpa') {  // cpa:<n>:act|pause|del
+      const all = camps(); const c = all[Number(id)]; if (!c) return send('No encontré esa campaña.');
+      try {
+        if (opts === 'act') { await activar(c); c.estado = 'activa'; await send(`▶️ Campaña <b>activada</b>. Empieza a gastar ~$${c.presupuesto}/día. Revisa resultados en 2-3 días con /campanas.`); }
+        if (opts === 'pause') { await pausar(c); c.estado = 'pausada'; await send('⏸️ Campaña en pausa.'); }
+        if (opts === 'del') { await borrar(c); c.estado = 'borrada'; await send('🗑️ Campaña borrada.'); }
+        saveCamps(all);
+      } catch (e) { await send(`⚠️ Meta: ${esc(e.message)}`); }
+      return;
+    }
+    const x = ultimoReel(id); if (!x?.exists) return send('No encontré el reel.');
+    await rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [[{ text: '⏳ Creando en pausa…', callback_data: 'x:0' }]] } }).catch(() => {});
+    (async () => {
+      const r = await crearCampana({ p: x.p, videoUrl: x.url, texto: x.caption, titulo: x.p.price_cents ? x.p.title : `GRATIS: ${x.p.title}`, link: destino(x.p), presupuesto: Number(opts) || 3, say: send });
+      const all = camps(); all.push({ ...r, pid: x.p.id, titulo: x.p.title, presupuesto: Number(opts) || 3, estado: 'pausada', fecha: new Date().toISOString() }); saveCamps(all);
+      const n = all.length - 1;
+      await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+        text: `✅ <b>Campaña creada EN PAUSA</b> · ${esc(x.p.title)}\n💵 ${Number(opts) || 3} ${esc(r.moneda)}/día · 💡 ${esc(r.intereses.join(', ') || 'sin intereses (público amplio)')}\n\nRevísala en el Administrador de anuncios. Cuando estés conforme, toca ▶️ Activar.`,
+        reply_markup: { inline_keyboard: [[{ text: '👀 Ver en Meta', url: r.url }], [{ text: '▶️ Activar', callback_data: `cpa:${n}:act` }, { text: '🗑️ Borrar', callback_data: `cpa:${n}:del` }]] } });
+    })().catch((e) => send(`⚠️ No pude crear la campaña: ${esc(e.message)}`));
+    return;
   }
   if (action === 'x') {  // botones "❌ No" / informativos: solo cerrar
     await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Listo, no hice nada.' }).catch(() => {});
@@ -561,7 +615,7 @@ export async function startRadarBot() {
   await rtg('deleteWebhook', {}).catch(() => {});
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
-    ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
+    ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
     ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
