@@ -1,5 +1,6 @@
 // 💬 Comentarios de Instagram y Facebook (cada 5 min, sin gastar Claude):
-// - Quien comenta la palabra (REGALO, AHORRO, NAVIDAD…) recibe respuesta pública con el link del regalo.
+// - SOLO en publicaciones del REGALO (texto con /regalo o #regalo; decisión de Diego): quien comenta la palabra recibe respuesta pública con el link.
+//   En las demás publicaciones no se responde solo: se le avisa a Diego.
 // - Spam, estafas, enlaces raros e insultos se OCULTAN (no se borran) y se avisa a Diego con botones Eliminar / Mostrar.
 // - Preguntas y demás comentarios: aviso a Diego para que responda él.
 // Necesita en el token: instagram_manage_comments, pages_manage_engagement, pages_read_user_content.
@@ -27,6 +28,7 @@ const RESP_PRECIO = [
   '¡Hola! 💜 Todos los precios y la descarga inmediata están en pixeliadigital.app (link en la bio).',
   '¡Gracias por escribir! ✨ Lo encuentras en pixeliadigital.app — pagas con PayPal, tarjeta o Binance y lo descargas al momento.',
 ];
+const esRegalo = (t) => /\/regalo|#regalo\b/i.test(String(t || ''));  // publicación del regalo gratis
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const short = (t) => String(t || '').replace(/\s+/g, ' ').slice(0, 220);
 
@@ -36,7 +38,7 @@ async function igComments() {
   const out = [];
   for (const m of media) {
     const cs = (await call('GET', `${G}/${m.id}/comments`, { fields: 'id,text,username,timestamp,hidden', limit: '50' }).catch(() => ({ data: [] }))).data || [];
-    for (const c of cs) out.push({ red: 'i', id: c.id, text: c.text, user: c.username, ts: c.timestamp, link: m.permalink, post: short(m.caption).slice(0, 40), hidden: c.hidden });
+    for (const c of cs) out.push({ red: 'i', id: c.id, text: c.text, user: c.username, ts: c.timestamp, link: m.permalink, post: short(m.caption).slice(0, 40), hidden: c.hidden, regalo: esRegalo(m.caption) });
   }
   return out;
 }
@@ -46,7 +48,7 @@ async function fbComments() {
   const out = [];
   for (const p of posts) {
     const cs = (await call('GET', `${G}/${p.id}/comments`, { fields: 'id,message,from,created_time,is_hidden', filter: 'stream', limit: '50' }).catch(() => ({ data: [] }))).data || [];
-    for (const c of cs) if (c.from?.id !== page) out.push({ red: 'f', id: c.id, text: c.message, user: c.from?.name || 'alguien', ts: c.created_time, link: p.permalink_url, post: short(p.message).slice(0, 40), hidden: c.is_hidden });
+    for (const c of cs) if (c.from?.id !== page) out.push({ red: 'f', id: c.id, text: c.message, user: c.from?.name || 'alguien', ts: c.created_time, link: p.permalink_url, post: short(p.message).slice(0, 40), hidden: c.is_hidden, regalo: esRegalo(p.message) });
   }
   return out;
 }
@@ -79,7 +81,7 @@ export async function revisarComentarios() {
         await ocultar(c.red, c.id);
         await kb(`🛡️ ${red} · Oculté un comentario de ${who} (${SPAM.test(c.text) ? 'spam/enlace' : 'insulto'}):\n«${esc(short(c.text))}»`,
           [[{ text: '🗑️ Eliminar', callback_data: `cm:d:${c.red}:${c.id}` }, { text: '👁️ Volver a mostrar', callback_data: `cm:s:${c.red}:${c.id}` }]]);
-      } else if (PALABRA.test(c.text) && respuestas < 20) {
+      } else if (c.regalo && PALABRA.test(c.text) && respuestas < 20) {
         const precio = /precio|cu[aá]nto|info|compr/i.test(c.text) && !/regalo|gratis|ahorro|navidad/i.test(c.text);
         await reply(c, pick(precio ? RESP_PRECIO : RESP_REGALO)); respuestas++;
         await say(`💬 ${red} · Respondí a ${who}: «${esc(short(c.text))}»`);
