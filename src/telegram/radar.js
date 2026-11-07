@@ -167,10 +167,11 @@ Productos en tendencia que encontró el radar:
 ${JSON.stringify(pool)}
 Productos que la tienda YA vende: ${JSON.stringify(mine)}
 
-Propón 3 ideas, cada una de uno de estos tipos:
-- "fusion": UN producto nuevo y mejor que combina lo mejor de 2-3 productos de la lista (para el mismo público).
+MÉTODO INVENTOR PIXELIA (obligatorio): no queremos lo "rayado" (planners, trackers o plantillas genéricas). Toma lo que encuentres como MATERIA PRIMA y haz lluvia de ideas: si algo solo ya es bueno y distinto, tómalo; si no, FUSIONA 2-3 hallazgos que nunca van juntos, agrega PERSONALIZACIÓN AUTOMÁTICA por pedido (nombre del niño, mascota, ciudad, fecha: cada compra única), mezcla FÍSICO + DIGITAL (se imprime y se desbloquea algo con QR: audio, pista, página), vende una EXPERIENCIA (una tarde en familia, una fiesta lista, un reto) y usa cultura latina (estampitas, lotería, fiestas). Nuestra ventaja: podemos fabricar productos interactivos (páginas web en la tienda, juegos) y productos que se generan solos por cada pedido, no solo PDFs. Si no ves nada bueno, INVENTA algo nuevo aunque suene raro: mejor 5 ideas audaces que 5 copias. Cada invento con nombre, frase gancho y qué se genera solo.
+Propón 3 ideas (al menos 2 "fusion" audaces), cada una de uno de estos tipos:
+- "fusion": UN producto NUEVO que nadie vende, que combina 2-3 productos de la lista (aunque sean de públicos distintos) aplicando el método inventor.
 - "pack": 3 productos que se complementan para el MISMO público (pueden incluir alguno que la tienda ya vende), para vender a $4.99 cada uno o los 3 a $9.99.
-Todo debe ser contenido ORIGINAL (inspirado en la idea, nunca copiar diseños ni textos). Productos que se puedan fabricar como PDF, planner, plantillas, hojas de cálculo o guías.
+Todo debe ser contenido ORIGINAL (inspirado en la idea, nunca copiar diseños ni textos). Productos que podamos fabricar: PDF imprimible, juegos, hojas de cálculo, páginas web interactivas en la tienda, o generados automáticamente por pedido.
 Devuelve SOLO JSON:
 {"propuestas":[{"tipo":"fusion|pack","nombre":"nombre comercial","publico":"para quién","por_que":"por qué va a vender (1-2 frases)","basado_en":[ids del radar],
 "productos":[{"titulo":"...","emoji":"1 emoji","frase_corta":"máx 90 caracteres","descripcion":"qué incluye, en 4-6 viñetas","contenido":"lista de páginas/secciones para fabricarlo","ya_existe":false}],
