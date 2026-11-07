@@ -39,44 +39,69 @@ export async function cuenta() {
   return api('GET', env('META_AD_ACCOUNT'), { fields: 'name,currency,account_status,min_daily_budget' });
 }
 
-/** Crea campaña + conjunto + anuncio con el reel, TODO EN PAUSA. */
-export async function crearCampana({ p, videoUrl, texto, titulo, link, presupuesto, say }) {
+async function subirVideo(act, url, nombre) {
+  const v = await api('POST', `${act}/advideos`, { file_url: url, name: nombre });
+  for (let i = 0; i < 40; i++) {
+    await sleep(6000);
+    const s = await api('GET', v.id, { fields: 'status,picture' }).catch(() => ({}));
+    if (s.status?.video_status === 'ready' && s.picture) return { id: v.id, thumb: s.picture };
+    if (s.status?.video_status === 'error') throw new Error('Meta no pudo procesar el video');
+  }
+  const t = await api('GET', `${v.id}/thumbnails`, {}).catch(() => ({ data: [] }));
+  const thumb = (t.data || []).find((x) => x.is_preferred)?.uri || t.data?.[0]?.uri;
+  if (!thumb) throw new Error('el video sigue procesándose; prueba de nuevo en unos minutos');
+  return { id: v.id, thumb };
+}
+async function subirImagen(act, url) {
+  const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
+  const r = await api('POST', `${act}/adimages`, { bytes: buf.toString('base64') });
+  return Object.values(r.images || {})[0]?.hash;
+}
+
+/** Crea campaña + conjunto + anuncios A/B (reel, otra variante o imagen), TODO EN PAUSA. */
+export async function crearCampana({ p, variantes, link, presupuesto, publico = {}, say }) {
   const act = env('META_AD_ACCOUNT');
   const c = await cuenta();
   if (c.account_status !== 1) throw new Error('la cuenta publicitaria no está activa (revisa Calidad de la cuenta o el método de pago)');
   const nombre = `Pixelia · ${p.title.slice(0, 40)} · ${new Date().toISOString().slice(0, 10)}`;
-  await say('⏳ 1/5 Subiendo el reel a la cuenta publicitaria…');
-  const v = await api('POST', `${act}/advideos`, { file_url: videoUrl, name: nombre });
-  let thumb = '';
-  for (let i = 0; i < 40; i++) {
-    await sleep(6000);
-    const s = await api('GET', v.id, { fields: 'status,picture' }).catch(() => ({}));
-    if (s.status?.video_status === 'ready') { thumb = s.picture || ''; break; }
-    if (s.status?.video_status === 'error') throw new Error('Meta no pudo procesar el video');
-  }
-  if (!thumb) { const t = await api('GET', `${v.id}/thumbnails`, {}).catch(() => ({ data: [] })); thumb = (t.data || []).find((x) => x.is_preferred)?.uri || t.data?.[0]?.uri || ''; }
-  if (!thumb) throw new Error('el video sigue procesándose; prueba de nuevo en unos minutos');
-  await say('⏳ 2/5 Creando la campaña (objetivo: tráfico)…');
+  await say(`⏳ 1/4 Creando la campaña (objetivo: visitas a la página)…`);
   const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION',
     daily_budget: Math.round(presupuesto * 100), bid_strategy: 'LOWEST_COST_WITHOUT_CAP' });
-  await say('⏳ 3/5 Armando el público (países, edad, intereses)…');
-  const ints = await idsIntereses(interesesPara(p));
-  const targeting = { geo_locations: { countries: PAISES }, age_min: 24, age_max: 45, genders: [2], targeting_automation: { advantage_audience: 0 },
-    ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
+  await say('⏳ 2/4 Armando el público (países, edad, intereses)…');
+  const ints = await idsIntereses((publico.intereses?.length ? publico.intereses : interesesPara(p)).slice(0, 8));
+  const targeting = { geo_locations: { countries: PAISES }, age_min: Math.max(18, Number(publico.edad_min) || 24), age_max: Math.min(65, Number(publico.edad_max) || 45),
+    ...(publico.generos === 'mujeres' || !publico.generos ? { genders: [2] } : publico.generos === 'hombres' ? { genders: [1] } : {}),
+    targeting_automation: { advantage_audience: 0 }, ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });
-  await say('⏳ 4/5 Creando el anuncio con tu reel…');
-  const cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · creativo`, object_story_spec: { page_id: env('META_PAGE_ID'),
-    ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}),
-    video_data: { video_id: v.id, image_url: thumb, message: texto, title: titulo.slice(0, 40),
-      call_to_action: { type: p.price_cents ? 'SHOP_NOW' : 'DOWNLOAD', value: { link } } } } });
-  const ad = await api('POST', `${act}/ads`, { name: `${nombre} · anuncio`, adset_id: set.id, creative: { creative_id: cr.id }, status: 'PAUSED' });
-  await say('⏳ 5/5 Listo, revisando…');
-  return { camp: camp.id, set: set.id, ad: ad.id, moneda: c.currency, intereses: ints.map((i) => i.name),
+  const ads = [];
+  for (const [k, v] of variantes.entries()) {
+    const letra = 'ABCD'[k];
+    await say(`⏳ 3/4 Subiendo el anuncio ${letra} (${v.tipo === 'video' ? 'reel' : 'imagen'})…`);
+    const cta = { type: p.price_cents ? 'SHOP_NOW' : 'DOWNLOAD', value: { link } };
+    let spec;
+    if (v.tipo === 'video') { const vid = await subirVideo(act, v.url, `${nombre} ${letra}`);
+      spec = { video_data: { video_id: vid.id, image_url: vid.thumb, message: v.texto, title: v.titulo.slice(0, 40), call_to_action: cta } };
+    } else { const hash = await subirImagen(act, v.url);
+      spec = { link_data: { image_hash: hash, link, message: v.texto, name: v.titulo.slice(0, 40), call_to_action: cta } }; }
+    const cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: { page_id: env('META_PAGE_ID'), ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}), ...spec } });
+    const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${letra} · ${v.nombre || v.tipo}`, adset_id: set.id, creative: { creative_id: cr.id }, status: 'PAUSED' });
+    ads.push({ letra, id: ad.id, nombre: v.nombre || v.tipo });
+  }
+  await say('⏳ 4/4 Listo, revisando…');
+  return { camp: camp.id, set: set.id, ads, moneda: c.currency, intereses: ints.map((i) => i.name),
     url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${act.replace('act_', '')}&selected_campaign_ids=${camp.id}` };
 }
 
-export async function activar(ids) { for (const id of [ids.ad, ids.set, ids.camp]) await api('POST', id, { status: 'ACTIVE' }); }
+export async function activar(ids) { for (const id of [...(ids.ads || []).map((a) => a.id), ids.ad, ids.set, ids.camp].filter(Boolean)) await api('POST', id, { status: 'ACTIVE' }); }
+export const pausarAnuncio = (adId) => api('POST', adId, { status: 'PAUSED' });
+export const cambiarPresupuesto = (campId, usd) => api('POST', campId, { daily_budget: Math.round(usd * 100) });
+/** Resultados por anuncio (A/B) de los últimos 7 días. */
+export async function porAnuncio(campId) {
+  const r = await api('GET', `${campId}/insights`, { level: 'ad', fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,ctr,actions', date_preset: 'last_7d' });
+  return (r.data || []).map((x) => ({ id: x.ad_id, nombre: x.ad_name, gasto: Number(x.spend || 0), vistas: Number(x.impressions || 0), clics: Number(x.clicks || 0),
+    visitas: Number((x.actions || []).find((a) => a.action_type === 'landing_page_view')?.value || 0) }));
+}
 export async function pausar(ids) { await api('POST', ids.camp, { status: 'PAUSED' }); }
 export async function borrar(ids) { await api('DELETE', ids.camp, {}); }
 

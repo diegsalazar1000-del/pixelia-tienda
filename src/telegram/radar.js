@@ -7,7 +7,7 @@ import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
-import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES } from './anuncios-meta.js';
+import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio } from './anuncios-meta.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -327,7 +327,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
 🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.
 
-/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B) y qué te recomiendo (llega solo cada lunes).\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -350,18 +350,78 @@ function ultimoReel(pid) {
   return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
 }
 // 📊 Campañas en Meta (todo en pausa hasta que Diego toca Activar)
+export async function reporteCampanas(chat) {
+  const all = camps().map((c, n) => ({ ...c, n })).filter((c) => c.estado === 'activa');
+  if (!all.length) return false;
+  for (const c of all) {
+    const ads = await porAnuncio(c.camp).catch(() => []);
+    const tot = ads.reduce((a, x) => ({ g: a.g + x.gasto, v: a.v + x.visitas, k: a.k + x.clics }), { g: 0, v: 0, k: 0 });
+    const lines = ads.map((x) => { const l = (c.ads || []).find((a) => a.id === x.id); return `${l?.letra || '•'} ${esc(l?.nombre || '')}: ${x.gasto.toFixed(2)} gastado · ${x.visitas} visitas · ${x.visitas ? (x.gasto / x.visitas).toFixed(2) + ' por visita' : 'sin visitas'}`; });
+    const conV = ads.filter((x) => x.vistas >= 300);
+    const rows = [];
+    let rec = 'Aún hay pocos datos: déjalo correr unos días más.';
+    if (conV.length >= 2) {
+      const costo = (x) => x.visitas ? x.gasto / x.visitas : Infinity;
+      const [mejor, peor] = [...conV].sort((a, b) => costo(a) - costo(b));
+      const lm = (c.ads || []).find((a) => a.id === mejor.id), lp = (c.ads || []).findIndex((a) => a.id === peor.id);
+      if (costo(peor) > costo(mejor) * 1.3 && lp >= 0) { rec = `Gana ${lm?.letra}: cada visita sale más barata. Te sugiero pausar ${c.ads[lp].letra} y hacer otra versión parecida a ${lm?.letra}.`; rows.push([{ text: `⏸️ Pausar ${c.ads[lp].letra}`, callback_data: `cpx:${c.n}:pa${lp}` }]); }
+      else rec = 'A y B van parecidos: déjalos correr.';
+    }
+    if (tot.v >= 20 && tot.g / Math.max(1, tot.v) < 0.25) { rec += ' Las visitas salen baratas: puedes subir el presupuesto.'; rows.push([{ text: `⬆️ Subir a $${Math.min(10, c.presupuesto + 2)}/día`, callback_data: `cpx:${c.n}:b${Math.min(10, c.presupuesto + 2)}` }]); }
+    rows.push([{ text: '👀 Ver en Meta', url: c.url }, { text: '⏸️ Pausar campaña', callback_data: `cpa:${c.n}:pause` }]);
+    await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: `📈 <b>Reporte · ${esc(c.titulo)}</b> (7 días)\nTotal: ${tot.g.toFixed(2)} ${esc(c.moneda || '')} · ${tot.v} visitas a la página · ${tot.k} clics\n${lines.join('\n') || 'Sin datos todavía.'}\n\n🧠 ${esc(rec)}`, reply_markup: { inline_keyboard: rows } });
+  }
+  return true;
+}
+function startReporteSemanal() {
+  const F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'reporte.json');
+  setInterval(() => {
+    const d = new Date(); if (d.getUTCDay() !== 1 || d.getUTCHours() !== 13) return;  // lunes ~9:00 Caracas
+    let st = {}; try { st = JSON.parse(fs.readFileSync(F, 'utf8')); } catch {}
+    const hoy = d.toISOString().slice(0, 10); if (st.last === hoy) return;
+    fs.writeFileSync(F, JSON.stringify({ last: hoy }));
+    reporteCampanas(config.telegram.adminChatId).catch((e) => console.error('[reporte]', e.message));
+  }, 10 * 60e3);
+}
 const CAMP_F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'campanas.json');
 const camps = () => { try { return JSON.parse(fs.readFileSync(CAMP_F, 'utf8')); } catch { return []; } };
 const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true }); fs.writeFileSync(CAMP_F, JSON.stringify(c.slice(-50), null, 1)); };
 function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
+const PLANES = new Map();
+/** Variantes A/B: A = último reel; B = el reel anterior (otro formato) o la imagen estática del último anuncio. */
+function variantesDe(x) {
+  const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug), base = config.baseUrl.replace(/\/$/, '') + `/media/anuncios/${x.p.slug}/`;
+  const vs = [{ tipo: 'video', url: x.url, nombre: 'reel' }];
+  let otros = []; try { otros = fs.readdirSync(dir).filter((f) => /\.mp4$/.test(f) && f !== x.file && !/sin-musica/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t); } catch {}
+  if (otros[0]) vs.push({ tipo: 'video', url: base + encodeURIComponent(otros[0].f), nombre: 'reel 2' });
+  else if (fs.existsSync(path.join(dir, 'A-4x5.jpg'))) vs.push({ tipo: 'imagen', url: base + 'A-4x5.jpg', nombre: 'imagen' });
+  return vs;
+}
+async function planCampana(x) {
+  let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug, 'guion.json'), 'utf8')).story || {}; } catch {}
+  let B = {}; try { B = JSON.parse(fs.readFileSync(path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug, 'brief.json'), 'utf8')); } catch {}
+  const gratis = !x.p.price_cents;
+  const R = await askJson(`Eres trafficker de Meta Ads para productos digitales en Latinoamérica (español neutro). Producto: ${JSON.stringify({ titulo: x.p.title, frase: x.p.short, descripcion: String(x.p.description || '').slice(0, 800), precio: gratis ? 'GRATIS a cambio del correo' : '$' + (x.p.price_cents / 100).toFixed(2) })}
+Público que creemos: ${JSON.stringify(B.publico || '')}. Guion del reel: ${JSON.stringify((story.escenas || []).map((e) => e.voz).filter(Boolean)).slice(0, 600)}
+Escribe 2 textos de anuncio MUY distintos para probar A/B (A: empieza por el dolor o una pregunta que frena el scroll; B: empieza por el beneficio/resultado o curiosidad). Cada uno: 1ª línea gancho corto con emoji, 2-4 líneas con viñetas emoji de lo que incluye, cierre con llamada a la acción${gratis ? ' (descárgalo GRATIS)' : ''}, y 4-6 hashtags del nicho en español al final. Máx 450 caracteres cada uno. Nada de urgencia falsa ni promesas exageradas.
+Sugiere también el público: 5-8 intereses de Meta (nombres EN INGLÉS tal como existen en Meta Ads, ej. "Personal finance", "Christmas"), edad mínima y máxima, y generos (mujeres|hombres|todos).
+Devuelve SOLO JSON: {"textos":[{"texto":"...","titular":"≤ 40 caracteres"},{"texto":"...","titular":"..."}],"publico":{"intereses":[...],"edad_min":n,"edad_max":n,"generos":"mujeres|hombres|todos"},"por_que":"1 frase"}`, 2500).catch(() => null);
+  const t = (R?.textos || []).filter((y) => y.texto).slice(0, 2);
+  while (t.length < 2) t.push({ texto: x.caption, titular: gratis ? `GRATIS: ${x.p.title}` : x.p.title });
+  return { textos: t, publico: R?.publico || {}, por_que: R?.por_que || '' };
+}
 async function previewCampana(pid) {
   const x = ultimoReel(pid);
   if (!x || !x.exists) return send('Primero crea un reel de ese producto (/anuncios) y luego toca 📊.');
-  return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-    text: `📊 <b>Campaña para ${esc(x.p.title)}</b> (se crea EN PAUSA, no gasta hasta que la actives)\n\n` +
-      `🎯 Objetivo: visitas a ${esc(destino(x.p))}\n🌎 Países: ${PAISES.join(', ')}\n👩 Mujeres de 24 a 45 años\n💡 Intereses: ${esc(interesesPara(x.p).join(', '))}\n` +
-      `🎬 Anuncio: tu último reel + este texto:\n<i>${esc(x.caption.slice(0, 300))}</i>\n\n¿Cuánto al día?`,
-    reply_markup: { inline_keyboard: [[2, 3, 5].map((u) => ({ text: `$${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })), [{ text: '❌ No', callback_data: 'x:0' }]] } });
+  await send('🧠 Preparando la campaña: textos A/B con IA y público sugerido…');
+  const plan = await planCampana(x); const vs = variantesDe(x);
+  plan.variantes = vs.map((v, k) => ({ ...v, texto: plan.textos[k % plan.textos.length].texto, titulo: plan.textos[k % plan.textos.length].titular }));
+  PLANES.set(String(x.p.id), plan);
+  const pub = plan.publico;
+  await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: `📊 <b>Campaña para ${esc(x.p.title)}</b> (se crea EN PAUSA, no gasta hasta que la actives)\n\n🎯 Objetivo: visitas a ${esc(destino(x.p))}\n🌎 ${PAISES.join(', ')}\n👥 ${esc(pub.generos || 'mujeres')} de ${pub.edad_min || 24} a ${pub.edad_max || 45} años\n💡 Intereses: ${esc((pub.intereses || interesesPara(x.p)).join(', '))}\n📍 Ubicaciones: automáticas (Reels, Feed, Historias de Instagram y Facebook)${plan.por_que ? `\n🧠 ${esc(plan.por_que)}` : ''}\n\n` +
+      plan.variantes.map((v, k) => `<b>${'AB'[k]} · ${v.tipo === 'video' ? '🎬 ' + v.nombre : '🖼️ imagen'}</b>\n<i>${esc(v.texto)}</i>`).join('\n\n') + '\n\n¿Cuánto al día? (se reparte entre A y B; Meta da más al que mejor funcione)',
+    reply_markup: { inline_keyboard: [[2, 3, 5].map((u) => ({ text: `$${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })), [{ text: '🔁 Otros textos', callback_data: `cp:${x.p.id}:` }, { text: '❌ No', callback_data: 'x:0' }]] } });
 }
 async function previewPublicar(pid) {
   const x = ultimoReel(pid);
@@ -383,6 +443,7 @@ async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/reporte')) return reporteCampanas(m.chat.id).then((ok) => ok || send('No hay campañas activas todavía.')).catch((e) => send(`⚠️ ${esc(e.message)}`));
   if (text.startsWith('/campanas') || text.startsWith('/campañas')) {
     const all = camps().map((c, n) => ({ ...c, n })).filter((c) => c.estado !== 'borrada').slice(-8);
     if (!all.length) return send('Aún no hay campañas. Crea un reel y toca 📊 Crear campaña.');
@@ -488,10 +549,18 @@ export async function onCallback(q) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
   }
-  if ((action === 'cp' || action === 'cpb' || action === 'cpa') && String(q.from?.id) === String(config.telegram.adminChatId)) {
+  if ((action === 'cp' || action === 'cpb' || action === 'cpa' || action === 'cpx') && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     if (!adsListos()) return send('Falta conectar la cuenta publicitaria: <code>bash configurar.sh redes</code> con el token de Pixelia Bot.');
     if (action === 'cp') return previewCampana(id);
+    if (action === 'cpx') {  // cpx:<n>:pa<adIndex> | b<usd>
+      const all = camps(); const c = all[Number(id)]; if (!c) return send('No encontré esa campaña.');
+      try {
+        if (opts.startsWith('pa')) { const ad = (c.ads || [])[Number(opts.slice(2))]; await pausarAnuncio(ad.id); await send(`⏸️ Pausé el anuncio ${ad.letra}. El presupuesto se va al otro.`); }
+        if (opts.startsWith('b')) { const u = Number(opts.slice(1)); await cambiarPresupuesto(c.camp, u); c.presupuesto = u; saveCamps(all); await send(`💵 Presupuesto cambiado a $${u}/día.`); }
+      } catch (e) { await send(`⚠️ Meta: ${esc(e.message)}`); }
+      return;
+    }
     if (action === 'cpa') {  // cpa:<n>:act|pause|del
       const all = camps(); const c = all[Number(id)]; if (!c) return send('No encontré esa campaña.');
       try {
@@ -505,11 +574,12 @@ export async function onCallback(q) {
     const x = ultimoReel(id); if (!x?.exists) return send('No encontré el reel.');
     await rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [[{ text: '⏳ Creando en pausa…', callback_data: 'x:0' }]] } }).catch(() => {});
     (async () => {
-      const r = await crearCampana({ p: x.p, videoUrl: x.url, texto: x.caption, titulo: x.p.price_cents ? x.p.title : `GRATIS: ${x.p.title}`, link: destino(x.p), presupuesto: Number(opts) || 3, say: send });
+      const plan = PLANES.get(String(x.p.id)) || { variantes: [{ tipo: 'video', url: x.url, nombre: 'reel', texto: x.caption, titulo: x.p.title }], publico: {} };
+      const r = await crearCampana({ p: x.p, variantes: plan.variantes, publico: plan.publico, link: destino(x.p), presupuesto: Number(opts) || 3, say: send });
       const all = camps(); all.push({ ...r, pid: x.p.id, titulo: x.p.title, presupuesto: Number(opts) || 3, estado: 'pausada', fecha: new Date().toISOString() }); saveCamps(all);
       const n = all.length - 1;
       await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-        text: `✅ <b>Campaña creada EN PAUSA</b> · ${esc(x.p.title)}\n💵 ${Number(opts) || 3} ${esc(r.moneda)}/día · 💡 ${esc(r.intereses.join(', ') || 'sin intereses (público amplio)')}\n\nRevísala en el Administrador de anuncios. Cuando estés conforme, toca ▶️ Activar.`,
+        text: `✅ <b>Campaña creada EN PAUSA</b> · ${esc(x.p.title)}\n💵 ${Number(opts) || 3} ${esc(r.moneda)}/día · 🅰️🅱️ ${r.ads.length} anuncios (${r.ads.map((a) => a.letra + ': ' + a.nombre).join(', ')})\n💡 ${esc(r.intereses.join(', ') || 'sin intereses (público amplio)')}\n\nRevísala en el Administrador de anuncios. Cuando estés conforme, toca ▶️ Activar.`,
         reply_markup: { inline_keyboard: [[{ text: '👀 Ver en Meta', url: r.url }], [{ text: '▶️ Activar', callback_data: `cpa:${n}:act` }, { text: '🗑️ Borrar', callback_data: `cpa:${n}:del` }]] } });
     })().catch((e) => send(`⚠️ No pude crear la campaña: ${esc(e.message)}`));
     return;
@@ -620,6 +690,7 @@ Nombre del anuncio en Meta: <code>[${product.slug}] v1</code>`);
 export async function startRadarBot() {
   if (!token()) { console.log('[radar] RADAR_BOT_TOKEN vacío: botones del radar desactivados.'); return; }
   await rtg('deleteWebhook', {}).catch(() => {});
+  startReporteSemanal();
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
