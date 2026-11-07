@@ -18,6 +18,10 @@
 - Repo: `diegsalazar1000-del/pixelia-tienda` (rama main). Commits con las líneas de atribución.
 - Instagram: @pixelia.digitalstore. Bots: tienda (Telegram, Stars) y **@PixeliaRadarBot** (radar + estudio).
 
+## Regla de Diego
+- Toda mejora se aplica para TODO (todos los productos, anuncios y comandos), nunca a un solo video o caso: se mejoran las reglas/comandos, no el resultado puntual.
+- Próximo paso de catálogo: comprar ~3 productos PLR/MRR virales (licencia clara que permita modificar y revender con marca propia), rehacerlos en español con nuestro estilo y mejorados. Revisar la licencia antes de pagar; evitar "mega bundles" de miles de páginas a $1.
+
 ## Qué hay construido
 - **Tienda** Node 22 sin dependencias (`src/`), SQLite. Pagos: PayPal live (incluye tarjeta Visa/Mastercard), Binance semi-automático (la API da "restricted location" desde EE. UU.; él confirma con botón), Telegram Stars. Entrega por correo (Resend, `hola@mail.pixeliadigital.app`), Telegram y enlace firmado. Meta Pixel + Conversions API.
 - **Packs**: producto con `bundle_ids` (ej. 3 × $4.99 → pack $9.99). Caja "Llévate los 3" en cada producto y oferta "Completa tu pack" tras comprar (precio = pack − lo pagado). Un pack no se publica si a un producto le falta archivo.
