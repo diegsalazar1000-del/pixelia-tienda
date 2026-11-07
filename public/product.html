@@ -146,13 +146,13 @@ function checkoutWeb() {
     <h3>${t('sendTo')}</h3>
     <div class="field"><label>${t('email')}</label><input id="email" type="email" placeholder="tu@correo.com" autocomplete="email"></div>
     ${CFG.whatsapp ? `<div class="field"><label>${t('whatsapp')}</label><input id="wa" type="tel" placeholder="+58 412 1234567" autocomplete="tel"></div>` : ''}
+    <h3 style="margin-top:18px">${t('payWith')}</h3>
+    <div class="methods">${methods.map(([k, n, s]) => `<button class="method" data-m="${k}">${n}<small>${s}</small></button>`).join('')}</div>
+    <div id="pay"></div><div class="err" id="err"></div>
     ${P.bump && !UPSELL ? `<label class="bump" style="display:flex;gap:12px;align-items:center;margin:16px 0 4px;padding:12px;border:2px dashed #ffc83d88;border-radius:16px;background:#ffc83d12;cursor:pointer">
       <input type="checkbox" id="bumpChk" style="width:22px;height:22px;flex:none">
       <img src="${escH(P.bump.cover)}" alt="" style="width:54px;height:54px;border-radius:10px;object-fit:cover;flex:none">
       <span style="font-size:.92rem"><b>🛒 Comprados juntos habitualmente:</b> agrega <b>${escH(P.bump.emoji || '')} ${escH(P.bump.title)}</b> por <b>${money(P.bump.bumpPrice)}</b> <s style="opacity:.6">${money(P.bump.price)}</s> <span class="save">-20%</span><br><small style="color:var(--mut)">${escH(P.bump.short || '')}</small></span></label>` : ''}
-    <h3 style="margin-top:18px">${t('payWith')}</h3>
-    <div class="methods">${methods.map(([k, n, s]) => `<button class="method" data-m="${k}">${n}<small>${s}</small></button>`).join('')}</div>
-    <div id="pay"></div><div class="err" id="err"></div>
     ${!P.pack && !UPSELL ? `<p class="coupon-line" id="couponLine"><a id="haveCoupon">¿Tienes un cupón?</a></p>` : ''}`;
   const hc = $('#haveCoupon');
   if (hc) hc.onclick = () => {
@@ -160,7 +160,9 @@ function checkoutWeb() {
     $('#cpnBtn').onclick = () => applyCoupon($('#cpn').value).catch((e) => { $('#err').textContent = e.message; });
   };
   $('.methods').onclick = (e) => { const b = e.target.closest('.method'); if (b) pick(b.dataset.m); };
-  const bc = $('#bumpChk'); if (bc) bc.onchange = () => { BUMP = bc.checked; const bp = $('.big-price'); if (bp) bp.innerHTML = priceBox() + (BUMP ? ` <small style="color:var(--mut)">+ ${money(P.bump.bumpPrice)} = <b>${money(Math.round((PRICE + P.bump.bumpPrice) * 100) / 100)}</b></small>` : ''); };
+  const bc = $('#bumpChk'); if (bc) bc.onchange = () => { BUMP = bc.checked;
+    if (METHOD === 'binance' && ORDER) { ORDER = null; $('.methods').style.display = ''; pick('binance'); }  // el importe cambia: hay que generar el pedido de nuevo
+    const bp = $('.big-price'); if (bp) bp.innerHTML = priceBox() + (BUMP ? ` <small style="color:var(--mut)">+ ${money(P.bump.bumpPrice)} = <b>${money(Math.round((PRICE + P.bump.bumpPrice) * 100) / 100)}</b></small>` : ''); };
   pick(methods[0][0]);
 }
 
@@ -222,7 +224,7 @@ function binanceSteps(o) {
       <li>Envía <b>exactamente</b> este importe en USDT (los céntimos identifican tu pedido):
         <div class="copy"><b>${o.amount} USDT</b><button data-c="${o.amount}">${t('copy')}</button></div></li>
       <li>Al Binance Pay ID:<div class="copy"><b>${escH(o.payId)}</b><button data-c="${escH(o.payId)}">${t('copy')}</button></div>
-        <div class="bqr" style="margin-top:10px;text-align:center"><img src="/binance-qr.jpg" alt="QR de Binance Pay" style="width:190px;max-width:70%;border-radius:14px;background:#fff;padding:8px" onerror="this.parentNode.remove()">
+        <div class="bqr" style="margin-top:10px;text-align:center"><img src="/binance-qr.jpg" alt="QR de Binance Pay" style="display:block;margin:0 auto 6px;width:180px;max-width:70%;border-radius:14px;background:#fff;padding:8px" onerror="this.parentNode.remove()">
         <div style="font-size:.82rem;color:var(--mut)">o escanéalo desde Binance → Pay → Escanear</div></div></li>
       <li>Copia el <b>ID de orden</b> que te muestra Binance y pégalo aquí:</li>
     </ol>
