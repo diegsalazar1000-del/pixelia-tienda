@@ -1,0 +1,16 @@
+{
+  "nino": "Sofía", "edad": 6, "mascota": "Coco", "tipo_mascota": "perrito", "ciudad": "Valencia", "le_gusta": "las estrellas y los dinosaurios",
+  "titulo": "Sofía y la Estrella que se Perdió",
+  "dedicatoria": "Para Sofía, que tiene el corazón más valiente de Valencia.",
+  "paginas": [
+    {"texto": "En la ciudad de Valencia, en una casita con ventanas azules, vivía una niña llamada Sofía. Tenía seis años, una risa que se oía hasta la esquina y un perrito llamado Coco que la seguía a todas partes.", "escena": ["🏠", "👧", "🐶"], "cielo": "dia", "extra": ["🌳", "🌼"]},
+    {"texto": "A Sofía le encantaban las estrellas y los dinosaurios. Cada noche, antes de dormir, miraba el cielo desde su ventana y contaba: una, dos, tres... ¡hasta cien estrellas!", "escena": ["🪟", "👧", "🦕"], "cielo": "noche", "extra": ["⭐", "✨", "🌙"]},
+    {"texto": "Pero una noche, Sofía notó algo raro. En el cielo faltaba una estrella, la más pequeñita, la que siempre brillaba justo encima de su casa. —¿Dónde estará? —susurró Sofía. Coco movió la cola, como diciendo: ¡vamos a buscarla!", "escena": ["👧", "🐶", "❓"], "cielo": "noche", "extra": ["🌙", "⭐"]},
+    {"texto": "Sofía se puso sus pantuflas de dinosaurio y, de puntillas, salió al jardín con Coco. Entre las flores había una lucecita temblando. ¡Era la estrella! Se había caído del cielo y estaba muy asustada.", "escena": ["🌟", "👧", "🐶"], "cielo": "noche", "extra": ["🌷", "🌿", "🌼"]},
+    {"texto": "—No tengas miedo —le dijo Sofía con voz suave—. Yo te ayudo a volver a casa. La estrellita dejó de temblar. Nunca nadie le había hablado con tanto cariño.", "escena": ["👧", "🌟", "💛"], "cielo": "noche", "extra": ["🌙"]},
+    {"texto": "Pero, ¿cómo subir una estrella tan alto? Entonces apareció un dinosaurio enorme y amable, de cuello larguísimo. —Súbanse —dijo—. Mi cuello llega hasta las nubes.", "escena": ["🦕", "👧", "🐶"], "cielo": "noche", "extra": ["☁️", "⭐", "✨"]},
+    {"texto": "Subieron y subieron, más alto que los edificios, más alto que los pájaros dormidos. Arriba, Sofía estiró los brazos y colocó a la estrellita en su lugar. ¡Brilló más fuerte que nunca!", "escena": ["🌟", "👧", "☁️"], "cielo": "noche", "extra": ["⭐", "✨", "🌙"]},
+    {"texto": "De vuelta en su cama, Sofía abrazó a Coco y miró por la ventana. La estrellita le guiñó un ojo, como diciendo: gracias, amiga. Y Sofía se quedó dormida, sonriendo, sabiendo que las personas valientes también son las más tiernas.", "escena": ["🛏️", "👧", "🐶"], "cielo": "noche", "extra": ["⭐", "🌙", "💤"]}
+  ],
+  "frase_final": "Buenas noches, Sofía. Las estrellas cuidan tus sueños."
+}
