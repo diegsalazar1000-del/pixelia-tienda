@@ -39,7 +39,7 @@ const state = () => { try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); }
 
 function prompt(cats, tema, ya) {
   const hoy = new Date().toISOString().slice(0, 10);
-  const soloMundo = /^mundo$/i.test(tema); if (soloMundo) tema = '';
+  const soloMundo = /^mundo$/i.test(tema); const soloPlr = /^plr$/i.test(tema); if (soloMundo || soloPlr) tema = '';
   return `Hoy es ${hoy}. Eres buscador de oportunidades para una tienda de productos digitales en español (Latinoamérica) que vende a 3-10 USD.
 Investiga en internet (varias búsquedas en español e inglés: Etsy best sellers, TikTok Shop, TikTok/Instagram virales, Hotmart, Gumroad, Pinterest, Google Trends, artículos recientes)
 qué productos DIGITALES se están vendiendo o haciendo virales en los ÚLTIMOS 3 MESES (no clásicos de hace años).
@@ -49,6 +49,7 @@ NO repitas nada parecido a esto (ya lo tenemos o ya lo vimos): ${JSON.stringify(
 Busca VARIEDAD: cada hallazgo de una categoría y un formato distinto (video, PDF, plantilla, audio, pack…).
 Incluye cursos o videos que se vendan (la tienda los recrearía como curso propio con guion, diapositivas y ejercicios, sin copiar a la persona).
 Evita: marcas registradas, personajes, "cómo ganar dinero rápido", promesas de salud o resultados, contenido para adultos.
+PLR / MRR EN INGLÉS PARA REHACER (el mercado en español está mucho menos lleno: esa es nuestra ventaja): busca en Etsy, Gumroad, Payhip, Stan Store y tiendas PLR productos digitales en INGLÉS, específicos y bien hechos (planners, trackers, plantillas, ebooks, kits, imprimibles, también cosas DIFERENTES y nuevas que estén pegando), cuya licencia diga CLARAMENTE que puedes MODIFICARLOS, ponerles TU MARCA y REVENDERLOS (PLR o "PLR + MRR" con rebranding). Descarta los "mega bundles" de miles de páginas a $1-5, los que solo permiten uso personal o revender sin modificar, y los de licencia dudosa. Para cada uno di cómo lo haríamos MEJOR en español (qué agregar) y si conviene una versión que se calcula sola en Excel/Google Sheets.
 TENDENCIAS DEL MUNDO: revisa también qué está pasando ESTA SEMANA en el mundo y en Latinoamérica (noticias que cambian la vida diaria, temas y retos virales, estrenos, cambios de precios o de reglas, temporada, y las fechas especiales de los próximos 30-60 días: festivos, regreso a clases, Black Friday, Navidad, San Valentín, Día de la Madre, mundiales, etc.).
 De ahí saca NECESIDADES NUEVAS que la gente tendrá y propón productos digitales que las resuelvan (ej. si sube el costo de la vida → plantilla para recortar gastos; si viene diciembre → planificador de regalos y cenas; si se viraliza un reto → kit para hacerlo).
 No te aproveches de tragedias, guerras, enfermedades ni política; nada de marcas ni personajes con derechos.
@@ -63,9 +64,11 @@ Devuelve SOLO un JSON:
  "ideas":[{"titulo_tienda":"...","basada_en":"qué tendencia la inspira","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"por_que":"breve",
   "anuncio":{"gancho":"...","texto":"...","titular":"..."}}],
  "mundo":[{"tendencia":"qué está pasando (noticia, tema viral o fecha que viene)","url":"fuente real","necesidad":"qué necesitará la gente por eso","cuando":"desde cuándo/hasta cuándo sirve",
-  "titulo_tienda":"...","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"anuncio":{"gancho":"...","texto":"...","titular":"..."}}]}
+  "titulo_tienda":"...","publico":"...","frase_corta":"...","descripcion":"4-6 viñetas","precio_sugerido":número,"emoji":"...","nota":1-10,"anuncio":{"gancho":"...","texto":"...","titular":"..."}}],
+ "plr":[{"titulo":"nombre original en inglés","url":"enlace real a la página del producto","plataforma":"etsy|gumroad|payhip|…","precio":número,"licencia":"lo que dice la licencia, resumido (≤ 25 palabras)","modificar":true,"marca_propia":true,"revender":true,
+  "por_que":"señales de que se vende o pega (reseñas, ventas, novedad)","titulo_tienda":"cómo se llamaría nuestra versión en español","mejoras":"qué le agregaríamos para hacerlo mejor","excel":true|false,"publico":"...","precio_sugerido":número,"emoji":"...","nota":1-10}]}
 Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
-${soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas y 2-3 productos en "mundo".'}`;
+${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas, solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 3-4 ideas nuevas, 2-3 productos en "mundo" y 2-3 en "plr".'}`;
 }
 
 async function askClaude(text) {
@@ -113,18 +116,22 @@ export async function explorar(tema = '') {
   if (!config.anthropic.key || !token()) return;
   const day = Math.floor(Date.now() / 864e5);
   const cats = [0, 1, 2, 3].map((k) => CATEGORIAS[(day * 4 + k) % CATEGORIAS.length]);  // rota categorías cada día
+  if (/^plr$/i.test(tema)) await say('🛒 <b>Buscando productos PLR en inglés con licencia clara</b> (modificar, poner tu marca y revender) para rehacerlos en español… (2-4 min)'); else
   if (/^mundo$/i.test(tema)) await say('🌍 <b>Revisando las tendencias del mundo</b> (noticias, virales y fechas que vienen) para proponer productos… (2-4 min)'); else
   await say(`🌐 <b>Explorando tendencias</b>${tema ? ` sobre <i>${esc(tema)}</i>` : `: ${esc(cats.map((c) => c.split(' (')[0].split(':')[0]).join(' · '))}`}… (2-4 min)`);
   let res;
   const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
   try { res = await askClaude(prompt(cats, tema, ya)); }
   catch (e) { return say(`⚠️ El explorador falló: ${esc(e.message)}`); }
-  const { hallazgos = [], ideas = [], mundo = [] } = JSON.parse(JSON.stringify(res.data || {}).replace(/<\\?\/?cite[^>]*>/g, ''));
+  const { hallazgos = [], ideas = [], mundo = [], plr = [] } = JSON.parse(JSON.stringify(res.data || {}).replace(/<\\?\/?cite[^>]*>/g, ''));
   const items = [
     ...hallazgos.map((h) => ({ ...h, _tipo: 'hallazgo' })),
     ...ideas.map((i) => ({ ...i, titulo: i.titulo_tienda, plataforma: 'idea-ia', evidencia: `Idea nueva basada en: ${i.basada_en || ''}. ${i.por_que || ''}`, decision: 'recrear', _tipo: 'idea' })),
     ...mundo.map((m) => ({ ...m, titulo: m.titulo_tienda, plataforma: 'idea-mundo', categoria: 'tendencia mundial',
       evidencia: `🌍 ${m.tendencia || ''}\n🧩 Necesidad: ${m.necesidad || ''}${m.cuando ? `\n🗓️ ${m.cuando}` : ''}`, decision: 'recrear', _tipo: 'mundo' })),
+    ...plr.filter((x) => x.url && x.modificar !== false && x.revender !== false).map((x) => ({ ...x, plataforma: ('plr-' + (x.plataforma || 'web')).slice(0, 20), categoria: 'PLR para rehacer', decision: 'comprar_reventa',
+      evidencia: `📜 Licencia: ${x.licencia || '¿?'} (${[x.modificar && 'modificar', x.marca_propia && 'tu marca', x.revender && 'revender'].filter(Boolean).join(' · ')})\n📈 ${x.por_que || ''}\n🇪🇸 Nuestra versión: ${x.titulo_tienda || ''}\n✨ Mejoras: ${x.mejoras || ''}${x.excel ? '\n📊 Con versión Excel/Sheets que se calcula sola' : ''}`,
+      derechos: x.licencia, _tipo: 'plr' })),
   ].filter((x) => x.titulo || x.titulo_tienda);
   const fresh = Candidates.addMany(items.map((x) => ({ source: String(x.plataforma || 'web').slice(0, 20), external_id: hash((x.url || '') + (x.titulo || x.titulo_tienda)),
     url: x.url || '', title: x.titulo || x.titulo_tienda, snippet: x.evidencia || '', price: Number(x.precio) || 0, currency: 'USD',
@@ -137,14 +144,15 @@ export async function explorar(tema = '') {
       categoria: x.categoria, decision: x.decision === 'comprar_reventa' ? 'buy' : 'recreate', como_recrear: x.como_recrear, derechos: x.derechos, idea: x.frase_corta, publico: x.publico,
       anuncio: x.anuncio && typeof x.anuncio === 'object' ? x.anuncio : undefined };
     Candidates.update(c.id, { ai_score: nota, ai, status: 'notified' });
-    const titulo = x._tipo === 'mundo' ? `🌍 <b>TENDENCIA MUNDIAL</b> · ${esc(ai.titulo)}` : x._tipo === 'idea' ? `💡 <b>IDEA NUEVA</b> · ${esc(ai.titulo)}` : `${esc(x.emoji || '✨')} <b>${esc(ai.titulo)}</b>`;
+    const titulo = x._tipo === 'plr' ? `🛒 <b>PLR PARA REHACER</b> · ${esc(x.titulo || '')}` : x._tipo === 'mundo' ? `🌍 <b>TENDENCIA MUNDIAL</b> · ${esc(ai.titulo)}` : x._tipo === 'idea' ? `💡 <b>IDEA NUEVA</b> · ${esc(ai.titulo)}` : `${esc(x.emoji || '✨')} <b>${esc(ai.titulo)}</b>`;
     await say(`${titulo}\n⭐ ${nota}/10 · ${esc(x.plataforma || '')}${x.precio ? ` · visto a $${esc(x.precio)}` : ''}\n👥 ${esc(x.publico || '')}\n📈 ${esc(x.evidencia || '')}\n\n${esc(x.frase_corta || '')}\n💰 Nuestro precio: $${esc(ai.precio_sugerido || 4.99)}`,
       { reply_markup: x._tipo === 'idea' || x._tipo === 'mundo' ? { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }],
-        ...(x._tipo === 'mundo' && x.url ? [[{ text: '📰 Ver la noticia/tendencia', url: x.url }]] : [])] } : kb(c) }).catch(() => {});
+        ...(x._tipo === 'mundo' && x.url ? [[{ text: '📰 Ver la noticia/tendencia', url: x.url }]] : [])] }
+        : x._tipo === 'plr' ? { inline_keyboard: [[{ text: '🔗 Ver producto y licencia', url: x.url }], [{ text: '🛒 Lo compro', callback_data: `buy:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } : kb(c) }).catch(() => {});
     sent++;
   }
   const st = state(); st.last = new Date().toISOString().slice(0, 10); fs.writeFileSync(STATE, JSON.stringify(st));
-  return say(sent ? `✅ Explorador: ${sent} oportunidades nuevas (${hallazgos.length} tendencias + ${ideas.length} ideas + ${mundo.length} del mundo) · ${res.searches} búsquedas.\nToca 🛠️ Recrear en las que te gusten o usa /fusionar para combinarlas.`
+  return say(sent ? `✅ Explorador: ${sent} oportunidades nuevas (${hallazgos.length} tendencias + ${ideas.length} ideas + ${mundo.length} del mundo + ${plr.length} PLR) · ${res.searches} búsquedas.\nToca 🛠️ Recrear en las que te gusten o usa /fusionar para combinarlas.`
     : 'El explorador no encontró nada nuevo hoy (todo lo que vio ya estaba en el radar). Prueba con /explorar y un tema, ej. <code>/explorar cursos de cocina</code>.');
 }
 

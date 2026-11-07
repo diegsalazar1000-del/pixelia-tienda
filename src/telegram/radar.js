@@ -436,7 +436,7 @@ async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -581,6 +581,10 @@ export async function onCallback(q) {
 
   if (action === 'no') { Candidates.update(c.id, { status: 'discarded' }); return mark('❌ Descartado'); }
 
+  if (action === 'buy' && String(Candidates.get(id)?.source || '').startsWith('plr-')) {  // PLR: se compra y Claude lo rehace en español
+    await mark('🛒 Lo compro (PLR)');
+    return send(`🛒 <b>PLR para rehacer: ${esc(c.title)}</b>\n\n1️⃣ Ábrelo: ${esc(c.url)}\n2️⃣ <b>Antes de pagar</b>, mándale el enlace a Claude (el chat donde construimos Pixelia) para que lea la licencia y la vista previa.\n3️⃣ Si Claude dice que sí: cómpralo y guarda el comprobante.\n4️⃣ Pásale el archivo a Claude: lo rehace en español con nuestro estilo y mejoras${/Excel/.test(c.snippet || '') ? ' (y la versión Excel/Sheets que se calcula sola)' : ''}, y te da el ZIP y la portada listos para subir en ${esc(config.baseUrl)}/admin.\n\n${esc(c.snippet || '')}`);
+  }
   if (action === 'buy') {
     const product = createDraft(raw, { decision: 'buy' });
     await mark('🛒 Comprar · borrador creado');
