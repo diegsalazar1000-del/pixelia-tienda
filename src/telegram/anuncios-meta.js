@@ -79,6 +79,7 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });
   const ads = [], videos = {};
   let setImgs = null;
+  try {
   for (const [k, v] of variantes.entries()) {
     const letra = 'ABCD'[k];
     await say(`⏳ 3/4 Subiendo el anuncio ${k + 1} (${v.nombre || (v.tipo === 'video' ? 'reel' : 'imagen')})…`);
@@ -136,6 +137,7 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${letra} · ${v.nombre || v.tipo}`, adset_id: set.id, creative: { creative_id: cr.id }, status: 'PAUSED' });
     ads.push({ letra, id: ad.id, nombre: v.nombre || v.tipo });
   }
+  } catch (e) { await api('DELETE', camp.id, {}).catch(() => {}); throw e; }  // si algo falla, no deja una campaña a medias en Meta
   await say('⏳ 4/4 Listo, revisando…');
   return { camp: camp.id, set: set.id, sets: [set.id, setImgs?.id].filter(Boolean), ads, moneda: c.currency, intereses: aud.length ? [publico.etiqueta || 'interesados reales'] : ints.map((i) => i.name),
     url: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${act.replace('act_', '')}&selected_campaign_ids=${camp.id}` };
