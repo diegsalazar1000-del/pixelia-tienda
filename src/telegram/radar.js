@@ -454,6 +454,10 @@ export async function onCallback(q) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
   }
+  if (action === 'x') {  // botones "❌ No" / informativos: solo cerrar
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: 'Listo, no hice nada.' }).catch(() => {});
+    return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+  }
   if (action === 'cm' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // cm:d|s:i|f:<id>
     const [, what, red, ...rest] = String(q.data).split(':'); const cid = rest.join(':');
     try {
