@@ -86,26 +86,29 @@ const VOICES = { ia: '🎲 IA', f: '👩 Mujer', m: '👨 Hombre', 0: '🔇 Sin 
 const MUSIC_DIR = path.join(path.dirname(config.paths?.files || path.resolve('storage/products')), 'musica');
 const songs = (g) => { try { return fs.readdirSync(path.join(MUSIC_DIR, g)).filter((f) => /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f)).length; } catch { return 0; } };
 
-function pickerKb(pid, sel, sug = {}) {
+function pickerKb(pid, sel, sug = {}, full = false) {
   const mark = (on, txt, star) => `${on ? '✅ ' : ''}${txt}${star ? ' ⭐' : ''}`;
-  const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val })}` });
+  sel = { ...sel }; delete sel.m;
+  const btn = (k, val, txt) => ({ text: mark(String(sel[k]) === String(val), txt, String(sug[k]) === String(val)), callback_data: `sel:${pid}:${packOpts({ ...sel, [k]: val, m: full ? 1 : undefined })}` });
   const g = (x) => btn('g', x, GENRES[x] + (songs(x) ? ' 🎧' : ''));
+  const principal = [
+    ...(adsListos() ? [[{ text: '📊 Crear campaña con este reel', callback_data: `cp:${pid}:` }]] : []),
+    ...(redesListas() ? [[{ text: '📤 Publicarlo en Instagram y Facebook', callback_data: `pr:${pid}:` }]] : []),
+    [{ text: '🎲 Hacer otro reel distinto', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
+  ];
+  if (!full) return [...principal, [{ text: '⚙️ Más opciones (voz, música, estilo, tutorial, comedia…)', callback_data: `sel:${pid}:${packOpts({ ...sel, m: 1 })}` }]];
   return [
-    ...(redesListas() ? [[{ text: '📤 Publicar este reel en Instagram y Facebook', callback_data: `pr:${pid}:` }]] : []),
-    ...(adsListos() ? [[{ text: '📊 Crear campaña de anuncios (queda en pausa)', callback_data: `cp:${pid}:` }]] : []),
-    [{ text: '🎬 Prompt para Gemini (clip realista gratis)', callback_data: `gem:${pid}:` }],
-    [{ text: '🧠 Anuncio PRO: investiga + 3 guiones + revisión (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }],
-    [{ text: '🎲 Otra variante (la IA elige otro formato)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, f: 'otro' })}` }],
-    [{ text: '🎓 Video tutorial (cómo se usa, con ejemplo)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }],
-    [{ text: '😂 Anuncio de comedia (meme viral)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'comedia' })}` }],
-    [{ text: '📸 Crear con fotos y videos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }],
-    [{ text: '🧪 4 variantes con formatos distintos (≈20 min)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
-    Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
-    [g('ia')], ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
-    [btn('s', 'ia', STYLES.ia)], ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])),
+    ...principal,
+    [{ text: '🎓 Tutorial', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }, { text: '😂 Comedia', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'comedia' })}` }],
+    [{ text: '📸 Con fotos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }, { text: '🎬 Prompt Gemini', callback_data: `gem:${pid}:` }],
+    [{ text: '🧠 PRO (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }, { text: '🧪 4 variantes', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
+    [{ text: '— Voz —', callback_data: 'x:0' }], Object.entries(VOICES).map(([k, t]) => btn('v', k, t)),
+    [{ text: '— Música —', callback_data: 'x:0' }], [g('ia')], ['reggaeton', 'pop', 'trap'].map(g), ['cumbia', 'electronica', 'lofi'].map(g), ['acustica', 'base', '0'].map(g),
+    [{ text: '— Estilo —', callback_data: 'x:0' }], [btn('s', 'ia', STYLES.ia)], ['color', 'neon'].map((x) => btn('s', x, STYLES[x])), ['minimal', 'tiktok'].map((x) => btn('s', x, STYLES[x])),
     [{ text: `🎬 Reel nuevo con lo marcado: ${VOICES[sel.v] || ''} · ${GENRES[sel.g] || ''}`.slice(0, 60), callback_data: `ad:${pid}:${packOpts(sel)}` }],
     [{ text: '🔊 Solo cambiar voz/música del último reel', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, a: 1 })}` }],
     [{ text: '🔁 Rehacer público, colores y textos (IA)', callback_data: `ad:${pid}:${packOpts({ ...sel, n: 1 })}` }],
+    [{ text: '⬅️ Menos opciones', callback_data: `sel:${pid}:${packOpts(sel)}` }],
   ];
 }
 
@@ -116,7 +119,7 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
   lastSug.set(p.id, sug);
   const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `${GENRES[g]} (${songs(g)})`).join(', ');
   return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-    text: `🎛️ <b>Más versiones de ${esc(p.title)}</b>\n<b>🎲 Otra variante</b>: la IA elige otro formato con su voz y música. <b>📸 Pixabay</b>: el anuncio usa fotos y videos reales.\nO marca tú voz, música y estilo y pulsa <b>🎬 Reel nuevo</b>. <b>🔊 Solo voz/música</b> = mismo video, otro audio (1 min).\n⭐ = sugerido por la IA para este público · 🎧 = hay canciones reales de ese género\n🎵 Biblioteca: ${lib ? esc(lib) : 'vacía — usa /musica para agregar canciones reales'}`,
+    text: `🎛️ <b>¿Qué hacemos con este anuncio de ${esc(p.title)}?</b>\n📊 <b>Crear campaña</b>: te muestro exactamente qué se publica (A y B) antes de crearla.\n🎲 <b>Otro reel</b>: la IA hace uno distinto.\n⚙️ <b>Más opciones</b>: elegir voz, música, estilo, tutorial, comedia…`,
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
@@ -417,13 +420,18 @@ const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true 
 function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
 const PLANES = new Map();
 /** Variantes A/B: A = último reel; B = el reel anterior (otro formato) o la imagen estática del último anuncio. */
-function variantesDe(x) {
+/** Lo que puede ir en B (A siempre es el reel nuevo): las 3 imágenes del mismo anuncio, el reel anterior o nada. */
+function opcionesB(x) {
   const dir = path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug), base = config.baseUrl.replace(/\/$/, '') + `/media/anuncios/${x.p.slug}/`;
-  const vs = [{ tipo: 'video', url: x.url, nombre: 'reel' }];
+  const ops = ['A', 'B', 'C'].filter((c) => fs.existsSync(path.join(dir, `${c}-4x5.jpg`))).map((c) => ({ tipo: 'imagen', url: base + `${c}-4x5.jpg`, nombre: `imagen ${c}` }));
   let otros = []; try { otros = fs.readdirSync(dir).filter((f) => /\.mp4$/.test(f) && f !== x.file && !/sin-musica/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t); } catch {}
-  if (otros[0]) vs.push({ tipo: 'video', url: base + encodeURIComponent(otros[0].f), nombre: 'reel 2' });
-  else if (fs.existsSync(path.join(dir, 'A-4x5.jpg'))) vs.push({ tipo: 'imagen', url: base + 'A-4x5.jpg', nombre: 'imagen' });
-  return vs;
+  if (otros[0]) ops.push({ tipo: 'video', url: base + encodeURIComponent(otros[0].f), nombre: 'reel anterior' });
+  ops.push({ tipo: 'nada', nombre: 'nada (solo A)' });
+  return ops;
+}
+function variantesDe(x, kB = 0) {
+  const ops = opcionesB(x), b = ops[kB % ops.length];
+  return [{ tipo: 'video', url: x.url, nombre: 'reel nuevo' }, ...(b.tipo === 'nada' ? [] : [b])];
 }
 async function planCampana(x, modo = '') {
   let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(path.dirname(MUSIC_DIR), 'anuncios', x.p.slug, 'guion.json'), 'utf8')).story || {}; } catch {}
@@ -438,10 +446,9 @@ Devuelve SOLO JSON: {"textos":[{"texto":"...","titular":"≤ 40 caracteres"},{"t
   while (t.length < 2) t.push({ texto: x.caption, titular: gratis ? `GRATIS: ${x.p.title}` : x.p.title });
   return { textos: t, publico: R?.publico || {}, por_que: R?.por_que || '' };
 }
-async function previewCampana(pid, modo = '') {
+async function previewCampana(pid, modo = '', kB = null) {
   const x = ultimoReel(pid);
   if (!x || !x.exists) return send('Primero crea un reel de ese producto (/anuncios) y luego toca 📊.');
-  await send('🧠 Preparando la campaña: textos A/B con IA y público sugerido…');
   let aud = null;
   if (modo) {  // 🎯 remarketing (i) o 👥 similares (s)
     const ids = pubIds();
@@ -449,15 +456,30 @@ async function previewCampana(pid, modo = '') {
       : { audiencias: ['sim_regalo', 'sim_vieron', 'sim_compradores'].map((k) => ids[k]).filter(Boolean), excluir: [ids.compradores].filter(Boolean), etiqueta: 'similares a tus interesados (1%)' };
     if (!aud.audiencias.length) return send(modo === 'i' ? 'Primero crea los públicos con /publicos.' : 'Primero crea los públicos similares con /similares.');
   }
-  const plan = await planCampana(x, modo); const vs = variantesDe(x);
-  if (aud) plan.publico = { ...aud, modo };
+  let plan = PLANES.get(String(x.p.id));
+  if (kB === null || !plan || plan.job !== x.job.id || (plan.publico?.modo || '') !== modo) {  // textos nuevos (al cambiar B se reutilizan)
+    await send('🧠 Preparando la campaña: textos A/B con IA y público sugerido…');
+    plan = await planCampana(x, modo); plan.job = x.job.id; kB = kB ?? 0;
+    if (aud) plan.publico = { ...aud, modo };
+  }
+  plan.kB = kB; const ops = opcionesB(x), vs = variantesDe(x, kB);
   plan.variantes = vs.map((v, k) => ({ ...v, texto: plan.textos[k % plan.textos.length].texto, titulo: plan.textos[k % plan.textos.length].titular }));
   PLANES.set(String(x.p.id), plan);
-  const pub = plan.publico;
-  await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : 'Campaña para '}${esc(x.p.title)}</b> (se crea EN PAUSA, no gasta hasta que la actives)\n\n🎯 Objetivo: visitas a ${esc(destino(x.p))}\n🌎 ${PAISES.join(', ')}\n` + (aud ? `👥 Público: ${esc(aud.etiqueta)}` : `👥 ${esc(pub.generos || 'todos')} de ${pub.edad_min || 24} a ${pub.edad_max || 45} años\n💡 Intereses: ${esc((pub.intereses || interesesPara(x.p)).join(', '))}`) + `\n📍 Ubicaciones: automáticas (Reels, Feed, Historias de Instagram y Facebook)${plan.por_que ? `\n🧠 ${esc(plan.por_que)}` : ''}\n\n` +
-      plan.variantes.map((v, k) => `<b>${'AB'[k]} · ${v.tipo === 'video' ? '🎬 ' + v.nombre : '🖼️ imagen'}</b>\n<i>${esc(v.texto)}</i>`).join('\n\n') + '\n\n¿Cuánto al día? (se reparte entre A y B; Meta da más al que mejor funcione)',
-    reply_markup: { inline_keyboard: [(aud ? [1, 2, 3] : [2, 3, 5]).map((u) => ({ text: `$${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })), [{ text: '🔁 Otros textos', callback_data: aud ? `rm:${x.p.id}:${modo}` : `cp:${x.p.id}:` }, { text: '❌ No', callback_data: 'x:0' }]] } });
+  const chat = config.telegram.adminChatId, cap = (k, v) => `${k === 0 ? '🅰️ <b>A</b>' : '🅱️ <b>B</b>'} · ${v.tipo === 'video' ? '🎬 ' : '🖼️ '}${esc(v.nombre)} — así se va a publicar:\n\n${esc(v.texto).slice(0, 900)}`;
+  for (const [k, v] of plan.variantes.entries()) {
+    if (kB !== 0 && k === 0) continue;  // al cambiar B no se repite A
+    const m = v.tipo === 'video' ? 'sendVideo' : 'sendPhoto';
+    await rtg(m, { chat_id: chat, [v.tipo === 'video' ? 'video' : 'photo']: v.url, caption: cap(k, v), parse_mode: 'HTML' })
+      .catch(() => rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML', text: cap(k, v) + `\n${esc(v.url)}` }));
+  }
+  const pub = plan.publico, sig = ops[(kB + 1) % ops.length];
+  await rtg('sendMessage', { chat_id: chat, parse_mode: 'HTML',
+    text: `📊 <b>${aud ? (modo === 'i' ? '🎯 Remarketing' : '👥 Similares') + ' · ' : ''}${esc(x.p.title)}</b>\n\n🅰️ A: <b>el reel nuevo</b>\n🅱️ B: <b>${esc(plan.variantes[1]?.nombre || 'ninguno (solo A)')}</b>\n` +
+      (aud ? `👥 ${esc(aud.etiqueta)}` : `👥 ${esc(pub.generos || 'todos')}, ${pub.edad_min || 24}-${pub.edad_max || 45} años · 🌎 8 países`) +
+      `\n\nSe crea <b>EN PAUSA</b> (no gasta nada) hasta que toques ▶️ Activar. Elige cuánto al día:`,
+    reply_markup: { inline_keyboard: [(aud ? [1, 2, 3] : [2, 3, 5]).map((u) => ({ text: `✅ $${u}/día`, callback_data: `cpb:${x.p.id}:${u}` })),
+      [{ text: `🔄 Cambiar B por: ${sig.nombre}`.slice(0, 60), callback_data: `cpv:${x.p.id}:${(kB + 1) % ops.length}${modo ? '.' + modo : ''}` }],
+      [{ text: '🔁 Otros textos', callback_data: aud ? `rm:${x.p.id}:${modo}` : `cp:${x.p.id}:` }, { text: '❌ Cancelar', callback_data: 'x:0' }]] } });
 }
 async function previewPublicar(pid) {
   const x = ultimoReel(pid);
@@ -639,12 +661,13 @@ export async function onCallback(q) {
   if (action === 'sel' && String(q.from?.id) === String(config.telegram.adminChatId)) {  // marcar/desmarcar en el selector
     const sel = parseOpts(opts); const sug = lastSug.get(Number(id)) || {};
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
-    return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug) } }).catch(() => {});
+    return rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: pickerKb(Number(id), sel, sug, sel.m === '1') } }).catch(() => {});
   }
-  if ((action === 'cp' || action === 'cpb' || action === 'cpa' || action === 'cpx') && String(q.from?.id) === String(config.telegram.adminChatId)) {
+  if ((action === 'cp' || action === 'cpv' || action === 'cpb' || action === 'cpa' || action === 'cpx') && String(q.from?.id) === String(config.telegram.adminChatId)) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     if (!adsListos()) return send('Falta conectar la cuenta publicitaria: <code>bash configurar.sh redes</code> con el token de Pixelia Bot.');
     if (action === 'cp') return previewCampana(id);
+    if (action === 'cpv') { const [k, modo] = String(opts || '0').split('.'); return previewCampana(id, modo || '', Number(k) || 0); }
     if (action === 'cpx') {  // cpx:<n>:pa<adIndex> | b<usd>
       const all = camps(); const c = all[Number(id)]; if (!c) return send('No encontré esa campaña.');
       try {
