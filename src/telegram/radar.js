@@ -2,6 +2,7 @@
 // Así n8n no necesita dirección pública: solo busca y avisa; la tienda ejecuta las decisiones.
 import fs from 'node:fs';
 import path from 'node:path';
+import { registrarClaude, resumenClaude, recargar } from '../gasto.js';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
 import { explorar } from './explorador.js';
@@ -61,7 +62,7 @@ No copies textos ni diseños del original; todo debe ser contenido nuevo. Sé co
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({ model: config.anthropic.model, max_tokens: 12000, messages: [{ role: 'user', content: prompt }] }) });
-  const data = await res.json();
+  const data = await res.json(); registrarClaude('plan de producto', data);
   if (!res.ok) throw new Error('IA: ' + (data.error?.message || res.status));
   return (data.content || []).map((b) => b.text || '').join('');
 }
@@ -124,19 +125,44 @@ export async function sendAdPicker(p, sel = {}, sug = {}) {
     reply_markup: { inline_keyboard: pickerKb(p.id, sel, sug) } });
 }
 
-// ===== Créditos de ElevenLabs =====
-async function creditos() {
+// ===== 💸 Créditos y gastos: ElevenLabs + Claude (estimado) + Meta =====
+const usd = (n) => '$' + (Number(n) || 0).toFixed(2);
+async function creditosEleven() {
   const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) return send('No hay clave de ElevenLabs configurada.');
+  if (!key) return '🎙️ <b>ElevenLabs</b>: no hay clave configurada.';
   try {
     const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': key } });
     const j = await r.json();
-    if (!r.ok) return send(`No pude leer los créditos (${esc(j.detail?.message || j.detail?.status || r.status)}).\nSi dice "missing permissions", en ElevenLabs edita la clave y activa <b>User → Read</b>. Mientras, míralos en elevenlabs.io (barra "Credits used").`);
+    if (!r.ok) return `🎙️ <b>ElevenLabs</b>: no pude leer los créditos (${esc(j.detail?.message || j.detail?.status || r.status)}). Si dice "missing permissions", en ElevenLabs edita la clave y activa <b>User → Read</b>.`;
     const used = j.character_count || 0, lim = j.character_limit || 0, left = Math.max(0, lim - used);
     const reset = j.next_character_count_reset_unix ? new Date(j.next_character_count_reset_unix * 1000).toLocaleDateString('es') : '—';
     const ahorro = fs.existsSync(path.join(path.dirname(MUSIC_DIR), 'ahorro'));
-    return send(`🎙️ <b>ElevenLabs</b> · plan ${esc(j.tier || '')}\nGastados: <b>${used.toLocaleString('es')}</b> de ${lim.toLocaleString('es')} (${lim ? Math.round(used / lim * 100) : 0}%)\nQuedan: <b>${left.toLocaleString('es')}</b> ≈ ${Math.floor(left / 180)} reels con voz nueva\nSe renuevan: ${reset}\nModo ahorro: ${ahorro ? '🟢 activado' : '⚪ desactivado'}`);
-  } catch (e) { return send('No pude consultar ElevenLabs: ' + esc(e.message)); }
+    return `🎙️ <b>ElevenLabs</b> · plan ${esc(j.tier || '')}\nGastados: <b>${used.toLocaleString('es')}</b> de ${lim.toLocaleString('es')} (${lim ? Math.round(used / lim * 100) : 0}%)\nQuedan: <b>${left.toLocaleString('es')}</b> ≈ ${Math.floor(left / 180)} reels con voz nueva\nSe renuevan: ${reset}\nModo ahorro: ${ahorro ? '🟢 activado' : '⚪ desactivado'}`;
+  } catch (e) { return '🎙️ <b>ElevenLabs</b>: no pude consultar (' + esc(e.message) + ').'; }
+}
+function creditosClaude() {
+  const c = resumenClaude();
+  if (!c.desde) return '🤖 <b>Claude (bot)</b>: todavía no hay gastos anotados (se empiezan a contar desde esta versión).';
+  const por = Object.entries(c.por).sort((a, b) => b[1] - a[1]).map(([k, v]) => `  · ${esc(k)}: ${usd(v)}`).join('\n');
+  const saldo = c.saldo === null ? 'sin recargas anotadas. Cuando recargues, escribe <code>/creditos recargue 20</code> (con lo que recargaste, en dólares) y voy restando.'
+    : `<b>${usd(c.saldo)}</b> (estimado: recargas ${usd(c.recargas.reduce((s, x) => s + x.usd, 0))} − gasto anotado). El exacto está en platform.claude.com → Billing.${c.saldo < 3 ? '\n⚠️ Queda poco: recarga pronto para que el bot no se detenga.' : ''}`;
+  return `🤖 <b>Claude (bot)</b>\nHoy: <b>${usd(c.hoy)}</b> (${c.llamadasHoy} usos) · 7 días: ${usd(c.d7)} · 30 días: ${usd(c.d30)}\n${por ? 'En qué se fue (7 días):\n' + por + '\n' : ''}Saldo: ${saldo}`;
+}
+async function creditosMeta() {
+  const t = process.env.META_USER_TOKEN, a = process.env.META_AD_ACCOUNT;
+  if (!t || !a) return '📣 <b>Meta</b>: no hay cuenta de anuncios configurada.';
+  try {
+    const q = async (p) => { const r = await fetch(`https://graph.facebook.com/v23.0/${a}/insights?fields=spend&date_preset=${p}&access_token=${encodeURIComponent(t)}`); const j = await r.json(); if (j.error) throw new Error(j.error.message); return Number(j.data?.[0]?.spend || 0); };
+    const [hoy, s7, tot] = await Promise.all([q('today'), q('last_7d'), q('maximum')]);
+    return `📣 <b>Meta (anuncios)</b>\nHoy: <b>${usd(hoy)}</b> · 7 días: ${usd(s7)} · total cuenta: ${usd(tot)}`;
+  } catch (e) { return '📣 <b>Meta</b>: no pude consultar (' + esc(e.message) + ').'; }
+}
+async function creditos(text = '') {
+  const m = String(text).match(/recargu?e\s+\$?\s*([\d.,]+)/i);
+  if (m) { const v = Number(m[1].replace(',', '.')); if (!(v > 0)) return send('Escribe el monto en dólares, por ejemplo: <code>/creditos recargue 20</code>');
+    recargar(v); return send(`✅ Anoté una recarga de Claude por <b>${usd(v)}</b>.\n\n` + creditosClaude()); }
+  const partes = await Promise.all([creditosEleven(), Promise.resolve(creditosClaude()), creditosMeta()]);
+  return send('💸 <b>Créditos y gastos</b>\n\n' + partes.join('\n\n'));
 }
 
 // ===== 🧬 Fusionar ideas del radar =====
@@ -148,7 +174,7 @@ async function askJson(prompt, maxTokens = 6000) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({ model: process.env.FUSION_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }) });
-  const data = await res.json();
+  const data = await res.json(); registrarClaude('fusionar / campañas', data);
   if (!res.ok) throw new Error('IA: ' + (data.error?.message || res.status));
   const t = (data.content || []).map((b) => b.text || '').join('').replace(/```json|```/g, '');
   return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
@@ -321,7 +347,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /cancelar — quitar los anuncios que están esperando en la fila.
 
 💸 <b>Créditos</b>
-/creditos — cuántos créditos de ElevenLabs (voces y música) llevas gastados y cuántos quedan.
+/creditos — créditos y gastos: ElevenLabs (voces y música), Claude del bot (gasto de hoy/semana/mes y saldo estimado) y Meta (anuncios). <code>/creditos recargue 20</code> anota una recarga de Claude.
 /ahorro on — no gastar ElevenLabs (reutiliza voces y canciones guardadas). /ahorro off para volver.
 
 🔎 <b>Buscar productos</b>
@@ -600,7 +626,7 @@ export async function onMessage(m) {
     return rtg('sendMessage', { chat_id: m.chat.id, text: '🎬 ¿Para qué producto escribo los prompts de Gemini?',
       reply_markup: { inline_keyboard: list.map((p) => [{ text: `${p.emoji} ${p.title}`.slice(0, 60), callback_data: `gem:${p.id}:` }]) } });
   }
-  if (text.startsWith('/creditos') || text.startsWith('/créditos')) return creditos();
+  if (text.startsWith('/creditos') || text.startsWith('/créditos')) return creditos(text);
   if (text.startsWith('/ahorro')) {
     const f = path.join(path.dirname(MUSIC_DIR), 'ahorro'); const arg = text.split(/\s+/)[1];
     if (arg === 'off' || arg === 'no') { try { fs.unlinkSync(f); } catch {} return send('💸 Modo ahorro <b>desactivado</b>: se crean voces y música nuevas con ElevenLabs cuando haga falta.'); }
@@ -627,7 +653,7 @@ export async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos de ElevenLabs gastados y disponibles\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos y gastos (ElevenLabs, Claude, Meta)\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -839,7 +865,7 @@ export async function startRadarBot() {
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['calendario', 'Publicaciones automáticas'], ['leccion', 'Lección de la semana'], ['remarketing', 'Campaña a quienes ya te conocen'], ['similares', 'Públicos similares'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
-    ['creditos', 'Créditos de ElevenLabs'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
+    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;

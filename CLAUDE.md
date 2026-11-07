@@ -87,6 +87,8 @@
 
 - ❌ Black Friday 2026: Diego decidió NO hacer nada este año ("estamos crudos"). No proponer packs ni campañas de Black Friday.
 
+- 💸 /creditos (7-nov): un solo mensaje con ElevenLabs (API), Claude del bot y Meta (gasto hoy/7d/total). Claude: Anthropic no da el saldo con la clave normal → cada llamada (src/gasto.js registrarClaude y estudio/gasto.py registrar) anota tokens en data/gasto-claude.jsonl (precios .env PRECIO_IN=2, PRECIO_OUT=10 por millón, PRECIO_BUSQUEDA=0.01; Sonnet 5.5); saldo ESTIMADO = recargas (/creditos recargue 20 → data/gasto-recargas.json) − gasto desde la 1ª recarga. Aviso si queda < $3. Toda llamada nueva a Claude debe registrarse.
+
 ## Pendientes al 7-nov (Diego puede preguntar "¿qué tenemos pendiente para hoy?")
 - [en curso 6-nov noche] Primer anuncio del tracker de hábitos: /anuncios → reel → 📊 campaña $3/día → Activar.
 - Sábado 7-nov: APAGAR el anuncio de prueba ("¡Queremos crear lo próximo contigo!", creado a mano en la cuenta nueva; Diego lo dejó encendido la noche del 6 para no tocar tanto la cuenta nueva). Compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).

@@ -4,6 +4,7 @@
 3) revisar(): mira fotogramas del video terminado y corrige lo que no se entienda (una sola vez).
 """
 import base64, json, os, subprocess, urllib.request
+import gasto
 from concurrent.futures import ThreadPoolExecutor
 
 MODEL = lambda: os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
@@ -16,6 +17,7 @@ def _claude(content, max_tokens=4000, tools=None, timeout=240):
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(),
                                      headers={"x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""), "anthropic-version": "2023-06-01", "content-type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as r: data = json.load(r)
+        gasto.registrar("reels: diseño y revisión", data)
         out += "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
         if data.get("stop_reason") != "pause_turn": break
         body["messages"] = body["messages"] + [{"role": "assistant", "content": data["content"]}]

@@ -1,5 +1,6 @@
 """Brief creativo con IA: a partir del producto, Claude decide público, colores, textos, voz y música."""
 import pathlib, json, os, urllib.request
+import gasto
 
 GENEROS = ["reggaeton", "pop", "electronica", "lofi", "acustica", "cumbia", "trap"]
 ESTILOS = ["color", "neon", "minimal", "tiktok"]
@@ -59,6 +60,7 @@ def make_brief(prod, n_pages, titles=None, api_key=None, model=None):
                                  headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=180) as r:
         data = json.load(r)
+    gasto.registrar("reels: idea", data)
     text = "".join(b.get("text", "") for b in data.get("content", [])).replace("```json", "").replace("```", "")
     B = json.loads(text[text.index("{"): text.rindex("}") + 1])
     return normalize(B, prod, n_pages, titles)
@@ -233,6 +235,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(),
                                  headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=180) as r: data = json.load(r)
+    gasto.registrar("reels: guion", data)
     text = "".join(b.get("text", "") for b in data.get("content", [])).replace("```json", "").replace("```", "")
     raw = json.loads(text[text.index("{"): text.rindex("}") + 1])
     st = normalize_story(raw, B, len(titles), force_open, force_style, force_format, stock)
@@ -250,6 +253,7 @@ def rank_formats(prod, B, api_key=None):
         req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(),
                                      headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
         with urllib.request.urlopen(req, timeout=60) as r: data = json.load(r)
+        gasto.registrar("reels: formatos", data)
         t = "".join(b.get("text", "") for b in data.get("content", []))
         got = [f for f in json.loads(t[t.index("{"): t.rindex("}") + 1]).get("formatos", []) if f in FORMATOS]
     except Exception as e:

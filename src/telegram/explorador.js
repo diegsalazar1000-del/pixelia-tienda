@@ -4,6 +4,7 @@
 // Cada hallazgo llega al bot del radar con los botones de siempre (Comprar / Recrear / Descartar).
 import fs from 'node:fs';
 import path from 'node:path';
+import { registrarClaude } from '../gasto.js';
 import { config } from '../config.js';
 import { Candidates, Products } from '../db.js';
 
@@ -87,7 +88,7 @@ export async function askClaude(text) {
   for (let turn = 0; turn < 5; turn++) {  // las búsquedas largas pueden "pausarse": se continúa
     const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
       headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const j = await r.json(); if (!r.ok) throw new Error(j.error?.message || r.status);
+    const j = await r.json(); registrarClaude('explorador / lecciones', j); if (!r.ok) throw new Error(j.error?.message || r.status);
     searches += j.usage?.server_tool_use?.web_search_requests || 0;
     out += (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
     if (j.stop_reason !== 'pause_turn') break;
@@ -110,7 +111,7 @@ async function parseLoose(text) {
     headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || config.anthropic.model, max_tokens: 12000,
       messages: [{ role: 'user', content: 'Corrige este JSON para que sea válido (comas, comillas, corchetes). No cambies el contenido. Devuelve SOLO el JSON:\n\n' + s.slice(0, 60000) }] }) });
-  const j = await r.json(); if (!r.ok) throw new Error('no pude leer la respuesta de la IA');
+  const j = await r.json(); registrarClaude('arreglar respuesta', j); if (!r.ok) throw new Error('no pude leer la respuesta de la IA');
   const fixed = (j.content || []).map((b) => b.text || '').join('').replace(/```json|```/g, '');
   return JSON.parse(fixed.slice(fixed.indexOf('{'), fixed.lastIndexOf('}') + 1));
 }
