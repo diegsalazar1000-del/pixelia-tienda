@@ -85,7 +85,7 @@
 
 ## Pendientes al 7-nov (Diego puede preguntar "¿qué tenemos pendiente para hoy?")
 - [en curso 6-nov noche] Primer anuncio del tracker de hábitos: /anuncios → reel → 📊 campaña $3/día → Activar.
-- Sábado 7-nov: compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).
+- Sábado 7-nov: APAGAR el anuncio de prueba ("¡Queremos crear lo próximo contigo!", creado a mano en la cuenta nueva; Diego lo dejó encendido la noche del 6 para no tocar tanto la cuenta nueva). Compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).
 - Plan de la semana (7-nov, acordado con Diego): subir 3-4 productos PLR más (él manda enlace ANTES de pagar → reviso licencia → compra → los rehago como el tracker de hábitos). Foco en vender, sin funciones nuevas salvo fallas.
 - Respaldo para migrar (pendiente, NO hacer aún): copias de todo (código, base de datos, archivos, .env sin mostrar claves, públicos/campañas) para poder mudarse a otro servidor, otra cuenta de anuncios u otro método de pago si hay un problema mayor.
 - Velocidad (para más adelante, aprobado como pendiente): (1) caché de Cloudflare (nube naranja) para imágenes/portadas; (2) aviso por Telegram si la tienda se cae o va lenta; (3) subir VPS a 2 GB cuando haya ventas seguidas.
