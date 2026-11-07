@@ -161,3 +161,13 @@ export async function crearSimilares(ids) {
   }
   return { ids: res, errores };
 }
+
+/** ⏰ Impresiones y clics por hora del día (hora local de quien vio el anuncio) de las campañas, últimos 28 días. */
+export async function horasAnuncios(campIds) {
+  const h = Array.from({ length: 24 }, () => ({ impresiones: 0, clics: 0 }));
+  for (const id of campIds) {
+    const r = await api('GET', `${id}/insights`, { fields: 'impressions,clicks', breakdowns: 'hourly_stats_aggregated_by_audience_time_zone', date_preset: 'last_28d', limit: 100 }).catch(() => ({ data: [] }));
+    for (const x of r.data || []) { const k = parseInt(String(x.hourly_stats_aggregated_by_audience_time_zone || ''), 10); if (k >= 0 && k < 24) { h[k].impresiones += Number(x.impressions || 0); h[k].clics += Number(x.clicks || 0); } }
+  }
+  return h;
+}

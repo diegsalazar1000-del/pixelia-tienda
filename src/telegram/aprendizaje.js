@@ -113,6 +113,7 @@ Fechas que vienen (hay que prepararse con 2-6 semanas de anticipación): ${JSON.
 Datos reales de la tienda: productos (30 días) ${JSON.stringify(perf)}; regalos gratis ${JSON.stringify(regalos)}; correos nuevos esta semana ${sem} (total ${subs.length}); ventas esta semana ${pagadas}.
 ${extra.campanas ? `Campañas activas esta semana: ${extra.campanas}` : 'Todavía no hay campañas activas con datos.'}
 ${resumenTexto() ? `Lo que ya aprendimos de los anuncios:\n${resumenTexto()}` : ''}
+${extra.horarios ? `Cuándo se mueve nuestra gente (ya calculado, menciónalo en la lección si es útil): ${extra.horarios}` : ''}
 Busca en internet (máx. 3 búsquedas) qué se está viviendo AHORA en Latinoamérica que afecte lo que compra la gente (temporada, fechas, tendencias de esta semana en redes sobre organización, ahorro, hábitos, fiestas) y qué tipo de anuncios/publicaciones está funcionando en este nicho.
 Devuelve SOLO JSON:
 {"leccion":{"titulo":"≤ 60 caracteres","texto":"≤ 650 caracteres: qué está pasando, qué aprendimos con NUESTROS datos (si hay) y por qué importa ahora","acciones":["2-3 acciones concretas para ESTA semana, cada una ≤ 110 caracteres, usando los comandos del bot cuando aplique (/anuncios, /gemini, /remarketing, /publicos)"]},

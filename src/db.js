@@ -129,6 +129,7 @@ export const Subscribers = {
     do { code = 'HOLA-' + crypto.randomBytes(3).toString('hex').toUpperCase(); }
     while (db.prepare('SELECT 1 FROM subscribers WHERE code = ?').get(code));
     db.prepare('INSERT INTO subscribers (email, code, source) VALUES (?, ?, ?)').run(e, code, String(source).slice(0, 60));
+    actividad('correo');
     return db.prepare('SELECT * FROM subscribers WHERE email = ?').get(e);
   },
   /** Cupón válido y sin usar (ignora mayúsculas y espacios). */
@@ -183,8 +184,8 @@ export const Products = {
   /** Packs activos que incluyen este producto. */
   bundlesWith: (id) => db.prepare("SELECT * FROM products WHERE active = 1 AND bundle_ids != '' AND (',' || bundle_ids || ',') LIKE ?").all(`%,${Number(id)},%`),
   remove: (id) => db.prepare("UPDATE products SET active = 0, retired_at = datetime('now') WHERE id = ?").run(id),
-  view: (id) => db.prepare(`INSERT INTO product_views (product_id, day, views) VALUES (?, date('now'), 1)
-    ON CONFLICT(product_id, day) DO UPDATE SET views = views + 1`).run(id),
+  view: (id) => (actividad('visita'), db.prepare(`INSERT INTO product_views (product_id, day, views) VALUES (?, date('now'), 1)
+    ON CONFLICT(product_id, day) DO UPDATE SET views = views + 1`).run(id)),
   /** Rendimiento de cada producto activo en los últimos N días. */
   performance(days = 7) {
     const since = `-${Number(days) || 7} days`;
@@ -257,7 +258,7 @@ export const Candidates = {
 
 export const Orders = {
   create(o) {
-    const id = newOrderId();
+    const id = newOrderId(); actividad('pago');
     db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
       o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null);
@@ -323,3 +324,11 @@ export const Reviews = {
   markOrderAsked: (id) => db.prepare('UPDATE orders SET review_asked=1 WHERE id=?').run(id),
   markSubAsked: (email) => db.prepare('UPDATE subscribers SET review_asked=1 WHERE email=?').run(email),
 };
+
+// ⏰ Actividad por día de la semana y hora (hora de Caracas, UTC-4) para aprender cuándo se mueve la gente
+db.exec(`CREATE TABLE IF NOT EXISTS actividad_hora (tipo TEXT, dow INTEGER, hora INTEGER, n INTEGER DEFAULT 0, PRIMARY KEY (tipo, dow, hora))`);
+export function actividad(tipo) {
+  try { const d = new Date(Date.now() - 4 * 3600e3);
+    db.prepare('INSERT INTO actividad_hora (tipo, dow, hora, n) VALUES (?, ?, ?, 1) ON CONFLICT(tipo, dow, hora) DO UPDATE SET n = n + 1').run(tipo, d.getUTCDay(), d.getUTCHours()); } catch {}
+}
+export const Actividad = { todas: () => db.prepare('SELECT tipo, dow, hora, n FROM actividad_hora').all() };

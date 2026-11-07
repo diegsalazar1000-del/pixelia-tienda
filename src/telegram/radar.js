@@ -330,7 +330,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /musica buscar <i>género</i> — pedir canciones reales con licencia (ej. <code>/musica buscar cumbia</code>).
 🎧 Mandar un MP3 con el género en el mensaje → se guarda para los anuncios.\n🔳 Mandar la foto de tu QR de Binance Pay escribiendo <code>qr binance</code> → sale al pagar con Binance.
 
-/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B), embudo de interesados y qué te recomiendo (llega solo cada lunes).\n/publicos — crea en Meta los públicos de interesados reales (web, Instagram y Facebook).\n/calendario — publicaciones automáticas (lunes consejo, miércoles y viernes un reel, 6 pm con aviso a las 3 pm). <code>/calendario off</code> lo apaga.\n/leccion — la lección de la semana + consejo para Instagram ahora (llega sola cada lunes).\n/remarketing — campaña para quienes ya te conocen (visitaron, bajaron el regalo, te siguen), sin gastar en compradores.\n/similares — crea públicos parecidos a tus interesados y te deja hacerles una campaña.\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
+/publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B), embudo de interesados y qué te recomiendo (llega solo cada lunes).\n/publicos — crea en Meta los públicos de interesados reales (web, Instagram y Facebook).\n/calendario — publicaciones automáticas: 1 consejo + 2 reels por semana en los días y horas en que más se mueve tu gente (aprende solo; al inicio lun/mié/vie 6 pm). Avisa 3 h antes. <code>/calendario off</code> lo apaga.\n/leccion — la lección de la semana + consejo para Instagram ahora (llega sola cada lunes).\n/remarketing — campaña para quienes ya te conocen (visitaron, bajaron el regalo, te siguen), sin gastar en compradores.\n/similares — crea públicos parecidos a tus interesados y te deja hacerles una campaña.\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
@@ -408,7 +408,7 @@ function startReporteSemanal() {
     const hoy = d.toISOString().slice(0, 10); if (st.last === hoy) return;
     fs.writeFileSync(F, JSON.stringify({ last: hoy }));
     reporteCampanas(config.telegram.adminChatId).catch((e) => console.error('[reporte]', e.message))
-      .then(() => leccion({ campanas: resumenCamps.join(' | ') })).catch((e) => send(`⚠️ No pude preparar la lección de la semana: ${esc(e.message)}`));
+      .then(() => leccion({ campanas: resumenCamps.join(' | '), campIds: camps().filter((c) => c.estado !== 'borrada').map((c) => c.camp) })).catch((e) => send(`⚠️ No pude preparar la lección de la semana: ${esc(e.message)}`));
   }, 10 * 60e3);
 }
 const CAMP_F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'campanas.json');
@@ -501,7 +501,7 @@ export async function onMessage(m) {
   }
   if (text.startsWith('/leccion') || text.startsWith('/lección')) {
     await send('🎓 Preparando la lección de la semana y el consejo para Instagram (busca en internet qué se está viviendo: unos centavos de Claude)…');
-    return leccion({ campanas: resumenCamps.join(' | ') }).catch((e) => send(`⚠️ ${esc(e.message)}`));
+    return leccion({ campanas: resumenCamps.join(' | '), campIds: camps().filter((c) => c.estado !== 'borrada').map((c) => c.camp) }).catch((e) => send(`⚠️ ${esc(e.message)}`));
   }
   if (text.startsWith('/remarketing') || text.startsWith('/similares')) {
     if (!adsListos()) return send('Falta conectar la cuenta publicitaria.');
