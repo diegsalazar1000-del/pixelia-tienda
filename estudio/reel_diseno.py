@@ -29,6 +29,7 @@ REGLAS (un solo HTML, sin JavaScript, sin enlaces externos):
 - html,body{{margin:0;width:1080px;height:1920px;overflow:hidden}}. Cada escena es <section class="s" id="s1">…</section>, <section class="s" id="s2">… (position:absolute;inset:0).
   CSS compartido UNA vez en <style> (sé compacto: clases reutilizables, una identidad visual coherente en todo el reel, con variaciones de composición por escena).
 - Elementos que deben APARECER uno tras otro dentro de la escena: ponles class "r1", "r2", "r3" (en ese orden; el fondo y lo fijo sin clase). Máx. 3 pasos.
+- SIN animaciones ni transiciones CSS, sin opacity:0 ni display:none en las escenas (las animaciones las ponemos nosotros). CSS compacto: el HTML completo debe ocupar menos de 14.000 caracteres.
 - Texto: corto (lo esencial de lo que dice la voz, máx. 8 palabras por bloque), MUY grande (titulares ≥ 90px, nada menor de 40px), alto contraste, márgenes ≥ 70px,
   y deja libre la franja de abajo (los últimos 280px) salvo en la última escena.
 - Muestra el producto REAL (las imágenes de páginas) en al menos 2 escenas: en celular, laptop, hoja, tarjetas con sombra… grande y nítido.
@@ -48,7 +49,7 @@ def _shots(html_path, out_dir, k, pasos):
     base = html_path.read_text(encoding="utf-8"); files = []
     for st in range(pasos + 1):
         hide = ",".join(f"#s{k} .r{i}" for i in range(st + 1, 4))
-        css = f"<style>.s:not(#s{k}){{display:none!important}}{hide + '{visibility:hidden!important}' if hide else ''}</style>"
+        css = f"<style>*,*::before,*::after{{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:both!important;transition:none!important}}.s:not(#s{k}){{display:none!important}}#s{k}{{visibility:visible!important;opacity:1!important}}{hide + '{visibility:hidden!important}' if hide else ''}</style>"
         p = out_dir / f"e{k}_{st}.html"; p.write_text(base.replace("</head>", css + "</head>", 1) if "</head>" in base else css + base, encoding="utf-8")
         creativos.render(p, out_dir / f"e{k}_{st}.png", W, H)
         files.append(Image.open(out_dir / f"e{k}_{st}.jpg").convert("RGB"))
@@ -95,7 +96,10 @@ def construir(prod, B, story, pages, phone, out_path, tmp, vdurs=None, say=None)
         sec = re.search(rf'<section[^>]*id=["\']s{k}["\'][\s\S]*?(?=<section[^>]*id=["\']s{k + 1}["\']|</body>|$)', html)
         pasos = max([int(x) for x in re.findall(r'class=["\'][^"\']*\br([123])\b', sec.group(0))] or [0]) if sec else 0
         fr = _shots(doc, work, k, pasos)
-        if ImageStat.Stat(fr[-1].convert("L")).stddev[0] < 6: raise RuntimeError(f"la escena {k} salió vacía")
+        if ImageStat.Stat(fr[-1].convert("L")).stddev[0] < 6:
+            print(f"reel diseñado: escena {k} vacía, uso la anterior", flush=True)
+            if not shots: raise RuntimeError("la primera escena salió vacía")
+            fr = [shots[-1][-1]]
         shots.append(fr)
     # animación: entrada con golpe, pasos que aparecen, zoom lento y transición entre escenas
     def frame(t):

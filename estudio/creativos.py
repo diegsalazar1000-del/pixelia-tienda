@@ -109,6 +109,7 @@ REGLAS DEL DISEÑO (HTML + CSS en un solo archivo, sin JavaScript, sin enlaces e
 - {neutro}
 - Prohibido: reseñas o testimonios inventados, cifras de ventas inventadas, "últimas unidades"/urgencia falsa, logos de marcas (ni Apple, ni Excel, ni Google), personas famosas.
 - Que se vea NATIVO y llamativo, no un folleto: jerarquía clara, mucho aire, un punto focal, un detalle que sorprenda (sticker, flecha dibujada, subrayado a mano, etiqueta de precio, notificación, nota adhesiva…).
+- Sin animaciones CSS. HTML COMPACTO: cada diseño debe ocupar menos de 6.000 caracteres (CSS corto, sin comentarios).
 - Cada diseño DIFERENTE de verdad: otra composición, otra letra, otra paleta, otro concepto.
 
 Devuelve SOLO JSON: {{"disenos":[{{"concepto":"nombre corto","por_que":"1 frase","foto":"búsqueda en inglés para una foto real de Pixabay o null","html":"<!doctype html>…"}}]}}"""
@@ -171,7 +172,7 @@ def disenar(prod, B, story, pages, phone, out, tmp, prefixes=("A", "B", "C"), sa
             if ph is not None: ph.convert("RGB").save(sub / "foto.jpg", quality=90)
         html = d["html"]
         html = re.sub(r"<link[^>]+>", "", html)
-        html = html.replace("<head>", f"<head><meta charset='utf-8'><style>{css}</style>", 1) if "<head>" in html else f"<meta charset='utf-8'><style>{css}</style>" + html
+        html = html.replace("<head>", f"<head><meta charset='utf-8'><style>{css}*,*::before,*::after{{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:both!important;transition:none!important}}</style>", 1) if "<head>" in html else f"<meta charset='utf-8'><style>{css}*,*::before,*::after{{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:both!important;transition:none!important}}</style>" + html
         (sub / "index.html").write_text(html, encoding="utf-8")
         render(sub / "index.html", sub / "4x5.png", *SIZES["4x5"])
         return sub
