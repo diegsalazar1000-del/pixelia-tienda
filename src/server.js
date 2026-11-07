@@ -149,7 +149,8 @@ on('POST', '/api/resena', async (req, res) => {
   json(res, 200, { ok: true });
 });
 on('GET', '/api/regalo/resenas', (req, res) => json(res, 200, { reviews: Object.values(GIFT_SLUGS).flatMap((s) => { const p = Products.bySlug(s); return p ? Reviews.approved(p.id, 10).map((r) => ({ ...r, product: p.title })) : []; }) }));
-on('GET', '/binance-qr.jpg', (req, res) => serveFile(res, path.join(path.dirname(config.paths.files), 'binance-qr.jpg'), { 'cache-control': 'public, max-age=600' }));
+on('GET', '/binance-qr.jpg', (req, res) => { const f = path.join(path.dirname(config.paths.files), 'binance-qr.jpg');
+  serveFile(res, fs.existsSync(f) ? f : path.join(config.paths.public, 'img', 'binance-qr.jpg'), { 'cache-control': 'public, max-age=600' }); });
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
