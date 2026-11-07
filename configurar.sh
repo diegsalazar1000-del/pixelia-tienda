@@ -69,16 +69,20 @@ case "$1" in
         const pages = (await j(`${G}/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${ll.access_token}`)).data || [];
         const p = pages.find((x) => /pixelia/i.test(x.name)) || pages[0];
         if (!p) throw new Error("el token no ve ninguna página (marca la página de Pixelia al generar el token)");
+        let ig = p.instagram_business_account?.id || "";
+        if (!ig) { try { const x = await j(`${G}/${p.id}?fields=instagram_business_account,connected_instagram_account&access_token=${p.access_token}`);
+          ig = x.instagram_business_account?.id || x.connected_instagram_account?.id || ""; } catch {} }
+        if (!ig) { try { const x = await j(`${G}/me/instagram_accounts?fields=id,username&access_token=${ll.access_token}`); ig = x.data?.[0]?.id || ""; } catch {} }
         let ad = ""; try { const a = (await j(`${G}/me/adaccounts?fields=account_id,name,account_status&access_token=${ll.access_token}`)).data || [];
           const x = a.find((y) => y.account_status === 1) || a[0]; if (x) ad = `act_${x.account_id}~${x.name}`; } catch {}
-        console.log(`OK|${p.id}|${p.access_token}|${p.instagram_business_account?.id || ""}|${ll.access_token}|${ad.replace(/[|]/g, "-")}|${p.name}`);
+        console.log(`OK|${p.id}|${p.access_token}|${ig}|${ll.access_token}|${ad.replace(/[|]/g, "-")}|${p.name}`);
       } catch (e) { console.log("ERR|" + e.message); }' 2>/dev/null)
     case "$OUT" in
       OK\|*) IFS='|' read -r _ PID PTOK IGID UTOK AD PNAME <<< "$OUT"
-        set_key META_PAGE_ID "$PID"; set_key META_PAGE_TOKEN "$PTOK"; set_key META_IG_ID "$IGID"
+        set_key META_PAGE_ID "$PID"; set_key META_PAGE_TOKEN "$PTOK"; [ -n "$IGID" ] && set_key META_IG_ID "$IGID"
         set_key META_USER_TOKEN "$UTOK"; set_key META_USER_TOKEN_AT "$(date +%Y-%m-%d)"
         if [ -n "$AD" ]; then set_key META_AD_ACCOUNT "${AD%%~*}"; echo "   ✔ Cuenta publicitaria: ${AD#*~}"; else echo "   ⚠️ No vi cuenta publicitaria (¿marcaste ads_management y ads_read?)"; fi
-        echo "   ✔ Página: $PNAME"; [ -n "$IGID" ] && echo "   ✔ Instagram conectado" || echo "   ⚠️ La página no tiene Instagram conectado: conéctalo en Facebook y repite esto.";;
+        echo "   ✔ Página: $PNAME"; if [ -n "$IGID" ]; then echo "   ✔ Instagram conectado"; elif grep -q '^META_IG_ID=.\+' .env; then echo "   ✔ Instagram: dejo el que ya estaba guardado"; else echo "   ⚠️ No encontré el Instagram: revisa que esté asignado a Pixelia Bot y repite esto."; fi;;
       *) echo "   ✖ No pude conectar: ${OUT#ERR|}"; exit 1;;
     esac;;
   nueva-clave)
