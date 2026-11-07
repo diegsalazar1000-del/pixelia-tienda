@@ -369,7 +369,7 @@ function embudo() {
 async function textoPublicos() {
   const ids = pubIds(); if (!Object.keys(ids).length) return '';
   const t = await tamanos(ids).catch(() => ({}));
-  return '🎯 <b>Interesados reales en Meta</b>\n' + Object.values(t).map((x) => `• ${esc(x.nombre.replace('Pixelia · ', ''))}: ${x.max > 0 ? (x.min < 1000 ? 'menos de 1.000' : `${x.min}-${x.max}`) : 'aún vacío'}`).join('\n');
+  return '🎯 <b>Interesados reales en Meta</b>\n' + Object.values(t).map((x) => `• ${esc(x.nombre.replace('Pixelia · ', ''))}: ${x.max > 1000 ? `${x.min}-${x.max}` : 'menos de 1.000 (Meta no da el número exacto hasta que pasen de 1.000)'}`).join('\n');
 }
 const resumenCamps = [];  // lo usa la lección del lunes
 const lp_rm = (c) => !c.remarketing && !String(c.titulo || '').startsWith('🎯') && !!pubIds().vieron;
