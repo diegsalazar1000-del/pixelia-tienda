@@ -260,9 +260,9 @@ function clipOptions(pid, cid) {
 }
 
 // 🎬 Prompts para Gemini (Veo): el clip realista que abre el anuncio. Diego lo pega en la app de Gemini y nos manda el video.
-const GEMINI_EJEMPLOS = `Vertical 9:16 video, realistic, handheld smartphone look. Night, small kitchen table lit by a warm lamp. A Latina woman in her early 30s, wearing a hoodie, is surrounded by crumpled receipts, bills and an open wallet with only a few coins. Her phone keeps buzzing with notifications. She drops her head on the table in comic frustration, then looks straight at the camera and says in neutral Latin American Spanish: "¿En qué se me fue el sueldo… otra vez?" Then she slowly turns a laptop toward the camera; the screen glows with a colorful dashboard of charts, out of focus. She raises an eyebrow and smiles, relieved. Natural sounds: phone buzzing, paper rustling, a soft sigh. No on-screen text, no logos, no brand names.
+const GEMINI_EJEMPLOS = `Vertical 9:16 video, realistic, handheld smartphone look. Night, small kitchen table lit by a warm lamp. A Latina woman in her early 30s, wearing a hoodie, is surrounded by crumpled receipts, bills and an open wallet with only a few coins. Her phone keeps buzzing with notifications. She drops her head on the table in comic frustration, then looks straight at the camera and says in neutral Latin American Spanish: "¿En qué se me fue el sueldo… otra vez?" Then she slowly turns a laptop toward the camera; the screen glows with a colorful dashboard of charts, out of focus. She raises an eyebrow and smiles, relieved. Natural sounds: phone buzzing, paper rustling, a soft sigh. No music, only natural ambient sounds and voices. No on-screen text, no logos, no brand names.
 
-Vertical 9:16 video, realistic, handheld party footage feel. A cheerful baby shower in a living room decorated with pastel pink, blue and beige balloons and a small cake. A group of women friends of different ages sit around a table holding printed game boards and using beans as markers, laughing. One woman reads a card aloud in a playful voice, everyone leans in with suspense. Suddenly the pregnant guest of honor jumps up, raises her board and shouts in neutral Latin American Spanish: "¡LOTERÍA!" Everyone screams, laughs and hugs her, then they all freeze smiling at the camera. Warm natural daylight, joyful atmosphere. Natural sounds: laughter, cheering, chairs moving. No on-screen text, no logos, no brand names.`;
+Vertical 9:16 video, realistic, handheld party footage feel. A cheerful baby shower in a living room decorated with pastel pink, blue and beige balloons and a small cake. A group of women friends of different ages sit around a table holding printed game boards and using beans as markers, laughing. One woman reads a card aloud in a playful voice, everyone leans in with suspense. Suddenly the pregnant guest of honor jumps up, raises her board and shouts in neutral Latin American Spanish: "¡LOTERÍA!" Everyone screams, laughs and hugs her, then they all freeze smiling at the camera. Warm natural daylight, joyful atmosphere. Natural sounds: laughter, cheering, chairs moving. No music, only natural ambient sounds and voices. No on-screen text, no logos, no brand names.`;
 
 async function geminiPrompts(pid) {
   const p = Products.byId(Number(pid));
@@ -287,15 +287,18 @@ Reglas (Veo se equivoca cuando pasan muchas cosas: menos es más):
 - En los primeros 2 segundos pasa algo que frena el scroll (gesto exagerado, cara de sorpresa, frustración cómica, mirada a cámara).
 - TERMINA en una pose quieta y feliz que dure el último segundo (para cortar ahí y que entre nuestro producto real).
 - Termina siempre con "Natural sounds: …", "Consistent lighting and objects throughout." y "No on-screen text, no logos, no brand names."
-- Los 2 prompts deben ser situaciones MUY distintas entre sí (lugar, personas, emoción; uno puede ser cómico).
+- SONIDO: nada de música (Veo pone música triste o random): termina SIEMPRE con "No music, only natural ambient sounds and voices."
+- Los 2 prompts son de ESTILOS distintos:
+  1) "realista": persona real en un momento cotidiano de este público (como los ejemplos), gancho fuerte en el segundo 1.
+  2) "impacto": estilo ANUNCIO DE VIDEOJUEGO MÓVIL viral: animación 3D estilizada y caricaturesca (personajes originales tipo juguete/cartoon, NO de ninguna marca ni película), colores saturados, cámara dinámica pero continua (un solo plano con zoom o giro), una situación exagerada de "fallo" del problema que vive el público (ej. una avalancha de recibos, un cerdito alcancía que tiembla vacío, un caos de regalos navideños) que en el mismo plano se transforma en "victoria" satisfactoria y ordenada con un brillo/destello (como pasar de nivel), con efectos de sonido de juego (whoosh, pop, ding de victoria) y una reacción exagerada del personaje. En este estilo sí se permite un efecto mágico de transformación, pero sin texto ni números.
 - No repitas ideas parecidas a estas anteriores: ${JSON.stringify(hist.slice(-8).map((h) => h.idea))}
-Devuelve SOLO JSON: {"prompts": [{"idea": "la situación en 6-10 palabras en español", "gancho": "texto corto (≤ 5 palabras) que pondremos encima", "prompt": "..."}]}`, 3000);
+Devuelve SOLO JSON: {"prompts": [{"estilo": "realista|impacto", "idea": "la situación en 6-10 palabras en español", "gancho": "texto corto (≤ 5 palabras) que pondremos encima", "prompt": "..."}]}`, 3000);
   const ps = (R.prompts || []).filter((x) => x.prompt).slice(0, 2);
   if (!ps.length) return send('⚠️ No salieron prompts, prueba otra vez.');
   fs.writeFileSync(histF, JSON.stringify([...hist, ...ps.map((x) => ({ idea: x.idea }))].slice(-30)));
   for (const [k, x] of ps.entries())
     await rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
-      text: `🎬 <b>Prompt ${k + 1}: ${esc(x.idea || '')}</b>\nGancho sugerido: <i>${esc(x.gancho || '')}</i>\n(toca el texto para copiarlo)\n\n<code>${esc(x.prompt)}</code>` });
+      text: `${x.estilo === 'impacto' ? '🎮 <b>Impacto (estilo videojuego)' : '🎥 <b>Realista'}: ${esc(x.idea || '')}</b>\nGancho sugerido: <i>${esc(x.gancho || '')}</i>\n(toca el texto para copiarlo)\n\n<code>${esc(x.prompt)}</code>` });
   return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
     text: `1️⃣ Pega uno en Gemini → crear video (formato vertical).\n2️⃣ Descarga el video y mándamelo aquí escribiendo en el mensaje: <code>${esc(p.title.split(' ').slice(0, 2).join(' ').toLowerCase())}</code>\n3️⃣ Yo armo el anuncio con el producto, la voz, la música y el precio.`,
     reply_markup: { inline_keyboard: [[{ text: '🔄 Otros 2 prompts', callback_data: `gem:${p.id}:` }]] } });
