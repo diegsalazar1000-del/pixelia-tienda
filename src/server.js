@@ -65,6 +65,12 @@ function upsellFor(o) {
 }
 
 /** Precio final de un pedido web (cupón o "completa tu pack"). */
+export const BUMP_OFF = 0.2;  // 2º producto en el pago: 20% menos
+function bumpInfo(p) {
+  if (!p || p.bundle_ids || !p.price_cents) return null;
+  const x = Products.bumpFor(p); if (!x) return null;
+  return { slug: x.slug, title: x.title, emoji: x.emoji, short: x.short, price: x.price_cents / 100, bumpPrice: Math.round(x.price_cents * (1 - BUMP_OFF)) / 100, cover: publicProduct(x).cover };
+}
 function priceFor(p, b) {
   if (b.upsell?.id) {
     const prev = Orders.withProduct(b.upsell.id);
@@ -118,7 +124,7 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
-    DATA: JSON.stringify({ ...pp, packs: packOffers(p), reviews: Reviews.approved(p.id), rating: Reviews.summary(p.id) }).replace(/</g, '\\u003c') }));
+    DATA: JSON.stringify({ ...pp, packs: packOffers(p), bump: bumpInfo(p), reviews: Reviews.approved(p.id), rating: Reviews.summary(p.id) }).replace(/</g, '\\u003c') }));
 });
 // 🎁 Regalos gratis a cambio del correo (lead magnet)
 const REGALOS = {
@@ -206,6 +212,7 @@ on('POST', '/api/orders', async (req, res) => {
   if (!email && !whatsapp) return fail(res, 400, 'Indica tu correo o WhatsApp para enviarte el producto');
   let pr; try { pr = priceFor(p, b); } catch (e) { return fail(res, 400, e.message); }
   const extra = { coupon: pr.coupon || '', upsell_of: pr.upsell_of || '' };
+  if (b.bump && !pr.upsell_of) { const bi = bumpInfo(p); if (bi && bi.slug === b.bump) { pr.cents += Math.round(bi.bumpPrice * 100); extra.bump_id = Products.bySlug(bi.slug).id; } }
   if (b.method === 'paypal') {
     if (!paypalEnabled()) return fail(res, 400, 'PayPal no está activo');
     const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'paypal', amount_cents: pr.cents, currency: 'USD', lang: b.lang, ...extra });

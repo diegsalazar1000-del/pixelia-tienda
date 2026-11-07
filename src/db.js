@@ -104,7 +104,8 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN candidate_id INTEGER",
   "ALTER TABLE products ADD COLUMN bundle_ids TEXT DEFAULT ''",   // pack: ids de los productos incluidos, ej "3,5,8"
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
-  "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",      // pedido original cuando es "completa tu pack"
+  "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",
+  "ALTER TABLE orders ADD COLUMN bump_id INTEGER",                  // "agrega también" en el pago (2º producto con descuento)      // pedido original cuando es "completa tu pack"
 ]) { try { db.exec(sql); } catch {} }
 
 // Suscriptores: dejan su correo a cambio de un cupón de primera compra
@@ -169,6 +170,15 @@ export const Products = {
   bundleItems(p) {
     const ids = String(p?.bundle_ids || '').split(',').map(Number).filter(Boolean);
     return ids.map((i) => Products.byId(i)).filter(Boolean);
+  },
+  /** "Comprados juntos habitualmente": lo que más compran quienes compraron este; si no hay datos, misma categoría o el más vendido. */
+  bumpFor(p) {
+    const ok = (x) => x && x.id !== p.id && x.active && !x.bundle_ids && x.price_cents > 0 && (x.file_name || x.external_url);
+    const co = db.prepare(`SELECT o2.product_id id, COUNT(*) n FROM orders o1 JOIN orders o2 ON o1.email = o2.email AND o1.email != '' AND o2.product_id != o1.product_id
+      WHERE o1.product_id = ? AND o1.status = 'paid' AND o2.status = 'paid' GROUP BY o2.product_id ORDER BY n DESC LIMIT 5`).all(p.id);
+    for (const r of co) { const x = Products.byId(r.id); if (ok(x)) return x; }
+    const all = Products.list().filter(ok);
+    return all.find((x) => x.category === p.category) || all.sort((a, b) => b.sales - a.sales)[0] || null;
   },
   /** Packs activos que incluyen este producto. */
   bundlesWith: (id) => db.prepare("SELECT * FROM products WHERE active = 1 AND bundle_ids != '' AND (',' || bundle_ids || ',') LIKE ?").all(`%,${Number(id)},%`),
@@ -248,13 +258,14 @@ export const Candidates = {
 export const Orders = {
   create(o) {
     const id = newOrderId();
-    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
-      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '');
+    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
+      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null);
     return Orders.get(id);
   },
   get: (id) => db.prepare('SELECT * FROM orders WHERE id = ?').get(String(id || '').toUpperCase()),
-  withProduct: (id) => db.prepare(`SELECT o.*, p.title, p.slug, p.file_name, p.external_url, p.emoji, p.bundle_ids
+  withProduct: (id) => db.prepare(`SELECT o.*, CASE WHEN o.bump_id THEN p.title || ' + ' || (SELECT title FROM products WHERE id = o.bump_id) ELSE p.title END AS title,
+    p.slug, p.file_name, p.external_url, p.emoji, CASE WHEN o.bump_id THEN p.id || ',' || o.bump_id ELSE p.bundle_ids END AS bundle_ids
     FROM orders o JOIN products p ON p.id = o.product_id WHERE o.id = ?`).get(String(id || '').toUpperCase()),
   update(id, data) {
     const sets = Object.keys(data).map((k) => `${k} = :${k}`).join(', ');

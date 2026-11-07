@@ -34,7 +34,7 @@ export async function deliver(orderId) {
   if (o.telegram_chat_id && tgEnabled()) {
     try {
       const file = o.file_name && path.join(config.paths.files, o.file_name);
-      if (file && fs.existsSync(file) && fs.statSync(file).size < 49 * 1024 * 1024) {
+      if (!o.bump_id && file && fs.existsSync(file) && fs.statSync(file).size < 49 * 1024 * 1024) {
         await tgSendFile(o.telegram_chat_id, file, `🎉 <b>${esc(o.title)}</b>\nPedido <code>${o.id}</code>. ¡Gracias por tu compra!`);
       } else {
         await tg('sendMessage', {
