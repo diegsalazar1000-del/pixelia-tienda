@@ -105,6 +105,7 @@ REGLAS DEL DISEÑO (HTML + CSS en un solo archivo, sin JavaScript, sin enlaces e
   (vw, vh, vmin, %, clamp) para que se vea BIEN en los 3 tamaños. Nada importante a menos de 5vmin del borde. Nada cortado ni encimado.
 - Texto: titular corto y potente (máx. 9 palabras), letras grandes (titular ≥ 7vmin; ningún texto menor de 2.6vmin). Máx. 3 bloques de texto además del precio/CTA.
 - Siempre: {precio_regla}, el dominio «{dominio}» y una llamada a la acción corta ({cta}).
+- MENSAJE (método de campañas): 1 idea central en 1 frase; habla de BENEFICIOS no de funciones (cada línea responde "¿y a mí qué?" desde quien mira); compáralo con NO hacer nada (seguir como está); usa "tú"; una sola llamada a la acción.
 - {neutro}
 - Prohibido: reseñas o testimonios inventados, cifras de ventas inventadas, "últimas unidades"/urgencia falsa, logos de marcas (ni Apple, ni Excel, ni Google), personas famosas.
 - Que se vea NATIVO y llamativo, no un folleto: jerarquía clara, mucho aire, un punto focal, un detalle que sorprenda (sticker, flecha dibujada, subrayado a mano, etiqueta de precio, notificación, nota adhesiva…).

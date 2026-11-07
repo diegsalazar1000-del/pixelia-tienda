@@ -221,6 +221,7 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
     if not float(prod.get("price") or 0):
         forzar.append("ES UN REGALO GRATIS (se descarga dejando el correo en pixeliadigital.app/regalo). El cierre invita a COMENTAR una palabra clave corta en mayúsculas relacionada (ej. AHORRO o NAVIDAD) y a descargarlo gratis; en 'precio' di 'gratis' y usa cta 'DESCÁRGALO GRATIS'. Genera curiosidad y ganas de compartirlo/guardarlo.")
     if extra: forzar.append(extra)
+    forzar.append('MENSAJE (método de campañas): 1 idea central en 1 frase; habla de BENEFICIOS no de funciones (cada línea responde "¿y a mí qué?" desde quien mira); compáralo con NO hacer nada (seguir como está); usa "tú"; una sola llamada a la acción.')
     ap = aprendizaje()
     if ap: forzar.append("APRENDIZAJE DE NUESTRAS CAMPAÑAS REALES (úsalo para decidir gancho, formato y tono; no copies frases literales):\n" + ap)
     prompt = STORY_PROMPT.format(

@@ -33,6 +33,7 @@ REGLAS (un solo HTML, sin JavaScript, sin enlaces externos):
   y deja libre la franja de abajo (los últimos 280px) salvo en la última escena.
 - Muestra el producto REAL (las imágenes de páginas) en al menos 2 escenas: en celular, laptop, hoja, tarjetas con sombra… grande y nítido.
 - Primera escena = gancho que frena el scroll (contraste, tamaño, sorpresa). Última escena = {precio_regla} + «{dominio}» + llamada a la acción «{cta}».
+- MENSAJE (método de campañas): 1 idea central en 1 frase; habla de BENEFICIOS no de funciones (cada línea responde "¿y a mí qué?" desde quien mira); compáralo con NO hacer nada (seguir como está); usa "tú"; una sola llamada a la acción.
 - {neutro}
 - Prohibido: reseñas o cifras inventadas, urgencia falsa, logos de marcas, personas famosas.
 Devuelve SOLO JSON: {{"concepto":"nombre corto del estilo","html":"<!doctype html>…"}}"""

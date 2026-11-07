@@ -148,8 +148,8 @@ export const pausarAnuncio = (adId) => api('POST', adId, { status: 'PAUSED' });
 export const cambiarPresupuesto = (campId, usd) => api('POST', campId, { daily_budget: Math.round(usd * 100) });
 /** Resultados por anuncio (A/B) de los últimos 7 días. */
 export async function porAnuncio(campId) {
-  const r = await api('GET', `${campId}/insights`, { level: 'ad', fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,ctr,actions', date_preset: 'last_7d' });
-  return (r.data || []).map((x) => ({ id: x.ad_id, nombre: x.ad_name, gasto: Number(x.spend || 0), vistas: Number(x.impressions || 0), clics: Number(x.clicks || 0),
+  const r = await api('GET', `${campId}/insights`, { level: 'ad', fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,ctr,frequency,actions', date_preset: 'last_7d' });
+  return (r.data || []).map((x) => ({ id: x.ad_id, nombre: x.ad_name, gasto: Number(x.spend || 0), vistas: Number(x.impressions || 0), clics: Number(x.clicks || 0), frecuencia: Number(x.frequency || 0),
     visitas: Number((x.actions || []).find((a) => a.action_type === 'landing_page_view')?.value || 0) }));
 }
 export async function pausar(ids) { await api('POST', ids.camp, { status: 'PAUSED' }); }

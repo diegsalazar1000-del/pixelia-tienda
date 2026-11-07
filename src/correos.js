@@ -41,7 +41,8 @@ const CONSEJOS = {
       '<b>Márcalo cada día:</b> ver tu racha crecer es la mejor motivación (y no romperla dos días seguidos).'] },
 };
 
-const marco = (s, cuerpo) => `<div style="font-family:system-ui,sans-serif;max-width:540px;margin:auto;padding:26px;background:#0f0f1a;color:#eee;border-radius:16px;line-height:1.55">${cuerpo}
+const pre = (t) => `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(t)}</div>`;  // vista previa en la bandeja (no repite el asunto)
+const marco = (s, cuerpo, preview = '') => `${preview ? pre(preview) : ''}<div style="font-family:system-ui,sans-serif;max-width:540px;margin:auto;padding:26px;background:#0f0f1a;color:#eee;border-radius:16px;line-height:1.55">${cuerpo}
   <p style="color:#8a87a6;font-size:12px;margin-top:26px;border-top:1px solid #2a2840;padding-top:12px">Recibes este correo porque ${/regalo/.test(s.source) ? 'descargaste un regalo' : 'pediste tu cupón'} en ${esc(config.storeName)}. ¿No quieres más correos? <a style="color:#b9a6ff" href="${bajaLink(s.email)}">Darme de baja</a>.</p></div>`;
 const boton = (url, t) => `<p><a style="display:inline-block;background:#7c5cff;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:700" href="${url}">${t}</a></p>`;
 
@@ -49,12 +50,13 @@ function paso1(s) {
   const c = CONSEJOS[tema(s)], p = recomendar(s);
   const html = marco(s, `<h2 style="margin:0 0 12px">${c.titulo}</h2><ol style="padding-left:20px">${c.puntos.map((x) => `<li style="margin-bottom:10px">${x}</li>`).join('')}</ol>
     ${p ? `<p style="color:#cfcbe6">Y si quieres que todo se calcule solo, <a style="color:#b9a6ff" href="${base()}/p/${p.slug}">${esc(p.title)}</a> te lo deja listo en Excel o Google Sheets.</p>` : ''}
-    <p style="color:#cfcbe6">¿Te sirvió? Respóndenos por Telegram y cuéntanos cómo vas 💜</p>`);
+    <p style="color:#cfcbe6">¿Te sirvió? Respóndenos por Telegram y cuéntanos cómo vas 💜</p>`, 'Son 3 cambios pequeños. El segundo es el que más ayuda.');
   return { asunto: c.asunto, html, texto: c.puntos.map((x, i) => `${i + 1}. ${x.replace(/<[^>]+>/g, '')}`).join('\n') + `\n\nDarte de baja: ${bajaLink(s.email)}` };
 }
 
 function paso2(s) {
   const p = recomendar(s); if (!p) return null;
+  if (Orders.recent(3000).some((o) => o.status === 'paid' && String(o.email || '').toLowerCase() === s.email && Date.parse((o.paid_at || o.created_at) + 'Z') > Date.now() - 5 * 86400e3)) return null;  // acaba de comprar: no venderle encima
   const rv = Reviews.summary(p.id) || {}, una = Reviews.approved(p.id, 5).find((r) => r.stars >= 4 && r.text);
   const lista = String(p.description || '').split('\n').filter((l) => l.trim().startsWith('•')).slice(0, 5);
   const precio = `$${(p.price_cents / 100).toFixed(2)}`, cupon = s.used_order ? null : s.code;
@@ -66,7 +68,7 @@ function paso2(s) {
     ${rv.n ? `<p>⭐ ${rv.avg}/5 de ${rv.n} opinión${rv.n > 1 ? 'es' : ''} real${rv.n > 1 ? 'es' : ''}${una ? `: <i>"${esc(String(una.text).slice(0, 160))}"</i>` : ''}</p>` : ''}
     <p style="font-size:18px"><b>${precio}</b> · descarga inmediata · funciona en el celular</p>
     ${cupon ? `<p>Tu cupón de bienvenida sigue disponible: <b style="background:#7c5cff;padding:4px 10px;border-radius:8px;letter-spacing:1px">${esc(cupon)}</b> (15% en tu primera compra).</p>` : ''}
-    ${boton(url, 'Ver ' + esc(p.title.split(':')[0]))}`);
+    ${boton(url, 'Ver ' + esc(p.title.split(':')[0]))}`, cupon ? 'Tu 15% de bienvenida sigue guardado para ti.' : String(p.short || '').slice(0, 90));
   return { asunto: `${p.emoji || '✨'} ${p.title.split(':')[0]}${cupon ? ' (con tu 15%)' : ''}`, html, texto: `${p.title}\n${p.short || ''}\n${precio}${cupon ? `\nCupón 15%: ${cupon}` : ''}\n${url}\n\nDarte de baja: ${bajaLink(s.email)}` };
 }
 
