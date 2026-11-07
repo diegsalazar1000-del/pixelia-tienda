@@ -205,7 +205,18 @@ def next_format(prod, B, brief_file, out):
 def clip_story(prod, B, titles, n_pages, out, clip, tmp, force_style=None):
     """📹 Anuncio con un video del usuario (ej. Gemini): su clip abre (con su sonido) y el resto lo arma la IA alrededor."""
     dur = formatos.clip_duration(clip)
-    info = director.describir_clip(clip, dur, tmp) or {}
+    cola = director.cola_muda(clip, dur)  # final mudo y quieto de Veo
+    info = director.describir_clip(clip, dur, tmp, cola) or {}
+    pant = info.get("pantalla") if isinstance(info.get("pantalla"), dict) else None
+    try:
+        q = [[float(a) * 3, float(b) * 3] for a, b in pant["esquinas"]][:4] if pant else None  # 360x640 → 1080x1920
+        if q and len(q) == 4 and (max(x for x, _ in q) - min(x for x, _ in q)) > 150 and (max(y for _, y in q) - min(y for _, y in q)) > 100: pant = {"q": q, "tipo": pant.get("tipo", "")}
+        else: pant = None
+    except Exception: pant = None
+    if cola:
+        if pant: pant["t"] = round(cola + 0.15, 2); dur = round(min(dur, cola + 2.3), 2)  # el producto real aparece en la pantalla durante el final quieto
+        else: dur = round(max(4.0, cola + 0.6), 2)  # sin pantalla: se corta el final muerto
+    else: pant = None
     extra = (f"Este reel EMPIEZA con un clip real ya grabado de {dur:.1f} segundos (con su propio sonido y diálogo): {info.get('que_pasa', 'una persona en una situación cotidiana')}. "
              f"Emoción: {info.get('emocion', '')}. Lo más fuerte pasa hacia el segundo {info.get('momento_clave', 1)}. NO escribas una escena para el clip. "
              "Agrega al JSON 'gancho_clip': {\"lineas\": [1-2 líneas de 1-3 palabras], \"t\": segundo en que aparece el texto (0 si debe frenar el scroll desde el inicio, o el momento clave si el clip ya engancha solo)}. "
@@ -223,7 +234,7 @@ def clip_story(prod, B, titles, n_pages, out, clip, tmp, force_style=None):
     for l in ls: l["palabras"] = [brief_mod.noemoji(w)[:14] for w in l["palabras"] if brief_mod.noemoji(w)][:3]
     try: t = max(0.0, min(dur - 1.5, float(g.get("t", 0))))
     except Exception: t = 0.0
-    story["escenas"] = [{"tipo": "clip", "archivo": str(clip), "dur": dur, "voz": "", "gancho": {"lineas": ls[:2], "t": t}}] + rest
+    story["escenas"] = [{"tipo": "clip", "archivo": str(clip), "dur": dur, "voz": "", "gancho": {"lineas": ls[:2], "t": t, "dura": (pant["t"] - t) if pant else 99}, **({"pantalla": pant} if pant else {})}] + rest
     story["formato"] = "clip"; story["subtitulos"] = story.get("subtitulos", True)
     return story
 

@@ -147,17 +147,30 @@ def revisar(story, video, TL, tmpdir, ahorro=False):
     return R["guion"], [str(x)[:160] for x in (R.get("problemas") or [])][:6]
 
 # ===================== 📹 clip del usuario =====================
-def describir_clip(path, dur, tmpdir):
-    """Mira 4 fotogramas del clip y dice qué pasa (para escribir el resto del anuncio alrededor)."""
+def cola_muda(path, dur):
+    """Segundo en que empieza el silencio final (Veo suele rellenar 2-3 s mudos y quietos al final). None si no hay."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path), "-af", "silencedetect=n=-35dB:d=0.6", "-f", "null", "-"], capture_output=True, text=True)
+    starts = [float(x.split("silence_start:")[1].split()[0]) for x in r.stderr.splitlines() if "silence_start:" in x]
+    if not starts: return None
+    s = starts[-1]
+    ends = [float(x.split("silence_end:")[1].split("|")[0]) for x in r.stderr.splitlines() if "silence_end:" in x]
+    if ends and ends[-1] < dur - 0.15 and ends[-1] > s: return None  # el último silencio no llega al final
+    return s if dur - s >= 1.2 else None
+
+def describir_clip(path, dur, tmpdir, cola=None):
+    """Mira fotogramas del clip: qué pasa y, si al final hay una pantalla/hoja de frente y quieta, dónde está (para meter el producto real)."""
     frames = []
-    for k, t in enumerate([dur * x for x in (0.1, 0.4, 0.65, 0.9)]):
+    ts = [dur * x for x in (0.1, 0.4, 0.65)] + [min(dur - 0.2, (cola or dur * 0.9) + 0.4)]
+    for k, t in enumerate(ts):
         p = os.path.join(tmpdir, f"clip{k}.jpg")
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{t:.2f}", "-i", str(path), "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "5", p], check=False)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{t:.2f}", "-i", str(path), "-frames:v", "1", "-vf", "scale=360:640:force_original_aspect_ratio=increase,crop=360:640", "-q:v", "4", p], check=False)
         if os.path.exists(p): frames.append(p)
-    if not frames: return ""
+    if not frames: return {}
     content = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(open(p, "rb").read()).decode()}} for p in frames]
-    content.append({"type": "text", "text": f"Son 4 fotogramas en orden de un clip de {dur:.0f} s que abrirá un anuncio. Devuelve SOLO JSON: "
+    content.append({"type": "text", "text": f"Son 4 fotogramas en orden (360x640 px) de un clip de {dur:.0f} s que abrirá un anuncio; el ÚLTIMO es del final. Devuelve SOLO JSON: "
                     '{"que_pasa": "qué pasa en el clip, en 1-2 frases", "momento_clave": segundos en que pasa lo más fuerte (número), "emocion": "1 palabra", '
-                    '"zona_libre": "arriba|abajo (dónde se puede poner texto sin tapar la cara)"}'})
-    try: return _claude(content, max_tokens=400)
+                    '"zona_libre": "arriba|abajo (dónde se puede poner texto sin tapar la cara)", '
+                    '"pantalla": null o, SOLO si en el último fotograma se ve claramente una pantalla de laptop/tablet/celular o una hoja DE FRENTE y grande (al menos 1/6 de la imagen), '
+                    '{"tipo": "laptop|tablet|celular|hoja", "esquinas": [[x,y] arriba-izq, [x,y] arriba-der, [x,y] abajo-der, [x,y] abajo-izq] en píxeles de ese fotograma, del ÁREA VISIBLE de la pantalla (sin el marco)}}'})
+    try: return _claude(content, max_tokens=500)
     except Exception as e: print("no pude describir el clip:", e); return {}

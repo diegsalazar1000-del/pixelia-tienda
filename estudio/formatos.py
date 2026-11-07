@@ -297,6 +297,28 @@ def clip_duration(path):
         return round(float(r.stdout.strip()), 2)
     except Exception: return 8.0
 
+def _coef(dst, src):
+    """Coeficientes de Image.PERSPECTIVE: para cada punto de salida (dst) devuelve el de entrada (src)."""
+    A, B = [], []
+    for (x, y), (X_, Y_) in zip(dst, src):
+        A.append([x, y, 1, 0, 0, 0, -X_ * x, -X_ * y]); B.append(X_)
+        A.append([0, 0, 0, x, y, 1, -Y_ * x, -Y_ * y]); B.append(Y_)
+    return np.linalg.solve(np.array(A, float), np.array(B, float)).tolist()
+
+def pantalla_overlay(X, sc):
+    """Producto real metido en la pantalla/hoja del clip (se calcula una vez)."""
+    key = ("pant", id(sc)); cache = X.setdefault("mont", {})
+    if key not in cache:
+        q = sc["pantalla"]["q"]; hoja = sc["pantalla"].get("tipo") == "hoja"
+        sw, sh = (900, 1200) if hoja else (1600, 1000)
+        pg = X["pages"][0].convert("RGB"); src = Image.new("RGB", (sw, sh), (255, 255, 255))
+        k = min(sw / pg.width, sh / pg.height); im = pg.resize((int(pg.width * k), int(pg.height * k)), Image.LANCZOS)
+        src.paste(im, ((sw - im.width) // 2, (sh - im.height) // 2))
+        warped = src.transform((W, H), Image.PERSPECTIVE, _coef(q, [(0, 0), (sw, 0), (sw, sh), (0, sh)]), Image.BICUBIC).convert("RGBA")
+        m = Image.new("L", (W, H), 0); ImageDraw.Draw(m).polygon([tuple(p) for p in q], fill=255); warped.putalpha(m)
+        cache[key] = warped
+    return cache[key]
+
 def sc_clip(cv, sc, u, d, X):
     rd = X.setdefault("clipr", {}).get(id(sc))
     if rd is None: rd = X["clipr"][id(sc)] = ClipReader(sc["archivo"], X.get("fps", 30), d)
@@ -308,6 +330,13 @@ def sc_clip(cv, sc, u, d, X):
         for k in range(30): sd.rectangle([0, 0 + k * 22, W, (k + 1) * 22], fill=(0, 0, 0, int(150 * (1 - k / 30))))
         cv.alpha_composite(sh)
         lay = Image.new("RGBA", (W, H), (0, 0, 0, 0)); lines_block(lay, ls, W / 2, 330, W - 120, 100, 0.12, u - t0, 1.2); cv.alpha_composite(lay)
+    P = sc.get("pantalla")
+    if P and u >= P["t"]:  # ✨ pantalla mágica: el producto real aparece en la laptop/hoja del clip
+        v = u - P["t"]; ov = pantalla_overlay(X, sc)
+        if v < 0.3: ov = ov.copy(); ov.putalpha(ov.getchannel("A").point(lambda a: int(a * v / 0.3)))
+        cv.alpha_composite(ov)
+        if v < 0.18: cv.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(170 * (1 - v / 0.18)))))
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0)); lines_block(lay, [{"palabras": ["Así", "de", "fácil"]}], W / 2, 300, W - 120, 100, 0.1, v - 0.2, 1.2); cv.alpha_composite(lay)
 
 def sc_broll(cv, sc, u, d, X):
     rd = X.get("broll", {}).get(id(sc))

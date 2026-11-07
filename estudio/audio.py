@@ -297,6 +297,7 @@ def sfx_story(story, TL):
             g = sc.get("gancho") or {}
             ls = [l.get("palabras", []) for l in g.get("lineas", [])]
             if ls: add(buf, whoosh(0.3, 1.4), t0 + float(g.get("t", 0)), 0.5); word_sfx(buf, ls, t0 + float(g.get("t", 0)) + 0.05, anim)
+            if sc.get("pantalla"): add(buf, ding(1.2), t0 + float(sc["pantalla"]["t"]), 0.8)  # ✨ aparece el producto en la pantalla
         elif tp == "meme":
             import formatos
             ts = formatos.meme_times(sc, d)
