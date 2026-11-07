@@ -6,7 +6,7 @@ from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE))
-import motor, story as story_mod, audio, musica, brief as brief_mod, director, formatos, creativos  # noqa: E402
+import motor, story as story_mod, audio, musica, brief as brief_mod, director, formatos, creativos, reel_diseno  # noqa: E402
 
 PIXELIA = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 
@@ -295,7 +295,11 @@ def run_job(J):
             if v in ("f", "m"):
                 try: vd = audio.voice_durations(story, "femenina" if v == "f" else "masculina", tmp)
                 except Exception as e: print("voz previa falló:", e)
-            TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
+            TL = None
+            if opts.get("d") == "1" and not clip and not stock:  # 🎨 Reel diseñado (FASE DE PRUEBA, solo con su botón)
+                try: TL = reel_diseno.construir(prod, B, story, pages, phone, silent, tmp, vdurs=vd, say=say)
+                except Exception as e: print("reel diseñado:", e); traceback.print_exc(); say(f"⚠️ El reel diseñado (prueba) falló ({esc(str(e)[:150])}); hago el reel normal.")
+            if TL is None: TL = story_mod.build(B, story, pages, phone, silent, style=st, vdurs=vd)
             if pro and os.environ.get("AD_REVIEW", "1") != "0":
                 say("🔍 Revisando el video antes de mandártelo…")
                 fixed, probs = director.revisar(story, silent, TL, tmp, audio.ahorro())

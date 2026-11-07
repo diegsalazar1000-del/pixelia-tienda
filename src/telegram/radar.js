@@ -99,6 +99,7 @@ function pickerKb(pid, sel, sug = {}, full = false) {
   if (!full) return [...principal, [{ text: '⚙️ Más opciones (voz, música, estilo, tutorial, comedia…)', callback_data: `sel:${pid}:${packOpts({ ...sel, m: 1 })}` }]];
   return [
     ...principal,
+    [{ text: '🎨 Reel diseñado (prueba)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, d: 1 })}` }],
     [{ text: '🎓 Tutorial', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'tutorial' })}` }, { text: '😂 Comedia', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, f: 'comedia' })}` }],
     [{ text: '📸 Con fotos de Pixabay', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, p: 1 })}` }, { text: '🎬 Prompt Gemini', callback_data: `gem:${pid}:` }],
     [{ text: '🧠 PRO (≈$0.25)', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, s: sel.s, q: 1 })}` }, { text: '🧪 4 variantes', callback_data: `ad:${pid}:${packOpts({ v: sel.v, g: sel.g, x: 4 })}` }],
