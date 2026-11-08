@@ -34,7 +34,7 @@ const CONSEJOS = {
   navidad: { asunto: '💡 Cómo llegar a enero sin estrés (ni deudas)', titulo: 'Diciembre tranquilo, enero sin sustos',
     puntos: ['<b>Primero el presupuesto, después los regalos:</b> decide cuánto vas a gastar en total y repártelo por persona.',
       '<b>Divide diciembre en 4 semanas:</b> regalos la 1ª, comida y compras la 2ª, decoración la 3ª y la última solo para disfrutar.',
-      '<b>Elige 3 propósitos pequeños para enero</b>, no 10. Tres que sí cumplas valen más que una lista que abandonas en febrero.'] },
+      '<b>Elige 3 propósitos pequeños para enero</b>, no 10. Tres que sí cumplas valen más que una lista que se queda en la libreta.'] },
   general: { asunto: '💡 3 hábitos pequeños que cambian tu mes', titulo: 'Pequeños hábitos, mes distinto',
     puntos: ['<b>Empieza ridículamente fácil:</b> 1 página, 5 minutos, 1 vaso de agua. Lo difícil es empezar, no el tamaño.',
       '<b>Pégalo a algo que ya haces:</b> "después del café, leo 10 minutos". Así no dependes de acordarte.',

@@ -380,7 +380,7 @@ function ultimoReel(pid) {
   let story = {}; try { story = JSON.parse(fs.readFileSync(path.join(dir, 'guion.json'), 'utf8')).story || {}; } catch {}
   const base = String(story.copy?.texto || p.short || '').trim();
   const caption = p.price_cents ? `${base}\n\n💰 $${(p.price_cents / 100).toFixed(2)} · descarga inmediata\n👉 Link en la bio: pixeliadigital.app\n\n#productosdigitales #pixelia #descargainmediata`
-    : `${base}\n\n🎁 GRATIS · descárgalo en el link de la bio: pixeliadigital.app/regalo\n💬 ¿Lo quieres? Coméntalo y compártelo con quien lo necesite\n\n#gratis #regalo #pixelia #productosdigitales`;
+    : story.copy?.texto && /pixeliadigital\.app\//.test(base) ? base : `${base}\n\n🎁 GRATIS · descárgalo en el link de la bio: pixeliadigital.app${LANDING[p.slug] || '/regalo'}\n💬 ¿Lo quieres? Coméntalo y compártelo con quien lo necesite\n\n#gratis #regalo #pixelia #productosdigitales`;
   return { p, job: j, file: r.reel, url: `${config.baseUrl.replace(/\/$/, '')}/media/anuncios/${p.slug}/${encodeURIComponent(r.reel)}`, caption, exists: fs.existsSync(path.join(dir, r.reel)) };
 }
 // 📊 Campañas en Meta (todo en pausa hasta que Diego toca Activar)

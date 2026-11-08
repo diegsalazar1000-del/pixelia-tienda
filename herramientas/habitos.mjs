@@ -13,8 +13,8 @@ const slug = 'mi-2027-en-habitos';
 const old = Products.bySlug(slug);
 const p = Products.upsert({ ...(old ? { id: old.id } : {}), slug, emoji: '✨', category: 'Hábitos y productividad',
   title: 'Mi 2027 en Hábitos: Tracker de Hábitos Excel y Google Sheets',
-  gancho: 'Este año, tus propósitos no se mueren en febrero.',
-  short: 'Todos empezamos enero con ganas… y para el 14 de febrero ya nadie se acuerda del gimnasio. Aquí solo marcas ✓ y la hoja te celebra, te regaña y te muestra tu racha creciendo sola.',
+  gancho: 'Este año, tus metas no se quedan en la libreta.',
+  short: 'Todos anotamos metas con ganas… y a la semana ya nadie se acuerda del gimnasio. Aquí solo marcas ✓ y la hoja te celebra, te regaña y te muestra tu racha creciendo sola.',
   description: `Seamos honestos: tu lista de propósitos de 2026 está en algún lado, abandonada, junto a la bicicleta estática que hoy es perchero. 🫠
 
 No te faltó fuerza de voluntad. Te faltó ver tu avance. Cuando ves tu racha de 23 días seguidos, ya no la quieres romper ni por un pastelito.
@@ -45,7 +45,7 @@ Funciona en Excel y Google Sheets (gratis), también en el celular. Pagas una ve
   price_cents: 599, compare_cents: 0, cover_url: config.baseUrl + '/img/portada-habitos-2027.jpg', file_name: FILE,
   license_type: 'Propio', license_note: 'Para uso personal. No se permite revender ni compartir el archivo.', active: 1,
   i18n: JSON.stringify({ en: { title: 'My 2027 in Habits: Habit Tracker for Excel & Google Sheets',
-    gancho: 'This year, your resolutions won\'t die in February.', countdown_label: 'until 2027. Start ready.',
+    gancho: 'This year, your goals don\'t stay in the notebook.', countdown_label: 'until 2027. Start ready.',
     short: 'Tick ✓ each day and watch your streaks, level and progress calculate themselves. All 12 months of 2027 ready.',
     description: `• All 12 months of 2027 ready: just tick ✓ each day
 • 🔥 Streaks that carry over between months and 🚀 levels based on your pace

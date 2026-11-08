@@ -16,6 +16,13 @@ async function api(method, path, params = {}) {
 }
 
 export const PAISES = ['MX', 'CO', 'VE', 'PE', 'CL', 'AR', 'EC', 'US'];
+// 📍 Dónde salen los anuncios (Diego 8-nov): SIN Audience Network ni Messenger (clics baratos que no compran) y con prioridad a Instagram:
+// Instagram en todos sus lugares y Facebook solo en Feed, Reels e Historias. META_SOLO_INSTAGRAM=1 → solo Instagram.
+export function ubicaciones() {
+  if (env('META_SOLO_INSTAGRAM') === '1') return { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'reels', 'explore', 'explore_home', 'profile_feed'] };
+  return { publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['stream', 'story', 'reels', 'explore', 'explore_home', 'profile_feed'],
+    facebook_positions: ['feed', 'facebook_reels', 'story'] };
+}
 const INTERESES = { finanzas: ['Personal finance', 'Saving', 'Budget'], navidad: ['Christmas', 'Gift'], planner: ['Planners', 'Personal organizer', 'Stationery'],
   fiesta: ['Baby shower', 'Party'], general: ['Personal development', 'Productivity'] };
 export function interesesPara(p) {
@@ -71,10 +78,10 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
   const aud = (publico.audiencias || []).filter(Boolean);
   const ints = aud.length ? [] : await idsIntereses((publico.intereses?.length ? publico.intereses : interesesPara(p)).slice(0, 8));
   const targeting = aud.length ? {  // 🎯 remarketing / similares: el público ya está definido, sin intereses ni edad estrecha
-    geo_locations: { countries: PAISES }, age_min: 18, age_max: 65, targeting_automation: { advantage_audience: 0 },
+    geo_locations: { countries: PAISES }, age_min: 18, age_max: 65, targeting_automation: { advantage_audience: 0 }, ...ubicaciones(),
     custom_audiences: aud.map((id) => ({ id })), ...((publico.excluir || []).filter(Boolean).length ? { excluded_custom_audiences: publico.excluir.filter(Boolean).map((id) => ({ id })) } : {}) } : { geo_locations: { countries: PAISES }, age_min: Math.max(18, Number(publico.edad_min) || 24), age_max: Math.min(65, Number(publico.edad_max) || 45),
     ...(publico.generos === 'mujeres' ? { genders: [2] } : publico.generos === 'hombres' ? { genders: [1] } : {}),  // sin indicación = todos
-    targeting_automation: { advantage_audience: 0 }, ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
+    targeting_automation: { advantage_audience: 0 }, ...ubicaciones(), ...(ints.length ? { flexible_spec: [{ interests: ints.map(({ id, name }) => ({ id, name })) }] } : {}) };
   const set = await api('POST', `${act}/adsets`, { name: `${nombre} · público`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS',
     optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting });
   const ads = [], videos = {};
@@ -89,15 +96,14 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
         optimization_goal: 'LANDING_PAGE_VIEWS', destination_type: 'WEBSITE', targeting, is_dynamic_creative: true });
       // cada imagen con sus 3 tamaños: 4:5 → Feed, vertical → Historias/Reels, cuadrada → otros lugares; Meta elige la mejor imagen en cada lugar
       const imgs = [];
-      for (const it of v.items) for (const [t, u] of Object.entries(it.tamanos || { '4x5': it.url })) imgs.push({ hash: await subirImagen(act, u), nombre: it.nombre, t });
+      for (const it of v.items) for (const [t, u] of Object.entries(it.tamanos || { '4x5': it.url })) if (t !== '1x1') imgs.push({ hash: await subirImagen(act, u), nombre: it.nombre, t });
       const base = { bodies: (v.textos || [v.texto]).map((text) => ({ text })), titles: (v.titulos || [v.titulo]).map((t) => ({ text: String(t).slice(0, 40) })),
         link_urls: [{ website_url: link }], call_to_action_types: [cta.type], ad_formats: ['SINGLE_IMAGE'] };
       const actor = { page_id: env('META_PAGE_ID'), ...(env('META_IG_ID') ? { instagram_user_id: env('META_IG_ID') } : {}) };
       const lab = { '4x5': 'feed', '9x16': 'vertical', '1x1': 'cuadrada' };
       const reglas = [
         ...(imgs.some((i) => i.t === '9x16') ? [{ customization_spec: { publisher_platforms: ['facebook', 'instagram'], facebook_positions: ['story', 'facebook_reels'], instagram_positions: ['story', 'reels'] }, image_label: { name: 'vertical' } }] : []),
-        ...(imgs.some((i) => i.t === '1x1') ? [{ customization_spec: { publisher_platforms: ['facebook', 'messenger', 'audience_network'], facebook_positions: ['right_hand_column', 'marketplace', 'search'] }, image_label: { name: 'cuadrada' } }] : []),
-        { customization_spec: { publisher_platforms: ['facebook', 'instagram', 'messenger', 'audience_network'] }, image_label: { name: 'feed' } }].map((r, i) => ({ ...r, priority: i + 1 }));
+        { customization_spec: { publisher_platforms: ['facebook', 'instagram'] }, image_label: { name: 'feed' } }].map((r, i) => ({ ...r, priority: i + 1 }));
       let cr;
       try {
         cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: actor,
@@ -118,14 +124,12 @@ export async function crearCampana({ p, variantes, link, presupuesto, publico = 
     let cr = null;
     if (v.tipo !== 'video' && v.tamanos && Object.keys(v.tamanos).length > 1) {  // 🖼️ una imagen con sus tamaños: cada lugar usa el suyo
       try {
-        const hs = {}; for (const [t, u] of Object.entries(v.tamanos)) hs[t] = await subirImagen(act, u);
+        const hs = {}; for (const [t, u] of Object.entries(v.tamanos)) if (t !== '1x1') hs[t] = await subirImagen(act, u);
         const reglas = [], imgs = [];
         if (hs['9x16']) { imgs.push({ hash: hs['9x16'], adlabels: [{ name: 'vertical' }] });
           reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'instagram'], facebook_positions: ['story', 'facebook_reels'], instagram_positions: ['story', 'reels'] }, image_label: { name: 'vertical' }, priority: 1 }); }
-        if (hs['1x1']) { imgs.push({ hash: hs['1x1'], adlabels: [{ name: 'cuadrada' }] });
-          reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'messenger', 'audience_network'], facebook_positions: ['right_hand_column', 'marketplace', 'search'] }, image_label: { name: 'cuadrada' }, priority: 2 }); }
         imgs.push({ hash: hs['4x5'] || Object.values(hs)[0], adlabels: [{ name: 'feed' }] });
-        reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'instagram', 'messenger', 'audience_network'] }, image_label: { name: 'feed' }, priority: reglas.length + 1 });
+        reglas.push({ customization_spec: { publisher_platforms: ['facebook', 'instagram'] }, image_label: { name: 'feed' }, priority: reglas.length + 1 });
         cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · ${letra}`, object_story_spec: actor,
           asset_feed_spec: { images: imgs, bodies: [{ text: v.texto }], titles: [{ text: v.titulo.slice(0, 40) }], link_urls: [{ website_url: link }],
             call_to_action_types: [cta.type], ad_formats: ['SINGLE_IMAGE'], asset_customization_rules: reglas } });
@@ -151,6 +155,16 @@ export async function porAnuncio(campId) {
   const r = await api('GET', `${campId}/insights`, { level: 'ad', fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,ctr,frequency,actions', date_preset: 'last_7d' });
   return (r.data || []).map((x) => ({ id: x.ad_id, nombre: x.ad_name, gasto: Number(x.spend || 0), vistas: Number(x.impressions || 0), clics: Number(x.clicks || 0), frecuencia: Number(x.frequency || 0),
     visitas: Number((x.actions || []).find((a) => a.action_type === 'landing_page_view')?.value || 0) }));
+}
+/** Pone las ubicaciones nuevas (sin Audience Network, prioridad Instagram) a los conjuntos de una campaña ya creada. */
+export async function aplicarUbicaciones(ids) {
+  const sets = [...new Set([...(ids.sets || []), ids.set].filter(Boolean))], hechos = [];
+  for (const id of sets) {
+    const { targeting = {} } = await api('GET', id, { fields: 'targeting' });
+    for (const k of ['publisher_platforms', 'facebook_positions', 'instagram_positions', 'audience_network_positions', 'messenger_positions', 'device_platforms']) delete targeting[k];
+    await api('POST', id, { targeting: { ...targeting, ...ubicaciones() } }); hechos.push(id);
+  }
+  return hechos;
 }
 export async function pausar(ids) { await api('POST', ids.camp, { status: 'PAUSED' }); }
 export async function borrar(ids) { await api('DELETE', ids.camp, {}); }

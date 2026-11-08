@@ -33,9 +33,9 @@ export async function igFoto(imageUrl, caption) {
 }
 
 /** Reel en Instagram (el video tarda más en procesarse: hasta ~5 min). */
-export async function igReel(videoUrl, caption) {
+export async function igReel(videoUrl, caption, { feed = true, cover = '' } = {}) {  // feed:false → solo en la pestaña Reels, no en la cuadrícula
   const ig = env('META_IG_ID'); if (!ig) throw new Error('falta META_IG_ID (Instagram no está conectado a la página)');
-  const c = await call('POST', `${G}/${ig}/media`, { media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: 'true' });
+  const c = await call('POST', `${G}/${ig}/media`, { media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: feed ? 'true' : 'false', ...(cover ? { cover_url: cover } : {}) });
   for (let i = 0; i < 60; i++) {
     await sleep(5000);
     const s = await call('GET', `${G}/${c.id}`, { fields: 'status_code,status' }).catch(() => ({}));
