@@ -247,3 +247,60 @@ export async function cruce() {
   const gan = ganchos.slice(0, 3).map((g) => `• <b>${esc(g.producto)}</b>: "${esc(g.gancho)}"\n   <i>(${esc(g.de_donde || '')})</i>`).join('\n');
   return say(`🎣 <b>Ganchos para vender lo que ya tenemos</b>\n${gan || '—'}\n\n✅ Cruce listo: ${n} idea(s) nuevas · ${descartadas.length} descartadas · ${res.searches} búsquedas. El próximo, en 2 semanas (o cuando quieras con <code>/explorar cruce</code>).`);
 }
+
+// ===== 🧭 Buscador Exótico (idea de Diego, 7-nov) =====
+// Busca qué se está volviendo viral en culturas lejanas (Japón, Nigeria, Islandia…), POR QUÉ la gente lo paga,
+// y cómo lo convertimos o mejoramos como producto digital para Latinoamérica. Solo cuando se pide: /exotico [país].
+const EXOTICAS = ['Japón', 'Corea del Sur', 'China (Xiaohongshu, Douyin)', 'Taiwán', 'Tailandia', 'Vietnam', 'Indonesia', 'Filipinas', 'India',
+  'Nigeria', 'Kenia', 'Sudáfrica', 'Egipto', 'Marruecos', 'Turquía', 'Emiratos y Arabia Saudita', 'Islandia', 'Noruega', 'Suecia', 'Finlandia',
+  'Polonia', 'Ucrania y Europa del Este', 'Grecia', 'Brasil', 'Australia', 'Nueva Zelanda'];
+const banderas = { japón: '🇯🇵', corea: '🇰🇷', china: '🇨🇳', taiwán: '🇹🇼', tailandia: '🇹🇭', vietnam: '🇻🇳', indonesia: '🇮🇩', filipinas: '🇵🇭', india: '🇮🇳',
+  nigeria: '🇳🇬', kenia: '🇰🇪', sudáfrica: '🇿🇦', egipto: '🇪🇬', marruecos: '🇲🇦', turquía: '🇹🇷', emiratos: '🇦🇪', arabia: '🇸🇦', islandia: '🇮🇸', noruega: '🇳🇴',
+  suecia: '🇸🇪', finlandia: '🇫🇮', polonia: '🇵🇱', ucrania: '🇺🇦', grecia: '🇬🇷', brasil: '🇧🇷', australia: '🇦🇺', 'nueva zelanda': '🇳🇿', dinamarca: '🇩🇰' };
+const bandera = (p) => { const t = String(p || '').toLowerCase(); for (const [k, v] of Object.entries(banderas)) if (t.includes(k)) return v; return '🌏'; };
+
+function promptExotico(paises, nuestros, ya) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  return `Hoy es ${hoy}. Eres el BUSCADOR EXÓTICO de Pixelia, tienda de productos DIGITALES en español neutro para Latinoamérica ($3-10; clientes sobre todo en Venezuela).
+MISIÓN: encontrar qué se está volviendo viral o se vende mucho en culturas lejanas y convertirlo o mejorarlo como producto digital que guste AQUÍ.
+
+1. Investiga con búsquedas web reales (noticias, redes, tiendas, foros, también en inglés y en el idioma local) en: ${paises}. Busca productos, servicios, juguetes, apps, páginas web, juegos, rituales o costumbres que la gente esté pagando o compartiendo mucho en los últimos meses, y sobre todo POR QUÉ (emoción, identidad, humor, alivio del estrés, nostalgia, estatus, superstición, soledad). Ejemplos del estilo que buscamos: en China se agotó un caballito de peluche defectuoso porque "se parece a mí un lunes"; en Corea los jóvenes usan páginas que simulan pedir comida sin pagar para desestresarse; en Japón volvieron los álbumes de stickers.
+2. Para cada hallazgo piensa: ¿cómo lo CONVERTIMOS en producto digital para Latinoamérica? ¿Qué le MEJORAMOS (personalización automática por pedido, papel + teléfono, página interactiva en nuestra tienda, QR, juego en grupo, humor latino)? Tiene que ser FUNCIONAL (que sirva o se disfrute de verdad) y que dé ganas de decir "¡ese soy yo!" o "se lo tengo que mandar a fulano".
+3. Filtros: ¿ya existe en español/Latinoamérica? (búscalo); ¿una IA de chat lo hace gratis en 10 segundos? (descártalo); nada de personajes o marcas con derechos, promesas de salud o dinero, ni burlas de grupos o culturas (adaptamos con respeto).
+4. No repitas: ${JSON.stringify(ya)}. Productos que ya tenemos: ${JSON.stringify(nuestros)}.
+Tono: con emoción y humor, nada técnico, español neutro sencillo.
+Devuelve SOLO un JSON válido:
+{"hallazgos":[{"pais":"país","que":"qué es (≤ 15 palabras)","por_que":"por qué lo paga/comparte la gente (≤ 18 palabras)","url":"fuente real"}],
+ "productos":[{"titulo_tienda":"nombre comercial","emoji":"1 emoji","pais":"de dónde viene la idea","original":"qué es allá (≤ 20 palabras)","nuestra_version":"qué recibe el cliente aquí, concreto (≤ 40 palabras)","mejora":"qué le agregamos o mejoramos (≤ 25 palabras)","existe_aqui":"lo que encontraste parecido en español/LatAm o 'no encontré' (≤ 20 palabras)","publico":"a quién","precio_sugerido":número,"gancho":"frase jocosa, irónica o sentimental para el anuncio (≤ 18 palabras)","como_promocionar":"idea de reel corto (≤ 30 palabras)","nota":1-10}]}
+Cantidades: 5-8 hallazgos de países distintos y 2-3 productos (solo los mejores).`;
+}
+
+export async function exotico(pais = '') {
+  if (!config.anthropic.key || !token()) return;
+  const k = Math.floor(Date.now() / 864e5);
+  const paises = pais ? pais : [0, 1, 2].map((i) => EXOTICAS[(k * 7 + i * 9) % EXOTICAS.length]).join(', ');
+  await say(`🧭 <b>Buscador Exótico</b>: buscando qué se está volviendo viral en <b>${esc(paises)}</b> y cómo lo traemos a Latinoamérica… (3-5 min)`);
+  const nuestros = Products.list().map((p) => p.title).slice(0, 40);
+  const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
+  let res;
+  try { res = await askClaude(promptExotico(paises, nuestros, ya), Number(process.env.EXOTICO_SEARCHES || 12)); }
+  catch (e) { return say(`⚠️ El Buscador Exótico falló: ${esc(e.message)}`); }
+  const { hallazgos = [], productos = [] } = JSON.parse(JSON.stringify(res.data || {}).replace(/<\\?\/?cite[^>]*>/g, ''));
+  const lin = hallazgos.slice(0, 8).map((h) => `${bandera(h.pais)} <b>${esc(h.que)}</b>\n   ↳ ${esc(h.por_que || '')}${h.url ? ` · <a href="${esc(h.url)}">fuente</a>` : ''}`).join('\n');
+  await say(`🧭 <b>BUSCADOR EXÓTICO</b> · ${esc(paises)}\n\n🔭 <b>Lo que está pegando allá</b>\n${lin || '—'}`);
+  let n = 0;
+  for (const x of productos.slice(0, 3)) {
+    if (!x.titulo_tienda) continue;
+    const nota = Math.max(1, Math.min(10, Number(x.nota) || 6));
+    const [c] = Candidates.addMany([{ source: 'exotico', external_id: hash('exotico' + x.titulo_tienda), url: '', title: x.titulo_tienda,
+      snippet: `${bandera(x.pais)} ${x.original || ''}\n🎁 ${x.nuestra_version || ''}`, price: 0, currency: 'USD', keyword: 'buscador exótico', published_at: '', metrics: { publico: x.publico || '' }, trend_score: nota }]);
+    if (!c) continue;
+    Candidates.update(c.id, { ai_score: nota, status: 'notified', ai: { titulo: x.titulo_tienda, frase_corta: x.nuestra_version, descripcion: `${x.original || ''} → ${x.nuestra_version || ''}`,
+      precio_sugerido: x.precio_sugerido, emoji: x.emoji, categoria: 'invento (exótico)', decision: 'recreate', como_recrear: x.mejora, idea: x.nuestra_version, publico: x.publico,
+      anuncio: x.gancho ? { gancho: x.gancho } : undefined } });
+    await say(`${esc(x.emoji || '🧭')} <b>${esc(x.titulo_tienda)}</b>\n${bandera(x.pais)} Viene de ${esc(x.pais || '')} · ⭐ ${nota}/10 · 💰 $${esc(x.precio_sugerido || 4.99)}\n\n🏮 <b>Allá:</b> ${esc(x.original || '')}\n🎁 <b>Nuestra versión:</b> ${esc(x.nuestra_version || '')}\n✨ <b>Lo que le mejoramos:</b> ${esc(x.mejora || '')}\n🔎 <b>¿Existe aquí?</b> ${esc(x.existe_aqui || '')}\n👥 ${esc(x.publico || '')}\n🎬 <b>Cómo promocionarlo:</b> ${esc(x.como_promocionar || '')}\n\n💬 <i>"${esc(x.gancho || '')}"</i>`,
+      { reply_markup: { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } }).catch(() => {});
+    n++;
+  }
+  return say(`✅ Buscador Exótico: ${n} producto(s) para traer · ${hallazgos.length} hallazgos · ${res.searches} búsquedas.\nOtro país cuando quieras: <code>/exotico Islandia</code> (o solo /exotico y elijo yo).`);
+}

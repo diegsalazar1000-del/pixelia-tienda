@@ -5,7 +5,7 @@ import path from 'node:path';
 import { registrarClaude, resumenClaude, recargar } from '../gasto.js';
 import { config } from '../config.js';
 import { Products, Candidates, AdJobs } from '../db.js';
-import { explorar } from './explorador.js';
+import { explorar, exotico } from './explorador.js';
 import { redesListas, estadoRedes, publicarKit, igReel, fbVideo } from './redes.js';
 import { startComentarios, ocultar, eliminar, revisarComentarios } from './comentarios.js';
 import { adsListos, crearCampana, activar, pausar, borrar, resultados, interesesPara, PAISES, pausarAnuncio, cambiarPresupuesto, porAnuncio, crearPublicos, tamanos, crearSimilares, desgloseDinamico } from './anuncios-meta.js';
@@ -637,6 +637,10 @@ export async function onMessage(m) {
     const n = AdJobs.cancelQueued();
     return send(n ? `❌ Quité ${n} anuncio(s) de la fila. El que ya se está haciendo termina igual.` : 'No hay anuncios esperando en la fila (si uno ya se está haciendo, termina igual).');
   }
+  if (/^\/ex[oó]tico/i.test(text)) {
+    const pais = text.replace(/^\/ex[oó]tico(@\w+)?/i, '').trim();
+    exotico(pais).catch((e) => send(`⚠️ Buscador Exótico: ${esc(e.message)}`)); return;
+  }
   if (text.startsWith('/explorar')) {
     const tema = text.replace(/^\/explorar(@\w+)?/, '').trim();
     explorar(tema).catch((e) => send(`⚠️ Explorador: ${esc(e.message)}`)); return;
@@ -653,7 +657,7 @@ export async function onMessage(m) {
     const lib = Object.keys(GENRES).filter((g) => songs(g)).map((g) => `• ${GENRES[g]}: ${songs(g)}`).join('\n');
     return send(`${MUSIC_HELP}\n\n<b>Ahora tienes:</b>\n${lib || '(ninguna todavía)'}`);
   }
-  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español\n/explorar cruce — cruce de tendencias: redes + búsquedas + lo que se vende → 1-2 ideas que pasaron el filtro y ganchos para vender (sale solo cada 2 semanas)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos y gastos (ElevenLabs, Claude, Meta)\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
+  if (text.startsWith('/start') || text.startsWith('/ayuda')) return send('📡 Bot del radar de Pixelia. Escribe /lista para ver todos los comandos explicados.\n/anuncios — crear anuncios de un producto\n/explorar [tema] — buscar ya productos digitales en tendencia (o de un tema, ej. /explorar cursos de cocina)\n/explorar mundo — productos para lo que está pasando en el mundo (noticias, virales, fechas que vienen)\n/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español\n/exotico [país] — 🧭 Buscador Exótico: qué se vuelve viral en culturas lejanas (Japón, Nigeria, Islandia…) y cómo lo traemos o mejoramos aquí\n/explorar cruce — cruce de tendencias: redes + búsquedas + lo que se vende → 1-2 ideas que pasaron el filtro y ganchos para vender (sale solo cada 2 semanas)\n/fusionar — combinar productos del radar en uno mejor o en un pack de 3\n/creditos — créditos y gastos (ElevenLabs, Claude, Meta)\n/ahorro on|off — no gastar créditos (reutiliza voces y música)\n/cancelar — quitar anuncios de la fila\n/musica — agregar canciones reales para los anuncios\n/gemini — prompts para crear el clip realista en Gemini\n📹 Mándame un video (ej. de Gemini) y armo el anuncio con él');
 }
 
 export async function onCallback(q) {
@@ -865,7 +869,7 @@ export async function startRadarBot() {
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['calendario', 'Publicaciones automáticas'], ['leccion', 'Lección de la semana'], ['remarketing', 'Campaña a quienes ya te conocen'], ['similares', 'Públicos similares'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
-    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['fusionar', 'Combinar productos del radar'],
+    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;
