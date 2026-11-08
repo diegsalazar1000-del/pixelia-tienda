@@ -32,7 +32,7 @@ Funciona en Excel y Google Sheets (gratis), también en el celular. Pagas una ve
   gallery: JSON.stringify([
     { url: '/img/galeria/habitos-1-mes.jpg', cap: 'Cada mes: marcas ✓ y listo' },
     { url: '/img/galeria/habitos-2-como-voy.jpg', cap: '"¿Cómo voy?" te lo dice clarito' },
-    { url: '/img/galeria/habitos-3-animo.jpg', cap: 'Tu ánimo de cada día 😊' },
+    { url: '/img/galeria/habitos-3-animo.jpg', cap: 'Tu reflexión de cada mes 📝' },
     { url: '/img/galeria/habitos-4-mi-ano.jpg', cap: 'Mi Año: tu récord y tu mapa de calor' },
     { url: '/img/galeria/habitos-6-imprimible.jpg', cap: 'Versión imprimible para la nevera' }]),
   video_url: '/video/habitos-demo.mp4',

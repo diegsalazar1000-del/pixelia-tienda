@@ -117,6 +117,8 @@ for (const sql of [
   "ALTER TABLE orders ADD COLUMN bump_id INTEGER",
   "ALTER TABLE orders ADD COLUMN prueba INTEGER DEFAULT 0",          // compra hecha en "modo dueño" (no cuenta en estadísticas)                  // "agrega también" en el pago (2º producto con descuento)      // pedido original cuando es "completa tu pack"
 ]) { try { db.exec(sql); } catch {} }
+// Productos publicados por script sin precio en Stars (no salían para pagar con Telegram)
+try { db.exec("UPDATE products SET stars = CAST((price_cents / 100.0 / 0.013) + 0.999 AS INTEGER) WHERE stars = 0 AND price_cents > 0"); } catch {}
 
 // Suscriptores: dejan su correo a cambio de un cupón de primera compra
 db.exec(`CREATE TABLE IF NOT EXISTS subscribers (
@@ -168,6 +170,8 @@ export const Products = {
     // Al activarse por primera vez queda registrada la fecha de lanzamiento.
     if (p.active === 1 && !(p.id && Products.byId(p.id)?.launched_at)) p.launched_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (p.active === 1) p.retired_at = null;
+    // Precio en Telegram Stars automático si no se puso (misma regla que el panel: 1 ⭐ ≈ $0,013)
+    if (!Number(p.stars) && Number(p.price_cents) > 0 && !(p.id && Products.byId(p.id)?.stars)) p.stars = Math.ceil(p.price_cents / 100 / 0.013);
     const data = Object.fromEntries(fields.filter((f) => p[f] !== undefined).map((f) => [f, p[f]]));
     if (p.id) {
       const sets = Object.keys(data).map((k) => `${k} = :${k}`).join(', ');
