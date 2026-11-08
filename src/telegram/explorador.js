@@ -182,13 +182,17 @@ export function startExplorador() {
 // ===== 🧪 Cruce de tendencias (método de Diego, 7-nov) =====
 // Señales del momento (videos virales, búsquedas, lo que se vende, noticias) → PROBLEMAS y emociones → cruce con lo que
 // se vende y con nuestra ventaja → filtros con búsquedas reales → solo 1-2 ideas que sobreviven + ganchos para vender lo nuestro.
+const CULTURAS = ['Japón', 'Corea del Sur', 'China (Xiaohongshu, Douyin)', 'los países nórdicos', 'África (Nigeria, Kenia, Sudáfrica)', 'India', 'Brasil', 'Turquía y Medio Oriente', 'Europa del Este', 'Australia'];
 function promptCruce(nuestros, ya) {
   const hoy = new Date().toISOString().slice(0, 10);
+  const k = Math.floor(Date.now() / (14 * 864e5));  // rota 3 culturas en cada cruce
+  const culturas = [0, 1, 2].map((i) => CULTURAS[(k * 3 + i) % CULTURAS.length]).join(', ');
   return `Hoy es ${hoy}. Eres el inventor de productos de Pixelia, tienda de productos DIGITALES en español neutro para Latinoamérica (precios de $3 a $10; la mayoría de clientes en Venezuela, pagan con Binance o PayPal).
 
 NUESTRA VENTAJA (úsala): no solo PDFs; fabricamos productos interactivos (páginas web en nuestra tienda, juegos en el teléfono, códigos QR que desbloquean audio/video/pistas), productos GENERADOS AUTOMÁTICAMENTE por cada pedido con los datos del cliente (nombres, fotos, ciudad), mezclas de papel + teléfono, y experiencias para vivir en familia o en grupo.
 
 MÉTODO (síguelo en orden, con búsquedas web reales):
+0. MERCADOS DE OTRAS CULTURAS (obligatorio): esta vez revisa sobre todo ${culturas}. Busca qué productos, servicios, juguetes, apps, páginas o costumbres se están volviendo virales allá y POR QUÉ la gente los paga (emoción, identidad, alivio del estrés, humor, nostalgia). Ej. reales: en China se agotó un caballito de peluche defectuoso porque "se parece a mí un lunes"; en Corea los jóvenes usan páginas que simulan pedir comida sin pagar para desestresarse; en Japón volvieron los álbumes de stickers. Cruza eso con Latinoamérica: el producto tiene que ser FUNCIONAL, gustar aquí y dar ganas de decir "¡ese soy yo!" o "se lo tengo que mandar a fulano".
 1. SEÑALES DE LAS ÚLTIMAS 2 SEMANAS: qué videos/audios/formatos crecen de golpe en TikTok, Instagram y YouTube (cuántos videos, cuánto crecen, PARA QUÉ los usa la gente), qué se busca más (Google Trends, Etsy), qué se vende en Etsy/Hotmart/Gumroad, y noticias que cambian la vida diaria. TODO EL AÑO: no te centres en Navidad ni en una sola fecha (máximo 1 idea de temporada).
 2. De cada señal saca el PROBLEMA real y cotidiano y la EMOCIÓN que hay detrás (como hacen los fabricantes chinos con sus productos virales: un problema de todos los días + una solución que se entiende al instante). No saques "un producto por noticia".
 3. CRUZA esos problemas con lo que ya se vende y con nuestra ventaja para crear productos digitales nuevos o poco comunes.
@@ -201,18 +205,18 @@ MÉTODO (síguelo en orden, con búsquedas web reales):
 7. GANCHOS: con las señales más fuertes, escribe ganchos cortos para VENDER productos que YA tenemos (lista abajo). Nada de tragedias, muertes, política, guerras ni famosos usados como si recomendaran. Usa emoción (ej.: "Amor, no queremos que te enfermes, queremos que nos dures toda la vida").
 Productos que ya tenemos: ${JSON.stringify(nuestros)}.
 
-Habla como PRODUCTO (qué recibe el cliente, por qué es distinto, precio), corto y claro, en español neutro sencillo.
+Habla como PRODUCTO (qué recibe el cliente, por qué es distinto, precio), corto y claro, en español neutro sencillo, con EMOCIÓN y humor (nada de tono técnico). Lo que pega no es lo útil: es lo que hace decir "¡ese soy yo!" o "se lo tengo que mandar a fulano". Humor fuerte está bien, pero sin burlarse de grupos, sin política ni tragedias.
 Devuelve SOLO un JSON válido con esta forma:
 {"senales":[{"que":"qué está pasando (≤ 15 palabras)","dato":"número o hecho concreto","problema":"problema/emoción detrás (≤ 15 palabras)","url":"fuente real"}],
  "descartadas":[{"idea":"nombre corto","por_que":"ya existe X / la IA lo hace / no se entiende… (≤ 15 palabras)"}],
- "ideas":[{"titulo_tienda":"nombre comercial","emoji":"1 emoji","problema":"qué problema resuelve (≤ 20 palabras)","que_recibe":"qué recibe el cliente, concreto (≤ 40 palabras)","por_que_distinto":"por qué no es lo de siempre (≤ 25 palabras)","parecido":"lo más parecido que encontraste y en qué nos diferenciamos (≤ 25 palabras)","publico":"a quién","precio_sugerido":número,"gancho":"frase sentimental para el anuncio (≤ 18 palabras)","prueba_minima":"versión mínima para probar (≤ 20 palabras)","temporada":false,"nota":1-10}],
+ "ideas":[{"titulo_tienda":"nombre comercial","emoji":"1 emoji","problema":"qué problema resuelve (≤ 20 palabras)","que_recibe":"qué recibe el cliente, concreto (≤ 40 palabras)","por_que_distinto":"por qué no es lo de siempre (≤ 25 palabras)","parecido":"lo más parecido que encontraste y en qué nos diferenciamos (≤ 25 palabras)","publico":"a quién","precio_sugerido":número,"cultura":"de qué país/cultura viene la inspiración y qué pasó allá (≤ 20 palabras)","gancho":"frase JOCOSA, irónica, dramática o sentimental para el anuncio, nada técnica (≤ 18 palabras)","como_promocionar":"idea de reel corto que haga reír o tocar el corazón (≤ 30 palabras)","prueba_minima":"versión mínima para probar (≤ 20 palabras)","temporada":false,"nota":1-10}],
  "ganchos":[{"producto":"uno de nuestros productos","gancho":"texto del anuncio (≤ 18 palabras)","de_donde":"señal que lo inspira (≤ 10 palabras)"}]}
 Cantidades: 5-7 señales, 3-6 descartadas, SOLO 1-2 ideas (las que sobrevivan; si ninguna sobrevive, devuelve 0 y explica en descartadas), 3 ganchos.`;
 }
 
 export async function cruce() {
   if (!config.anthropic.key || !token()) return;
-  await say('🧪 <b>Cruce de tendencias</b> (cada 2 semanas): revisando redes, búsquedas, lo que se vende y noticias, y filtrando lo que ya existe… (3-5 min)');
+  await say('🧪 <b>Cruce de tendencias</b> (cada 2 semanas): revisando otras culturas, redes, búsquedas, lo que se vende y noticias, y filtrando lo que ya existe… (3-5 min)');
   const nuestros = Products.list().map((p) => p.title).slice(0, 40);
   const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
   let res;
@@ -235,7 +239,7 @@ export async function cruce() {
     Candidates.update(c.id, { ai_score: nota, status: 'notified', ai: { titulo: x.titulo_tienda, frase_corta: x.que_recibe, descripcion: `${x.problema || ''} ${x.que_recibe || ''}`,
       precio_sugerido: x.precio_sugerido, emoji: x.emoji, categoria: 'invento (cruce)', decision: 'recreate', como_recrear: x.prueba_minima, idea: x.que_recibe, publico: x.publico,
       anuncio: x.gancho ? { gancho: x.gancho } : undefined } });
-    await say(`${esc(x.emoji || '💡')} <b>IDEA QUE SOBREVIVIÓ · ${esc(x.titulo_tienda)}</b>\n⭐ ${nota}/10 · 💰 $${esc(x.precio_sugerido || 4.99)}${x.temporada ? ' · 🗓️ de temporada' : ''}\n\n🧩 <b>Problema:</b> ${esc(x.problema || '')}\n🎁 <b>Qué recibe:</b> ${esc(x.que_recibe || '')}\n✨ <b>Por qué es distinto:</b> ${esc(x.por_que_distinto || '')}\n🔎 <b>Lo más parecido:</b> ${esc(x.parecido || '')}\n👥 ${esc(x.publico || '')}\n🧪 <b>Prueba mínima:</b> ${esc(x.prueba_minima || '')}\n\n💬 <i>"${esc(x.gancho || '')}"</i>`,
+    await say(`${esc(x.emoji || '💡')} <b>IDEA QUE SOBREVIVIÓ · ${esc(x.titulo_tienda)}</b>\n⭐ ${nota}/10 · 💰 $${esc(x.precio_sugerido || 4.99)}${x.temporada ? ' · 🗓️ de temporada' : ''}\n\n🧩 <b>Problema:</b> ${esc(x.problema || '')}\n🎁 <b>Qué recibe:</b> ${esc(x.que_recibe || '')}\n✨ <b>Por qué es distinto:</b> ${esc(x.por_que_distinto || '')}\n🔎 <b>Lo más parecido:</b> ${esc(x.parecido || '')}\n👥 ${esc(x.publico || '')}${x.cultura ? `\n🌏 <b>Inspiración:</b> ${esc(x.cultura)}` : ''}\n🧪 <b>Prueba mínima:</b> ${esc(x.prueba_minima || '')}${x.como_promocionar ? `\n🎬 <b>Cómo promocionarlo:</b> ${esc(x.como_promocionar)}` : ''}\n\n💬 <i>"${esc(x.gancho || '')}"</i>`,
       { reply_markup: { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } }).catch(() => {});
     n++;
   }
