@@ -5,7 +5,7 @@ const env = (k) => process.env[k] || '';
 export const adsListos = () => !!(env('META_USER_TOKEN') && env('META_AD_ACCOUNT') && env('META_PAGE_ID'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function api(method, path, params = {}) {
+export async function api(method, path, params = {}) {
   const p = { ...params, access_token: env('META_USER_TOKEN') };
   for (const k of Object.keys(p)) if (typeof p[k] === 'object') p[k] = JSON.stringify(p[k]);
   const body = new URLSearchParams(p);
@@ -33,7 +33,7 @@ export function interesesPara(p) {
   if (/planner|agenda|organiz/.test(t)) return INTERESES.planner;
   return INTERESES.general;
 }
-async function idsIntereses(nombres) {
+export async function idsIntereses(nombres) {
   const out = [];
   for (const n of nombres) {
     const r = await api('GET', 'search', { type: 'adinterest', q: n, limit: 1, locale: 'es_LA' }).catch(() => ({ data: [] }));
