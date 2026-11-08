@@ -3,12 +3,13 @@
 // Antes borra los reels del Reto que ya se habían publicado (los busca por #reto30dias).
 // Antes: docker exec pixelia-estudio python3 /pixelia/herramientas/reto30/voz.py
 // Uso:   docker exec pixelia node --no-warnings /app/herramientas/reto30/publicar.mjs [--sin-borrar] [--sin-historia] [masculina|femenina]
+//        … femenina --facebook                    → sube ese reel SOLO a la página de Facebook
 //        … masculina --reemplazar --sin-historia  → cambia SOLO ese reel (borra el anterior de esa voz y sube el nuevo)
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../../src/config.js';
 import { Products, AdJobs } from '../../src/db.js';
-import { igReel, igHistoria, igRecientes, igBorrar } from '../../src/telegram/redes.js';
+import { igReel, igHistoria, igRecientes, igBorrar, fbVideo } from '../../src/telegram/redes.js';
 import { marcarPublicado } from '../../src/telegram/calendario.js';
 
 const SLUG = 'regalo-reto-30-dias', A = process.argv.slice(2);
@@ -21,6 +22,16 @@ const base = config.baseUrl.replace(/\/$/, '');
 const g = JSON.parse(fs.readFileSync(path.join(dir, 'guion.json'), 'utf8'));
 const generos = A.filter((x) => ['masculina', 'femenina'].includes(x)); if (!generos.length) generos.push('masculina', 'femenina');
 
+// --facebook: SOLO sube el/los reel(s) a la página de Facebook (no toca Instagram)
+if (A.includes('--facebook')) {
+  for (const genero of generos) {
+    const file = `reel-reto30-${genero}.mp4`;
+    if (!fs.existsSync(path.join(dir, file))) { console.log(`⚠️ No encuentro ${file}`); continue; }
+    try { const r = await fbVideo(`${base}/media/anuncios/${SLUG}/${file}`, g.story.copy.texto); console.log(`✔ Reel ${genero} subido a la página de Facebook. id: ${r?.id}`); }
+    catch (e) { console.log(`❌ Facebook (${genero}): ${e.message}`); }
+  }
+  process.exit(0);
+}
 // 1a) --reemplazar: borra SOLO el reel de esa voz (si tenemos su id guardado) y sube el nuevo
 if (A.includes('--reemplazar')) {
   for (const genero of generos) {
