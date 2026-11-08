@@ -10,7 +10,8 @@ import { api, idsIntereses, cuenta } from '../../src/telegram/anuncios-meta.js';
 import { igRecientes, call, G } from '../../src/telegram/redes.js';
 
 const A = process.argv.slice(2), opt = (k, d) => (A.includes(k) ? A[A.indexOf(k) + 1] : d);
-const DIAS = Number(opt('--dias', 0)), USD = Number(opt('--usd', 3))   // por defecto $3/día y SIN fecha de fin (Diego lo revisa en una semana), ESTADO = A.includes('--pausada') ? 'PAUSED' : 'ACTIVE';
+const DIAS = Number(opt('--dias', 0)), USD = Number(opt('--usd', 3));   // por defecto $3/día y SIN fecha de fin (Diego lo revisa en una semana)
+const ESTADO = A.includes('--pausada') ? 'PAUSED' : 'ACTIVE';
 const env = (k) => process.env[k] || '';
 const act = env('META_AD_ACCOUNT'), page = env('META_PAGE_ID'), ig = env('META_IG_ID');
 if (!act || !page || !ig) throw new Error('Falta conectar Meta (cuenta publicitaria, página o Instagram)');
