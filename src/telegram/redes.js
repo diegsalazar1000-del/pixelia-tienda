@@ -13,7 +13,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function call(method, url, params = {}) {
   const body = new URLSearchParams({ ...params, access_token: env('META_PAGE_TOKEN') });
-  const r = method === 'GET' ? await fetch(`${url}?${body}`) : await fetch(url, { method, body });
+  const r = method === 'POST' ? await fetch(url, { method, body }) : await fetch(`${url}?${body}`, { method });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.error) { const e = new Error(j.error?.error_user_msg || j.error?.message || `HTTP ${r.status}`); e.code = j.error?.code; throw e; }
   return j;
@@ -44,6 +44,23 @@ export async function igReel(videoUrl, caption, { feed = true, cover = '' } = {}
   }
   throw new Error('Instagram tardó demasiado procesando el video');
 }
+
+/** Historia de Instagram con una imagen (la API no permite el sticker de enlace: ese se pone a mano desde la app). */
+export async function igHistoria(imageUrl) {
+  const ig = env('META_IG_ID'); if (!ig) throw new Error('falta META_IG_ID (Instagram no está conectado a la página)');
+  const c = await call('POST', `${G}/${ig}/media`, { media_type: 'STORIES', image_url: imageUrl });
+  for (let i = 0; i < 20; i++) {
+    const s = await call('GET', `${G}/${c.id}`, { fields: 'status_code' }).catch(() => ({}));
+    if (s.status_code === 'FINISHED') break;
+    if (s.status_code === 'ERROR') throw new Error('Instagram no pudo procesar la historia');
+    await sleep(3000);
+  }
+  return call('POST', `${G}/${ig}/media_publish`, { creation_id: c.id });
+}
+/** Publicaciones recientes de Instagram (para encontrar y borrar una). */
+export const igRecientes = (n = 25) => call('GET', `${G}/${env('META_IG_ID')}/media`, { fields: 'id,caption,media_product_type,timestamp,permalink', limit: String(n) }).then((r) => r.data || []);
+/** Borra una publicación/reel/historia de Instagram (Meta lo permite desde dic-2025; pide el permiso instagram_manage_contents). */
+export const igBorrar = (id) => call('DELETE', `${G}/${id}`);
 
 /** Video en la página de Facebook. */
 export const fbVideo = (videoUrl, description) => call('POST', `${G}/${env('META_PAGE_ID')}/videos`, { file_url: videoUrl, description });

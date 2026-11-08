@@ -1,4 +1,5 @@
-"""Historia 1080x1920 del Reto 30 Días (deja un hueco abajo para el sticker de enlace). Uso: python3 historia.py portada.jpg salida.jpg"""
+"""Historia 1080x1920 del Reto 30 Días. Uso: python3 historia.py portada.jpg salida.jpg [--perfil]
+(normal: deja un hueco abajo para el sticker de enlace; --perfil: para subir por la API, que no permite sticker → "link en el perfil")"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 W, H = 1080, 1920; FD = "/usr/share/fonts/opentype/inter/"
@@ -16,6 +17,11 @@ shot = shot.crop((0, 0, sw, min(shot.height, 700)))
 fr = Image.new("RGB", (sw + 24, shot.height + 24), "white"); fr.paste(shot, (12, 12)); img.paste(fr, ((W - fr.width) // 2, 590))
 y = 590 + fr.height + 70
 c(y, "Google Sheets y Excel · también en el celular", F(36, "Medium"), (220, 215, 240))
-c(y + 110, "Toca el enlace y descárgalo", F(50, "Bold"), "white"); c(y + 175, "↓", F(70, "Black"), ORANGE)
+if "--perfil" in sys.argv:
+    g.rounded_rectangle([110, y + 70, W - 110, y + 300], 50, fill=PINK)
+    c(y + 130, "Descárgalo GRATIS en el", F(46, "Bold"), "white"); c(y + 190, "link de nuestro perfil", F(46, "Bold"), "white")
+    c(y + 255, "pixeliadigital.app/reto", F(44, "Black"), "white")
+else:
+    c(y + 110, "Toca el enlace y descárgalo", F(50, "Bold"), "white"); c(y + 175, "↓", F(70, "Black"), ORANGE)
 # abajo queda libre (~300 px) para poner el sticker de enlace
 img.save(sys.argv[2], quality=90); print("ok")
