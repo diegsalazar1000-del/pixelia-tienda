@@ -6,72 +6,159 @@
 <title>🔥 Reto 30 Días gratis · {{STORE}}</title>
 <meta name="description" content="¿Anotas tus metas y a la semana ya ni te acuerdas? Escribe tus retos a tu manera (✓ o cuántas horas, vasos, páginas) y la hoja calcula sola tu racha y tu avance. Gratis para Google Sheets y Excel.">
 <meta property="og:title" content="🔥 Reto 30 Días · gratis">
-<meta property="og:description" content="Marca ✓ cada día y mira tu racha crecer sola. Google Sheets y Excel, también en el celular.">
+<meta property="og:description" content="Escribe tus retos a tu manera y mira tu racha crecer sola. Google Sheets y Excel, también en el celular.">
 <meta property="og:image" content="{{BASE}}/regalos/reto-30-dias.jpg">
 {{PIXEL}}
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/css/styles.css">
 <style>
-main{max-width:560px;margin:0 auto;padding:22px 18px 70px}
+:root{--or:#ff6b3d;--pk:#ff4fa3;--tl:#14b8a6;--yl:#ffd966}
+main{max-width:560px;margin:0 auto;padding:22px 18px 120px}
 .kick{display:inline-block;padding:6px 12px;border-radius:999px;background:#ff6b3d22;border:1px solid #ff6b3d66;color:#ffb199;font-weight:700;font-size:.85rem}
-h1{font-size:clamp(1.9rem,8vw,2.6rem);line-height:1.08;margin:12px 0 10px}
-h1 em{font-style:normal;background:linear-gradient(90deg,#ff6b3d,#ff4fa3);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{color:var(--mut);font-size:1.05rem;margin:0 0 16px}
-.shot{border-radius:18px;overflow:hidden;border:1px solid #ffffff22;box-shadow:0 18px 50px #0008;background:#fff}
-.shot img{display:block;width:100%;height:auto}
-.pts{list-style:none;padding:0;margin:18px 0}.pts li{padding:7px 0;font-size:1rem}
-.form{padding:18px;border-radius:20px;background:linear-gradient(135deg,#ff6b3d2e,#7c5cff2e);border:1px solid #ffffff22}
-.form input[type=email]{width:100%;margin:8px 0}.chk{display:flex;gap:10px;align-items:flex-start;font-size:.84rem;color:var(--mut);margin:8px 0 12px}
-.chk input{margin-top:3px}.err{color:#ff7b8a;min-height:1.2em;margin:8px 0 0}.ok{color:#5fe3a1;margin-top:0}
+h1{font-size:clamp(1.9rem,8.4vw,2.7rem);line-height:1.08;margin:12px 0 8px}
+h1 .w{display:inline-block;opacity:0;transform:translateY(14px);animation:up .5s forwards}
+h1 em{font-style:normal}h1 em .w{background:linear-gradient(90deg,var(--or),var(--pk));-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes up{to{opacity:1;transform:none}}
+.sub{color:var(--mut);font-size:1.05rem;margin:0 0 18px;opacity:0;animation:up .6s 1.4s forwards}
+.demo{position:relative;border-radius:22px;overflow:hidden;border:1px solid #ffffff22;box-shadow:0 20px 60px #000a;background:#1c1533}
+.demo video,.demo img{display:block;width:100%;height:auto}
+.demo .tag{position:absolute;left:12px;bottom:12px;background:#000a;backdrop-filter:blur(6px);padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+.demo .tag i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;margin-right:6px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.cta{display:block;width:100%;border:0;cursor:pointer;margin:18px 0 6px;padding:18px;border-radius:18px;font:800 1.2rem/1 inherit;color:#fff;
+  background:linear-gradient(90deg,var(--or),var(--pk));box-shadow:0 12px 30px #ff4fa355;animation:pulse 2.2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+.cta small{display:block;font-weight:600;font-size:.8rem;opacity:.9;margin-top:6px}
+h2{font-size:1.4rem;margin:34px 0 12px}
+.step{padding:16px;border-radius:20px;background:#ffffff0a;border:1px solid #ffffff1a;margin:12px 0;opacity:0;transform:translateY(24px);transition:.6s}
+.step.on{opacity:1;transform:none}
+.step b.n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--or);margin-right:8px;font-size:.9rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{padding:8px 12px;border-radius:12px;background:#231a3d;border:1px solid #ffffff22;font-weight:700;font-size:.92rem;opacity:0;transform:scale(.6)}
+.on .chip{animation:pop .45s forwards}
+@keyframes pop{70%{transform:scale(1.08)}to{opacity:1;transform:none}}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+.cell{height:38px;border-radius:9px;background:#fff;display:grid;place-items:center;font-weight:800;color:#231a3d;font-size:.95rem}
+.on .cell{animation:paint .4s forwards}
+.cell.g{--c:var(--tl)}.cell.y{--c:var(--yl)}.on .cell.e{animation:none}
+@keyframes paint{to{background:var(--c)}}
+.cell.g{color:#fff}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{background:#fff;color:#231a3d;border-radius:14px;padding:10px 6px;text-align:center}
+.stat small{display:block;font-weight:800;font-size:.7rem;color:#fff;margin:-10px -6px 6px;padding:5px;border-radius:14px 14px 0 0}
+.stat b{font-size:1.25rem}
+.pts{list-style:none;padding:0;margin:8px 0}
+.pts li{padding:10px 0;font-size:1rem;opacity:0;transform:translateX(-20px);transition:.5s}
+.pts li.on{opacity:1;transform:none}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#0b0816ee;backdrop-filter:blur(10px);
+  border-top:1px solid #ffffff1a;transform:translateY(110%);transition:.35s;z-index:20}
+.bar.on{transform:none}.bar .cta{margin:0;padding:15px;font-size:1.05rem;animation:none}
+.sheet{position:fixed;inset:0;z-index:40;display:none;align-items:flex-end;justify-content:center;background:#000a}
+.sheet.on{display:flex}
+.box{width:100%;max-width:560px;background:#16112a;border-radius:24px 24px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));border:1px solid #ffffff22;animation:rise .35s}
+@keyframes rise{from{transform:translateY(100%)}}
+.box h3{margin:0 0 4px;font-size:1.3rem}.box p{color:var(--mut);margin:0 0 12px}
+.box input[type=email]{width:100%;font-size:1.05rem;padding:14px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--mut);margin:10px 0 14px}.chk input{margin-top:3px}
+.err{color:#ff7b8a;min-height:1.2em;margin:8px 0 0}.ok{color:#5fe3a1;margin-top:0}
+.x{float:right;background:none;border:0;color:#fff;font-size:1.6rem;cursor:pointer;line-height:1}
 .done a.btn{display:block;text-align:center;margin:10px 0}
 .code{font-size:1.4rem;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:6px 14px;border-radius:12px}
-.how{margin-top:26px;color:var(--mut);font-size:.92rem}.how b{color:#fff}
-.mini{text-align:center;color:var(--mut);font-size:.8rem;margin-top:28px}.mini a{color:#b9a6ff}
+.mini{text-align:center;color:var(--mut);font-size:.8rem;margin-top:30px}.mini a{color:#b9a6ff}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}h1 .w,.sub,.step,.pts li,.chip{opacity:1;transform:none}}
 </style>
 </head>
 <body>
 <div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
 <main>
   <span class="kick">🎁 GRATIS · Google Sheets y Excel</span>
-  <h1>¿Anotas tus metas y a la semana ya ni te acuerdas? <em>Ya no tienes que hacer esto.</em></h1>
-  <p class="sub">Olvídate de la libreta que se queda en la gaveta. Escribe tus retos a tu manera y la hoja hace el resto.</p>
-  <div class="shot"><img src="/regalos/reto-30-dias.jpg" alt="Reto 30 Días lleno de ejemplo"></div>
+  <h1 id="h1">¿Anotas tus metas y a la semana ya ni te acuerdas? <em>Ya no tienes que hacer esto.</em></h1>
+  <p class="sub">Escribe tus retos a tu manera y mira cómo la hoja se llena, te celebra y te cuenta la racha sola.</p>
+  <div class="demo"><span class="tag"><i></i>Así se llena sola</span>
+    <video src="/video/reto-demo.mp4" poster="/video/reto-demo.jpg" autoplay muted loop playsinline preload="auto"></video></div>
+  <button class="cta" data-open>⬇️ Descargar ahora <small>Gratis · te llega a tu correo en segundos</small></button>
+
+  <h2>Así funciona</h2>
+  <div class="step"><b class="n">1</b><b>Escribe tus retos, a tu manera</b>
+    <div class="chips"><span class="chip">💻 Trabajar 5 horas</span><span class="chip">💧 8 vasos de agua</span><span class="chip">📖 Leer 10 páginas</span><span class="chip">🚶 Caminar ✓</span><span class="chip">😴 Dormir antes de las 11 ✓</span></div></div>
+  <div class="step"><b class="n">2</b><b>Marca ✓ o escribe cuánto hiciste</b>
+    <div class="grid"><span class="cell g">8</span><span class="cell y">3.5</span><span class="cell g">12</span><span class="cell g">✓</span><span class="cell g">✓</span>
+      <span class="cell g">8</span><span class="cell g">5</span><span class="cell y">6</span><span class="cell g">✓</span><span class="cell e">&nbsp;</span></div>
+    <p style="color:var(--mut);font-size:.88rem;margin:10px 0 0">🟩 llegaste a tu meta · 🟨 hiciste una parte (y tu racha sigue)</p></div>
+  <div class="step"><b class="n">3</b><b>La hoja hace el resto</b>
+    <div class="stats"><div class="stat"><small style="background:#ff6b3d">🔥 RACHA</small><b data-count="18">0</b> días</div>
+      <div class="stat"><small style="background:#14b8a6">⏱️ LLEVAS</small><b data-count="84.5">0</b> h</div>
+      <div class="stat"><small style="background:#ff4fa3">⭐ AVANCE</small><b data-count="52">0</b>%</div></div></div>
+
+  <h2>Lo que te llevas</h2>
   <ul class="pts">
-    <li>✏️ <b>Tus retos, a tu manera</b>: con ✓ o con cuánto hiciste (horas, vasos, páginas, $…) y tu meta del día</li>
-    <li>🟩🟨 Verde si llegaste, amarillo si hiciste una parte (y tu racha sigue)</li>
-    <li>🔥 Tu <b>racha</b>, tu <b>%</b> y <b>cuánto llevas</b> se calculan solos</li>
-    <li>💬 Mensajes que te empujan: día 1, semana 1, mitad… ¡día 30!</li>
-    <li>📱 Funciona en el celular con Google Sheets (gratis)</li>
+    <li>✏️ <b>Tus retos, tus reglas</b>: hasta 5, con su meta del día y cuándo lo vas a hacer</li>
+    <li>🔥 <b>Racha</b> y <b>mejor racha</b> que se calculan solas</li>
+    <li>📦 <b>Cuánto llevas</b>: "84,5 de 150 horas" — eso sí motiva</li>
+    <li>💬 Mensajes que te empujan: día 1, semana 1, mitad… <b>¡día 30!</b></li>
+    <li>📱 En el celular con Google Sheets (gratis) o en Excel</li>
   </ul>
-  <div class="form" id="form">
-    <b>¿A qué correo te lo mandamos?</b>
-    <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email">
-    <label class="chk"><input type="checkbox" id="ok"> <span>Acepto recibir correos de {{STORE}} con el regalo, novedades y ofertas. Puedo darme de baja cuando quiera.</span></label>
-    <button class="btn btn-main btn-block" id="go">🔥 Quiero mi Reto 30 Días</button>
-    <p class="err" id="err"></p>
-  </div>
-  <div class="form done" id="done" hidden></div>
-  <div class="how">
-    <p><b>¿Cómo se usa?</b> Ábrelo con la app de Google Sheets (o Excel), escribe la fecha en que empiezas y tus retos (cómo los mides y tu meta del día). Cada día marcas ✓ o escribes cuánto hiciste.</p>
-  </div>
+  <button class="cta" data-open>⬇️ Quiero mi Reto 30 Días <small>Gratis, sin tarjeta</small></button>
   <p class="mini">Hecho con 💜 por <a href="/">{{STORE}}</a> · <a href="/legal">Términos y privacidad</a></p>
 </main>
+
+<div class="bar" id="bar"><button class="cta" data-open>⬇️ Descargar ahora · gratis</button></div>
+
+<div class="sheet" id="sheet">
+  <div class="box">
+    <div id="form">
+      <button class="x" id="close" aria-label="Cerrar">×</button>
+      <h3>📩 ¿A dónde te lo mandamos?</h3>
+      <p>Introduce tu correo para que te llegue al instante (y también lo descargas aquí mismo).</p>
+      <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email" inputmode="email">
+      <label class="chk"><input type="checkbox" id="ok"> <span>Acepto recibir correos de {{STORE}} con el regalo, novedades y ofertas. Puedo darme de baja cuando quiera.</span></label>
+      <button class="cta" id="go" style="animation:none;margin:0">🔥 Enviármelo gratis</button>
+      <p class="err" id="err"></p>
+    </div>
+    <div class="done" id="done" hidden></div>
+  </div>
+</div>
 <script>
 const $ = (i) => document.getElementById(i);
+// título palabra por palabra
+(() => { const h = $('h1'); let k = 0;
+  const wrap = (node) => [...node.childNodes].forEach((n) => {
+    if (n.nodeType === 3) { const f = document.createDocumentFragment();
+      n.textContent.split(/(\s+)/).forEach((w) => { if (!w.trim()) return f.append(w); const s = document.createElement('span'); s.className = 'w'; s.style.animationDelay = (k++ * 0.07) + 's'; s.textContent = w; f.append(s); });
+      n.replaceWith(f); } else wrap(n); });
+  wrap(h); })();
+// aparecen al bajar
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) return; const el = e.target; el.classList.add('on'); io.unobserve(el);
+  el.querySelectorAll('.chip,.cell').forEach((c, i) => c.style.animationDelay = (0.15 + i * 0.12) + 's');
+  el.querySelectorAll('[data-count]').forEach((b) => { const to = parseFloat(b.dataset.count), dec = to % 1 ? 1 : 0, t0 = performance.now();
+    const tick = (t) => { const p = Math.min(1, (t - t0) / 1200); b.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(dec).replace('.', ','); if (p < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+}), { threshold: 0.35 });
+document.querySelectorAll('.step').forEach((s) => io.observe(s));
+document.querySelectorAll('.pts li').forEach((li, i) => { li.style.transitionDelay = (i * 0.12) + 's'; io.observe(li); });
+// barra fija con el botón siempre que el botón grande no esté a la vista
+const first = document.querySelector('.cta');
+new IntersectionObserver(([e]) => $('bar').classList.toggle('on', !e.isIntersecting && !$('sheet').classList.contains('on'))).observe(first);
+// ventana del correo
+const abrir = () => { $('sheet').classList.add('on'); setTimeout(() => $('email').focus(), 250); try { fbq('track', 'ViewContent', { content_name: 'regalo-reto' }); } catch {} };
+document.querySelectorAll('[data-open]').forEach((b) => b.onclick = abrir);
+if (location.hash === '#descargar') setTimeout(abrir, 600);   // enlace directo a la ventana del correo
+$('close').onclick = () => $('sheet').classList.remove('on');
+$('sheet').onclick = (e) => { if (e.target.id === 'sheet') $('sheet').classList.remove('on'); };
 $('go').onclick = async () => {
   $('err').textContent = '';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($('email').value.trim())) return $('err').textContent = 'Escribe tu correo para mandártelo 📩';
   if (!$('ok').checked) return $('err').textContent = 'Marca la casilla para poder enviarte el regalo.';
-  $('go').disabled = true;
+  $('go').disabled = true; $('go').textContent = 'Enviando…';
   try {
     const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('email').value, regalos: ['reto'], consent: true }) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo');
     try { fbq('track', 'Lead', { content_name: 'regalo-reto' }); } catch {}
     $('form').hidden = true; $('done').hidden = false;
-    $('done').innerHTML = `<h3 class="ok">✅ ¡Listo! Descárgalo aquí (también te llegó al correo):</h3>` +
+    $('done').innerHTML = `<h3 class="ok">✅ ¡Listo! Ya va a tu correo</h3><p>Y si lo quieres ya mismo:</p>` +
       j.links.map((l) => `<a class="btn btn-main" href="${l.url}" download>⬇️ Descargar mi Reto 30 Días</a>`).join('') +
-      `<p style="color:var(--mut);font-size:.9rem">Tip: en el celular, ábrelo con Google Sheets. Arriba escribe tu fecha de inicio y listo.</p>` +
-      (j.code ? `<p style="margin-top:18px">🎁 Y si quieres <b>todo tu 2027</b> así (12 meses, niveles, ánimo y resumen del año), tienes <b>${j.off}% de descuento</b>:</p><p class="code">${j.code}</p><p><a class="btn" style="display:block;text-align:center" href="/p/mi-2027-en-habitos?cupon=${encodeURIComponent(j.code)}">Ver Mi 2027 en Hábitos →</a></p>` : '');
-  } catch (e) { $('err').textContent = e.message; $('go').disabled = false; }
+      `<p style="font-size:.88rem">Tip: en el celular ábrelo con Google Sheets. Arriba escribe tu fecha de inicio y tus retos.</p>` +
+      (j.code ? `<p style="margin-top:16px">🎁 ¿Y si todo tu 2027 fuera así? (12 meses, niveles, ánimo y resumen del año) Tienes <b>${j.off}% de descuento</b>:</p><p class="code">${j.code}</p><p><a class="btn" style="display:block;text-align:center" href="/p/mi-2027-en-habitos?cupon=${encodeURIComponent(j.code)}">Ver Mi 2027 en Hábitos →</a></p>` : '');
+  } catch (e) { $('err').textContent = e.message; $('go').disabled = false; $('go').textContent = '🔥 Enviármelo gratis'; }
 };
 </script>
 </body>
