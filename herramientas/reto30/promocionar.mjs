@@ -24,7 +24,8 @@ console.log(`📌 Reels a promocionar: ${reels.length} (${reels.map((r) => r.per
 
 // 2) Público
 const PAISES = ['VE', 'CO', 'MX', 'PE', 'CL', 'AR', 'EC'];
-const ints = await idsIntereses(['Productivity', 'Personal development', 'Goal setting', 'Habit', 'Self-improvement', 'Motivation']);
+const ints = (await idsIntereses(['Productivity', 'Personal development', 'Self-improvement', 'Motivation', 'Time management']))
+  .filter((i, k, a) => !/cocina|cooking|food|jardin/i.test(i.name) && a.findIndex((x) => x.id === i.id) === k);   // Meta a veces devuelve intereses que no tienen nada que ver
 const targeting = { geo_locations: { countries: PAISES }, age_min: 20, age_max: 45, targeting_automation: { advantage_audience: 0 },
   ...(ints.length ? { flexible_spec: [{ interests: ints }] } : {}),
   publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'reels', 'explore_home', 'profile_feed'] };
@@ -32,7 +33,7 @@ console.log('🎯 Público: ' + PAISES.join(', ') + ' · 20-45 · ' + (ints.map(
 
 const hoy = new Date().toISOString().slice(0, 10), nombre = `Pixelia · Reto 30 Días · seguidores · ${hoy}`;
 const fin = DIAS > 0 ? { end_time: new Date(Date.now() + DIAS * 864e5).toISOString() } : {};
-const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION' });
+const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION', is_adset_budget_sharing_enabled: false });
 
 // 3) Conjunto: visitas al perfil de Instagram (si Meta lo permite por API) o, si no, visitas a /reto
 let modo = 'perfil', set;
