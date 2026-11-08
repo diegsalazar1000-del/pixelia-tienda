@@ -114,6 +114,12 @@
 
 - 🔬 ANÁLISIS RIGUROSO 7-nov (noche): MUERTAS: casos de detective imprimibles con QR (Etsy saturado, hay juego en español "Crímenes ilustrados"), game show familiar "¿quién dijo esto?" (apps Hearsay, Who Said That), libro de voces con QR para bodas solo (GuestCam desde $49, Wedibox, Dial Moments; ojo: también hacen álbum de fotos por QR = la Fiesta existe en inglés). HALLAZGO ESTRATÉGICO: muchas ideas buenas existen en inglés, manuales o caras ($20-$99) → nuestra jugada = "lo que en inglés cuesta $49 y es manual, en español, automático y a $5-10". SOBREVIVEN con esa lógica: (1) ESCAPE ROOM DE NUESTRA HISTORIA (pareja/amigos/cumpleaños): el cliente llena 8-10 recuerdos → se arman solos acertijos con sus fechas, lugares, canciones y fotos + bóveda digital final en nuestra web que revela su mensaje; existe en inglés (Puzzle Post, Enigmagram, encargos en Fiverr) físico/caro/manual; $6.99. (2) BODAS Y 15 AÑOS CON UN QR: álbum de fotos de los invitados + libro de voces (mensajes de audio) en español, desde la web; en inglés cuesta desde $49; nosotros ~$9.99; reutiliza el motor de la Fiesta.
 
+## Para el 8-nov (Diego: "anótalo para dejarlo corriendo para mañana")
+- Evaluar y arrancar (con su OK final): la FIESTA crece a BODAS y 15 AÑOS con un QR (álbum de fotos + libro de voces, ~$9.99) y el ESCAPE ROOM DE NUESTRA HISTORIA ($6.99). Antes: revisar a fondo competencia en español.
+- Primer CRUCE DE TENDENCIAS automático (corre 1 h después del explorador diario, tras update.sh).
+- Campaña: al 7-nov 23:00 iba 101 visitas a la página, $0,03 c/u, $2,55 gastados. Día 3 (~9/10-nov): decidir Audience Network con datos.
+- Recordar a Diego: bash update.sh (modo dueño, /creditos, cruce), abrir ?soy=dueno en PC y teléfono, /creditos recargue 12.01.
+
 ## Pendientes al 7-nov (Diego puede preguntar "¿qué tenemos pendiente para hoy?")
 - [en curso 6-nov noche] Primer anuncio del tracker de hábitos: /anuncios → reel → 📊 campaña $3/día → Activar.
 - Sábado 7-nov: APAGAR el anuncio de prueba ("¡Queremos crear lo próximo contigo!", creado a mano en la cuenta nueva; Diego lo dejó encendido la noche del 6 para no tocar tanto la cuenta nueva). Compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).
