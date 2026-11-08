@@ -17,7 +17,7 @@ const save = (s) => { s.seen = s.seen.slice(-5000); fs.writeFileSync(STATE, JSON
 
 const SPAM = /(https?:\/\/|www\.|\.com\b|\.net\b|t\.me\/|wa\.me|bit\.ly|gana(r)?\s+dinero|ingresos?\s+extra|inversi[oó]n|bitcoin|cripto|forex|trading|escr[ií]beme|cont[aá]ctame|m[aá]ndame\s+(un\s+)?(dm|mensaje)|dm\s+me|check\s+(my|mi)\s+(bio|perfil)|seguidores\s+gratis|promociona|colaboraci[oó]n\s+pagada|sugar\s+(daddy|mommy)|onlyfans|xxx)/i;
 const INSULTO = /\b(idiota|est[uú]pid[oa]s?|imb[eé]cil|pendej[oa]s?|marica|malparid[oa]|hijueputa|hdp|put[oa]s?|mierda|basura|cag[oó]n|gonorrea|culer[oa]|maldit[oa]s?)\b/i;
-const PALABRA = /\b(regalo|regalos|ahorro|navidad|navide[nñ]o|quiero|lo quiero|yo quiero|gratis|me interesa|info|precio|cu[aá]nto (cuesta|vale|sale)|link|enlace|c[oó]mo lo (consigo|descargo|compro))\b/i;
+const PALABRA = /\b(reto|retos|h[aá]bito|h[aá]bitos|30 d[ií]as|regalo|regalos|ahorro|navidad|navide[nñ]o|quiero|lo quiero|yo quiero|gratis|me interesa|info|precio|cu[aá]nto (cuesta|vale|sale)|link|enlace|c[oó]mo lo (consigo|descargo|compro))\b/i;
 const RESP_REGALO = [
   '¡Hecho! 🎁 Lo descargas gratis en el link de nuestra bio: pixeliadigital.app/regalo',
   '¡Es tuyo! 💜 Entra a pixeliadigital.app/regalo (también está en la bio) y descárgalo gratis.',
@@ -28,7 +28,14 @@ const RESP_PRECIO = [
   '¡Hola! 💜 Todos los precios y la descarga inmediata están en pixeliadigital.app (link en la bio).',
   '¡Gracias por escribir! ✨ Lo encuentras en pixeliadigital.app — pagas con PayPal, tarjeta o Binance y lo descargas al momento.',
 ];
-const esRegalo = (t) => /\/regalo|#regalo\b/i.test(String(t || ''));  // publicación del regalo gratis
+const esRegalo = (t) => /\/regalo|#regalo\b|\/reto\b|#reto(30)?\b/i.test(String(t || ''));
+const esReto = (t) => /\/reto\b|#reto(30)?\b/i.test(String(t || ''));  // publicación del Reto 30 Días → su propia página
+const RESP_RETO = [
+  '¡Hecho! 🔥 Tu Reto 30 Días está gratis en el link de nuestro perfil: pixeliadigital.app/reto',
+  '¡Es tuyo! 💪 Entra a pixeliadigital.app/reto (también está en el perfil) y empieza hoy.',
+  '¡Listo! ✨ Lo descargas gratis en pixeliadigital.app/reto — el link también está en el perfil.',
+  '¡Te lo dejamos listo! 🔥 Búscalo en el link del perfil o directo en pixeliadigital.app/reto',
+];  // publicación del regalo gratis
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const short = (t) => String(t || '').replace(/\s+/g, ' ').slice(0, 220);
 
@@ -38,7 +45,7 @@ async function igComments() {
   const out = [];
   for (const m of media) {
     const cs = (await call('GET', `${G}/${m.id}/comments`, { fields: 'id,text,username,timestamp,hidden', limit: '50' }).catch(() => ({ data: [] }))).data || [];
-    for (const c of cs) out.push({ red: 'i', id: c.id, text: c.text, user: c.username, ts: c.timestamp, link: m.permalink, post: short(m.caption).slice(0, 40), hidden: c.hidden, regalo: esRegalo(m.caption) });
+    for (const c of cs) out.push({ red: 'i', id: c.id, text: c.text, user: c.username, ts: c.timestamp, link: m.permalink, post: short(m.caption).slice(0, 40), hidden: c.hidden, regalo: esRegalo(m.caption), reto: esReto(m.caption) });
   }
   return out;
 }
@@ -48,7 +55,7 @@ async function fbComments() {
   const out = [];
   for (const p of posts) {
     const cs = (await call('GET', `${G}/${p.id}/comments`, { fields: 'id,message,from,created_time,is_hidden', filter: 'stream', limit: '50' }).catch(() => ({ data: [] }))).data || [];
-    for (const c of cs) if (c.from?.id !== page) out.push({ red: 'f', id: c.id, text: c.message, user: c.from?.name || 'alguien', ts: c.created_time, link: p.permalink_url, post: short(p.message).slice(0, 40), hidden: c.is_hidden, regalo: esRegalo(p.message) });
+    for (const c of cs) if (c.from?.id !== page) out.push({ red: 'f', id: c.id, text: c.message, user: c.from?.name || 'alguien', ts: c.created_time, link: p.permalink_url, post: short(p.message).slice(0, 40), hidden: c.is_hidden, regalo: esRegalo(p.message), reto: esReto(p.message) });
   }
   return out;
 }
@@ -82,8 +89,8 @@ export async function revisarComentarios() {
         await kb(`🛡️ ${red} · Oculté un comentario de ${who} (${SPAM.test(c.text) ? 'spam/enlace' : 'insulto'}):\n«${esc(short(c.text))}»`,
           [[{ text: '🗑️ Eliminar', callback_data: `cm:d:${c.red}:${c.id}` }, { text: '👁️ Volver a mostrar', callback_data: `cm:s:${c.red}:${c.id}` }]]);
       } else if (c.regalo && PALABRA.test(c.text) && respuestas < 20) {
-        const precio = /precio|cu[aá]nto|info|compr/i.test(c.text) && !/regalo|gratis|ahorro|navidad/i.test(c.text);
-        await reply(c, pick(precio ? RESP_PRECIO : RESP_REGALO)); respuestas++;
+        const precio = /precio|cu[aá]nto|info|compr/i.test(c.text) && !/regalo|gratis|ahorro|navidad|reto/i.test(c.text);
+        await reply(c, pick(c.reto ? RESP_RETO : precio ? RESP_PRECIO : RESP_REGALO)); respuestas++;
         await say(`💬 ${red} · Respondí a ${who}: «${esc(short(c.text))}»`);
       } else {
         await kb(`💬 ${red} · Comentario de ${who} en «${esc(c.post)}…»:\n«${esc(short(c.text))}»${c.text?.includes('?') ? '\n❓ Parece una pregunta: respóndele tú.' : ''}`, c.link ? [[{ text: '↗️ Abrir y responder', url: c.link }]] : []);

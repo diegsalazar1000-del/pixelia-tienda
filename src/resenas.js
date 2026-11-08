@@ -5,7 +5,7 @@ import { Products, Orders, Reviews } from './db.js';
 import { sendEmail } from './delivery/email.js';
 import { tg, tgEnabled, esc } from './telegram/api.js';
 
-export const GIFT_SLUGS = { ahorro: 'regalo-reto-de-ahorro-52-semanas-2027', navidad: 'regalo-planificador-navideno' };
+export const GIFT_SLUGS = { ahorro: 'regalo-reto-de-ahorro-52-semanas-2027', navidad: 'regalo-planificador-navideno', reto: 'regalo-reto-30-dias' };
 const sig = (s) => crypto.createHmac('sha256', config.secret).update('resena:' + s).digest('base64url').slice(0, 22);
 export const makeToken = (o) => { const s = Buffer.from(JSON.stringify(o)).toString('base64url'); return `${s}.${sig(s)}`; };
 export function readToken(t) {

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>🔥 Reto 30 Días gratis · {{STORE}}</title>
+<meta name="description" content="Si tus propósitos se mueren en febrero: marca ✓ cada día y tu racha, tu % y tu barra se calculan solos. Gratis para Google Sheets y Excel.">
+<meta property="og:title" content="🔥 Reto 30 Días · gratis">
+<meta property="og:description" content="Marca ✓ cada día y mira tu racha crecer sola. Google Sheets y Excel, también en el celular.">
+<meta property="og:image" content="{{BASE}}/regalos/reto-30-dias.jpg">
+{{PIXEL}}
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+main{max-width:560px;margin:0 auto;padding:22px 18px 70px}
+.kick{display:inline-block;padding:6px 12px;border-radius:999px;background:#ff6b3d22;border:1px solid #ff6b3d66;color:#ffb199;font-weight:700;font-size:.85rem}
+h1{font-size:clamp(1.9rem,8vw,2.6rem);line-height:1.08;margin:12px 0 10px}
+h1 em{font-style:normal;background:linear-gradient(90deg,#ff6b3d,#ff4fa3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);font-size:1.05rem;margin:0 0 16px}
+.shot{border-radius:18px;overflow:hidden;border:1px solid #ffffff22;box-shadow:0 18px 50px #0008;background:#fff}
+.shot img{display:block;width:100%;height:auto}
+.pts{list-style:none;padding:0;margin:18px 0}.pts li{padding:7px 0;font-size:1rem}
+.form{padding:18px;border-radius:20px;background:linear-gradient(135deg,#ff6b3d2e,#7c5cff2e);border:1px solid #ffffff22}
+.form input[type=email]{width:100%;margin:8px 0}.chk{display:flex;gap:10px;align-items:flex-start;font-size:.84rem;color:var(--mut);margin:8px 0 12px}
+.chk input{margin-top:3px}.err{color:#ff7b8a;min-height:1.2em;margin:8px 0 0}.ok{color:#5fe3a1;margin-top:0}
+.done a.btn{display:block;text-align:center;margin:10px 0}
+.code{font-size:1.4rem;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:6px 14px;border-radius:12px}
+.how{margin-top:26px;color:var(--mut);font-size:.92rem}.how b{color:#fff}
+.mini{text-align:center;color:var(--mut);font-size:.8rem;margin-top:28px}.mini a{color:#b9a6ff}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><span></span><span></span><span></span></div><div class="bg-grid"></div>
+<main>
+  <span class="kick">🎁 GRATIS · Google Sheets y Excel</span>
+  <h1>Si tus propósitos se mueren en febrero… <em>ya no tienes que hacer esto.</em></h1>
+  <p class="sub">Olvídate de la libreta que abandonas a la semana. Marca ✓ cada día y la hoja hace el resto.</p>
+  <div class="shot"><img src="/regalos/reto-30-dias.jpg" alt="Reto 30 Días lleno de ejemplo"></div>
+  <ul class="pts">
+    <li>🔥 Tu <b>racha</b> y tu <b>mejor racha</b> se calculan solas</li>
+    <li>📊 El <b>%</b> de cada hábito y la barra del reto se llenan solos</li>
+    <li>💬 Mensajes que te empujan: día 1, semana 1, mitad… ¡día 30!</li>
+    <li>📱 Funciona en el celular con Google Sheets (gratis)</li>
+  </ul>
+  <div class="form" id="form">
+    <b>¿A qué correo te lo mandamos?</b>
+    <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email">
+    <label class="chk"><input type="checkbox" id="ok"> <span>Acepto recibir correos de {{STORE}} con el regalo, novedades y ofertas. Puedo darme de baja cuando quiera.</span></label>
+    <button class="btn btn-main btn-block" id="go">🔥 Quiero mi Reto 30 Días</button>
+    <p class="err" id="err"></p>
+  </div>
+  <div class="form done" id="done" hidden></div>
+  <div class="how">
+    <p><b>¿Cómo se usa?</b> Ábrelo con la app de Google Sheets (o Excel), escribe la fecha en que empiezas, cambia los hábitos por los tuyos y cada día toca la casilla y elige ✓.</p>
+  </div>
+  <p class="mini">Hecho con 💜 por <a href="/">{{STORE}}</a> · <a href="/legal">Términos y privacidad</a></p>
+</main>
+<script>
+const $ = (i) => document.getElementById(i);
+$('go').onclick = async () => {
+  $('err').textContent = '';
+  if (!$('ok').checked) return $('err').textContent = 'Marca la casilla para poder enviarte el regalo.';
+  $('go').disabled = true;
+  try {
+    const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('email').value, regalos: ['reto'], consent: true }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo');
+    try { fbq('track', 'Lead', { content_name: 'regalo-reto' }); } catch {}
+    $('form').hidden = true; $('done').hidden = false;
+    $('done').innerHTML = `<h3 class="ok">✅ ¡Listo! Descárgalo aquí (también te llegó al correo):</h3>` +
+      j.links.map((l) => `<a class="btn btn-main" href="${l.url}" download>⬇️ Descargar mi Reto 30 Días</a>`).join('') +
+      `<p style="color:var(--mut);font-size:.9rem">Tip: en el celular, ábrelo con Google Sheets. Arriba escribe tu fecha de inicio y listo.</p>` +
+      (j.code ? `<p style="margin-top:18px">🎁 Y si quieres <b>todo tu 2027</b> así (12 meses, niveles, ánimo y resumen del año), tienes <b>${j.off}% de descuento</b>:</p><p class="code">${j.code}</p><p><a class="btn" style="display:block;text-align:center" href="/p/mi-2027-en-habitos?cupon=${encodeURIComponent(j.code)}">Ver Mi 2027 en Hábitos →</a></p>` : '');
+  } catch (e) { $('err').textContent = e.message; $('go').disabled = false; }
+};
+</script>
+</body>
+</html>

@@ -147,6 +147,8 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
 const REGALOS = {
   ahorro: { title: 'Reto de Ahorro 52 Semanas 2027', file: '/regalos/Reto-de-Ahorro-52-Semanas-Pixelia.zip' },
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
+  reto: { title: 'Reto 30 Días (Google Sheets / Excel)', file: '/regalos/Reto-30-Dias-Pixelia.xlsx',
+    next: { slug: 'mi-2027-en-habitos', text: '¿Te gustó? Imagina TODO tu 2027 así: 12 meses, niveles, ánimo diario y tu resumen del año.' } },
 };
 // ⭐ Reseñas reales con enlace firmado
 on('GET', '/baja', (req, res, _, url) => {  // darse de baja de los correos (enlace firmado)
@@ -174,6 +176,7 @@ on('GET', '/api/regalo/resenas', (req, res) => json(res, 200, { reviews: Object.
 on('GET', '/binance-qr.jpg', (req, res) => { const f = path.join(path.dirname(config.paths.files), 'binance-qr.jpg');
   serveFile(res, fs.existsSync(f) ? f : path.join(config.paths.public, 'img', 'binance-qr.jpg'), { 'cache-control': 'public, max-age=600' }); });
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
+on('GET', '/reto', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html')); });  // página corta del Reto 30 Días (reel → bio)
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
   const n = (subHits.get(ip) || 0) + 1; subHits.set(ip, n); if (subHits.size > 5000) subHits.clear();
@@ -192,6 +195,7 @@ on('POST', '/api/regalo', async (req, res) => {
        <h2 style="margin:0 0 12px">🎁 ¡Aquí está tu regalo!</h2>
        ${links.map((l) => `<p><a style="display:inline-block;background:#ff4fa3;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${l.url}">⬇️ Descargar ${esc(l.title)}</a></p>`).join('')}
        ${code ? `<p style="margin-top:18px">Y para tu primera compra, <b>${off}% de descuento</b> con el cupón:</p><p style="font-size:26px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:8px 16px;border-radius:12px">${code}</p>` : ''}
+       ${ids.map((id) => REGALOS[id].next).filter(Boolean).map((n) => { const np = Products.bySlug(n.slug); return np && np.active ? `<p style="margin-top:18px">${esc(n.text)}</p><p><a style="color:#b9a6ff;font-weight:700" href="${config.baseUrl}/p/${np.slug}${code ? '?cupon=' + code : ''}">👉 ${esc(np.title)}${code ? ` con tu ${off}%` : ''}</a></p>` : ''; }).join('')}
        <p style="color:#aab">Mira todos los productos en <a style="color:#b9a6ff" href="${config.baseUrl}">${esc(config.baseUrl.replace(/^https?:\/\//, ''))}</a></p></div>`)
       .catch((e) => console.error('[regalo]', e.message));
   }

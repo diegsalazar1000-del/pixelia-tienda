@@ -50,6 +50,10 @@ Reglas:
 - Precio: {precio}. Precio anterior: {tachado}.
 """
 
+# Regalos con página propia (el resto va a /regalo). Mismo mapa en src/telegram/radar.js y comentarios.js.
+LANDING = {"regalo-reto-30-dias": ("/reto", "RETO")}
+def landing(prod): return LANDING.get(str(prod.get("slug") or ""), ("/regalo", None))
+
 def make_brief(prod, n_pages, titles=None, api_key=None, model=None):
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     model = model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
@@ -90,7 +94,7 @@ def normalize(B, prod, n_pages, titles=None):
     m = B.get("musica") or {}; m["genero"] = m.get("genero") if m.get("genero") in GENEROS else "pop"; B["musica"] = m
     B["precio"] = float(prod.get("price") or 0); B["tachado"] = float(prod.get("compare") or 0) or None
     B["dominio"] = prod.get("dominio", "pixeliadigital.app")
-    if not B["precio"]: B["dominio"] += "/regalo"; B["tachado"] = None; B["regalo"] = True; B["cta"] = "DESCÁRGALO GRATIS"  # regalo a cambio del correo
+    if not B["precio"]: B["dominio"] += landing(prod)[0]; B["tachado"] = None; B["regalo"] = True; B["cta"] = "DESCÁRGALO GRATIS"  # regalo a cambio del correo
     gv = B.get("guion_voz") or {"gancho": " ".join(w for l in B["gancho"][:2] for w in l["palabras"]), "paginas": "Todo lo que necesitas, en un solo lugar.",
                                 "movil": "También en tu móvil.", "precio": "Hoy con descuento. Descárgalo ya."}
     lim = {"gancho": 6, "paginas": 10, "movil": 6, "precio": 8}
@@ -221,7 +225,8 @@ def make_storyboard(prod, B, titles, force_open=None, force_style=None, avoid=No
                       "Puedes usar ideas graciosas o curiosas (un gato sobre la agenda, alguien enterrado en papeles) siempre que se entienda la relación con el producto. Mete 2-3 planos con producto: true. "
                       "Las búsquedas en inglés, concretas y visuales; nada de marcas ni personas famosas.")
     if not float(prod.get("price") or 0):
-        forzar.append("ES UN REGALO GRATIS (se descarga dejando el correo en pixeliadigital.app/regalo). El cierre invita a COMENTAR una palabra clave corta en mayúsculas relacionada (ej. AHORRO o NAVIDAD) y a descargarlo gratis; en 'precio' di 'gratis' y usa cta 'DESCÁRGALO GRATIS'. Genera curiosidad y ganas de compartirlo/guardarlo.")
+        ruta, palabra = landing(prod)
+        forzar.append(f"ES UN REGALO GRATIS (se descarga dejando el correo en pixeliadigital.app{ruta}, link en el perfil). El cierre invita a COMENTAR " + (f"la palabra {palabra}" if palabra else "una palabra clave corta en mayúsculas relacionada (ej. AHORRO o NAVIDAD)") + " y a descargarlo gratis; en 'precio' di 'gratis' y usa cta 'DESCÁRGALO GRATIS'. Genera curiosidad y ganas de compartirlo/guardarlo.")
     if extra: forzar.append(extra)
     forzar.append('MENSAJE (método de campañas): 1 idea central en 1 frase; habla de BENEFICIOS no de funciones (cada línea responde "¿y a mí qué?" desde quien mira); compáralo con NO hacer nada (seguir como está); usa "tú"; una sola llamada a la acción.')
     ap = aprendizaje()

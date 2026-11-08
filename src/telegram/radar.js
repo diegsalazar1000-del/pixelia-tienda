@@ -456,7 +456,8 @@ function startReporteSemanal() {
 const CAMP_F = path.join(path.dirname(MUSIC_DIR), '..', 'data', 'campanas.json');
 const camps = () => { try { return JSON.parse(fs.readFileSync(CAMP_F, 'utf8')); } catch { return []; } };
 const saveCamps = (c) => { fs.mkdirSync(path.dirname(CAMP_F), { recursive: true }); fs.writeFileSync(CAMP_F, JSON.stringify(c.slice(-50), null, 1)); };
-function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : `${b}/regalo`; }
+const LANDING = { 'regalo-reto-30-dias': '/reto' };  // regalos con página propia (mismo mapa en estudio/brief.py)
+function destino(p) { const b = config.baseUrl.replace(/\/$/, ''); return p.price_cents ? `${b}/p/${p.slug}` : b + (LANDING[p.slug] || '/regalo'); }
 const PLANES = new Map();
 /** Variantes A/B: A = último reel; B = el reel anterior (otro formato) o la imagen estática del último anuncio. */
 /** Opciones para el 3er anuncio: las 3 imágenes juntas (Meta elige la mejor), una sola imagen con sus tamaños, el reel anterior o nada. */

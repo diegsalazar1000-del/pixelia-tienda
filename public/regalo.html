@@ -13,7 +13,7 @@
 <link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="/css/styles.css">
 <style>
-.gifts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:22px 0}
+.gifts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px;margin:22px 0}
 .gift{border:2px solid var(--line);border-radius:22px;overflow:hidden;cursor:pointer;background:#ffffff08;transition:.2s}
 .gift img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
 .gift .t{padding:12px 14px}.gift h3{margin:0 0 4px;font-size:1.05rem}.gift p{margin:0;color:var(--mut);font-size:.9rem}
@@ -31,7 +31,7 @@
 <header class="top"><div class="wrap"><a class="logo" href="/"><i>✦</i><span>{{STORE}}</span></a><nav class="nav"><a href="/#catalogo">Catálogo</a></nav></div></header>
 <main class="wrap" style="padding:30px 0 80px;max-width:860px">
   <h1 style="text-align:center;margin:0">🎁 Elige tu regalo gratis</h1>
-  <p style="text-align:center;color:var(--mut);margin:8px 0 0">PDF para imprimir + versión que se calcula sola en Excel o Google Sheets. Puedes llevarte los dos.</p>
+  <p style="text-align:center;color:var(--mut);margin:8px 0 0">PDF para imprimir + versión que se calcula sola en Excel o Google Sheets. Llévate los que quieras.</p>
   <div class="gifts" id="gifts"></div>
   <div class="form" id="form">
     <b>¿A qué correo te lo mandamos?</b>
@@ -45,6 +45,7 @@
 <script>
 const GIFTS = [
   { id: 'ahorro', title: 'Reto de Ahorro 52 Semanas 2027', desc: 'Colorea cada semana que ahorras. Versión creciente y fija + Excel que suma solo.', img: '/regalos/portada-reto-ahorro.jpg' },
+  { id: 'reto', title: 'Reto 30 Días', desc: 'Marca ✓ cada día y tu racha, tu % y tu barra se calculan solos. Google Sheets / Excel.', img: '/regalos/reto-30-dias.jpg' },
   { id: 'navidad', title: 'Planificador Navideño', desc: 'Presupuesto, lista de regalos, cenas y checklist de diciembre + Excel.', img: '/regalos/portada-planificador-navideno.jpg' },
 ];
 const q = new URLSearchParams(location.search).get('r');

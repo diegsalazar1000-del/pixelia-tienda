@@ -16,8 +16,8 @@ export function darDeBaja(t) {
   db.prepare('UPDATE subscribers SET unsub = 1 WHERE email = ?').run(String(tok.e).toLowerCase()); return true;
 }
 
-const tema = (s) => (/ahorro/.test(s.source) ? 'ahorro' : /navidad/.test(s.source) ? 'navidad' : 'general');
-const PREF = { ahorro: /financ|ahorro|dinero|presupuesto|gasto/i, navidad: /2027|planner|agenda|hábito|habito|año/i, general: /hábito|habito|planner|2027|financ/i };
+const tema = (s) => (/ahorro/.test(s.source) ? 'ahorro' : /navidad/.test(s.source) ? 'navidad' : /regalo:.*\breto\b/.test(s.source) ? 'habitos' : 'general');
+const PREF = { ahorro: /financ|ahorro|dinero|presupuesto|gasto/i, navidad: /2027|planner|agenda|hábito|habito|año/i, habitos: /hábito|habito/i, general: /hábito|habito|planner|2027|financ/i };
 
 /** Producto que más le sirve: el que estaba viendo (cupón desde una ficha) → el de su tema → el más vendido. Nunca uno que ya compró. */
 function recomendar(s) {
@@ -40,6 +40,7 @@ const CONSEJOS = {
       '<b>Pégalo a algo que ya haces:</b> "después del café, leo 10 minutos". Así no dependes de acordarte.',
       '<b>Márcalo cada día:</b> ver tu racha crecer es la mejor motivación (y no romperla dos días seguidos).'] },
 };
+CONSEJOS.habitos = { ...CONSEJOS.general, asunto: '🔥 3 trucos para no romper tu racha del Reto 30 Días', titulo: 'Que tu reto llegue al día 30' };
 
 const pre = (t) => `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(t)}</div>`;  // vista previa en la bandeja (no repite el asunto)
 const marco = (s, cuerpo, preview = '') => `${preview ? pre(preview) : ''}<div style="font-family:system-ui,sans-serif;max-width:540px;margin:auto;padding:26px;background:#0f0f1a;color:#eee;border-radius:16px;line-height:1.55">${cuerpo}
