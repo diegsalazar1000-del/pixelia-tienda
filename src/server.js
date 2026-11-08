@@ -42,8 +42,12 @@ function publicProduct(p, lang = 'es') {
   return { id: p.id, slug: p.slug, title: tr.title || p.title, short: tr.short || p.short, description: tr.description || p.description,
     category: p.category, price: p.price_cents / 100, compare: p.compare_cents / 100, stars: p.stars, emoji: p.emoji, color: p.color,
     cover: p.cover_url || `/cover/${p.slug}.svg`, license: p.license_type, featured: !!p.featured, sales: p.sales,
-    pack: p.bundle_ids ? Products.bundleItems(p).map((i) => ({ slug: i.slug, title: i.title, emoji: i.emoji, price: i.price_cents / 100 })) : null };
+    pack: p.bundle_ids ? Products.bundleItems(p).map((i) => ({ slug: i.slug, title: i.title, emoji: i.emoji, price: i.price_cents / 100 })) : null,
+    gancho: tr.gancho || p.gancho || '', gallery: jsonList(p.gallery), video: p.video_url || '', faq: jsonList(tr.faq || p.faq),
+    countdown: p.countdown ? { date: p.countdown, label: tr.countdown_label || p.countdown_label || '' } : null,
+    sample: p.sample_url ? { title: tr.sample_title || p.sample_title || 'Muestra gratis' } : null };
 }
+function jsonList(v) { if (Array.isArray(v)) return v; try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
 
 /** Datos extra de la página de producto: packs que lo incluyen (para la caja "Llévate los 3"). */
 function packOffers(p) {
@@ -90,7 +94,16 @@ function priceFor(p, b) {
 
 function serveFile(res, file, headers = {}) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); return res.end('No encontrado'); }
-  res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', ...headers });
+  const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', size = fs.statSync(file).size;
+  const rg = /^bytes=(\d*)-(\d*)$/.exec(res.req?.headers?.range || '');
+  if (rg && (rg[1] || rg[2])) { // iPhone/Safari solo reproduce videos si el servidor acepta pedazos (Range)
+    let a = rg[1] ? Number(rg[1]) : size - Number(rg[2]), b = rg[1] && rg[2] ? Math.min(Number(rg[2]), size - 1) : size - 1;
+    if (a < 0) a = 0;
+    if (a > b || a >= size) { res.writeHead(416, { 'content-range': `bytes */${size}` }); return res.end(); }
+    res.writeHead(206, { 'content-type': type, 'accept-ranges': 'bytes', 'content-range': `bytes ${a}-${b}/${size}`, 'content-length': b - a + 1, ...headers });
+    return fs.createReadStream(file, { start: a, end: b }).pipe(res);
+  }
+  res.writeHead(200, { 'content-type': type, 'accept-ranges': 'bytes', 'content-length': size, ...headers });
   fs.createReadStream(file).pipe(res);
 }
 
@@ -256,17 +269,24 @@ on('POST', '/api/subscribe', async (req, res) => {
   const b = await body(req, 1e4); const email = String(b.email || '').trim().slice(0, 120);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Revisa tu correo');
   const s = Subscribers.add(email, b.source);
-  if (s.used_order) return fail(res, 400, 'Este correo ya usó su cupón de bienvenida 💜');
+  const mp = b.sample ? Products.bySlug(String(b.source || '')) : null;   // muestra gratis del producto
+  const muestra = mp && mp.sample_url ? { title: mp.sample_title || 'Muestra gratis', url: mp.sample_url.startsWith('http') ? mp.sample_url : config.baseUrl + mp.sample_url } : null;
+  if (s.used_order && !muestra) return fail(res, 400, 'Este correo ya usó su cupón de bienvenida 💜');
+  if (muestra && config.email.resendKey && (s.existed || s.used_order))
+    sendEmail(email, `🎁 Tu muestra gratis: ${muestra.title}`, `Aquí tienes tu muestra: ${muestra.url}`,
+      `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px"><h2 style="margin:0 0 8px">🎁 Tu muestra gratis</h2><p>${esc(muestra.title)}</p><p><a style="display:inline-block;background:#7c5cff;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${muestra.url}">Descargar muestra</a></p></div>`).catch(() => {});
+  if (s.used_order) return json(res, 200, { code: '', off: 0, sample: muestra });
   if (!s.existed && config.email.resendKey) {
     const off = Math.round(COUPON_OFF * 100);
     sendEmail(email, `🎁 Tu cupón de ${off}% en ${config.storeName}`, `Tu cupón: ${s.code} (${off}% en tu primera compra de un producto).`,
       `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px">
        <h2 style="margin:0 0 8px">🎁 ¡Bienvenida/o a ${esc(config.storeName)}!</h2><p>Tu cupón de <b>${off}% de descuento</b> en tu primera compra:</p>
        <p style="font-size:28px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:10px 18px;border-radius:12px">${s.code}</p>
+       ${muestra ? `<p>🎁 Y tu muestra gratis: <a style="color:#b9a6ff" href="${muestra.url}">${esc(muestra.title)}</a></p>` : ''}
        <p style="color:#aab">Válido una vez, en cualquier producto suelto. <a style="color:#b9a6ff" href="${config.baseUrl}">Ver la tienda</a></p></div>`)
       .catch((e) => console.error('[cupón]', e.message));
   }
-  json(res, 200, { code: s.code, off: Math.round(COUPON_OFF * 100) });
+  json(res, 200, { code: s.code, off: Math.round(COUPON_OFF * 100), sample: muestra });
 });
 
 on('POST', '/api/paypal/capture', async (req, res) => {

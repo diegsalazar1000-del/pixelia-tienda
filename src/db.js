@@ -103,6 +103,15 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN retired_at TEXT",
   "ALTER TABLE products ADD COLUMN candidate_id INTEGER",
   "ALTER TABLE products ADD COLUMN bundle_ids TEXT DEFAULT ''",   // pack: ids de los productos incluidos, ej "3,5,8"
+  // Página de producto que vende (8-nov): gancho emocional, galería, video, cuenta regresiva, muestra gratis y preguntas propias.
+  "ALTER TABLE products ADD COLUMN gancho TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN gallery TEXT DEFAULT ''",        // JSON [{"url":"/img/..","cap":"texto"}]
+  "ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN countdown TEXT DEFAULT ''",      // AAAA-MM-DD: "Faltan N días para…"
+  "ALTER TABLE products ADD COLUMN countdown_label TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN sample_url TEXT DEFAULT ''",     // muestra gratis a cambio del correo
+  "ALTER TABLE products ADD COLUMN sample_title TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN faq TEXT DEFAULT ''",            // JSON [{"q":"..","a":".."}] (se suman a las generales)
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN bump_id INTEGER",
@@ -154,7 +163,8 @@ export const Products = {
   upsert(p) {
     const fields = ['slug', 'title', 'short', 'description', 'category', 'price_cents', 'compare_cents', 'stars', 'emoji',
       'color', 'cover_url', 'file_name', 'external_url', 'license_type', 'license_note', 'i18n', 'featured', 'active',
-      'launched_at', 'retired_at', 'candidate_id', 'bundle_ids'];
+      'launched_at', 'retired_at', 'candidate_id', 'bundle_ids',
+      'gancho', 'gallery', 'video_url', 'countdown', 'countdown_label', 'sample_url', 'sample_title', 'faq'];
     // Al activarse por primera vez queda registrada la fecha de lanzamiento.
     if (p.active === 1 && !(p.id && Products.byId(p.id)?.launched_at)) p.launched_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (p.active === 1) p.retired_at = null;

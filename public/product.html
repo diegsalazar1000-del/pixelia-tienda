@@ -20,6 +20,18 @@
 .pack-list{list-style:none;padding:0;margin:8px 0}.pack-list li{padding:4px 0}
 .coupon-line{margin:8px 0 0;font-size:.9rem}.coupon-line a{color:#b9a6ff;cursor:pointer}
 .ok{color:#5fe3a1}
+.gancho{font-size:clamp(1.55rem,6.5vw,2.3rem);line-height:1.12;font-weight:900;margin:6px 0 8px;letter-spacing:-.02em;background:linear-gradient(90deg,#fff,#c9b8ff 55%,#ff9bd2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pdp h1.sub{font-size:1.05rem;font-weight:700;color:var(--dim,#c8c8d8);margin:0 0 6px}
+.cd{display:inline-block;line-height:1.35;margin:2px 0 12px;padding:8px 12px;border-radius:16px;background:#ff4fa31f;border:1px solid #ff4fa355;font-weight:700;font-size:.92rem}
+.cd b{color:#ff9bd2;font-size:1.05rem}
+.gal-h{margin:26px 0 10px}.gal{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+.gal figure{flex:0 0 82%;max-width:420px;margin:0;scroll-snap-align:start;border:1px solid var(--line,#ffffff1f);border-radius:16px;overflow:hidden;background:#ffffff08}
+.gal img,.gal video{display:block;width:100%;height:auto;background:#fff}
+.gal figcaption{padding:9px 12px;font-size:.88rem;color:var(--dim,#c8c8d8)}
+.faq{margin-top:26px}.faq h3{margin:0 0 10px}.faq details{border:1px solid var(--line,#ffffff1f);border-radius:14px;margin:8px 0;background:#ffffff06}
+.faq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}.faq summary::-webkit-details-marker{display:none}
+.faq summary:after{content:'+';float:right;color:#b9a6ff;font-weight:900}.faq details[open] summary:after{content:'–'}
+.faq details p{margin:0;padding:0 14px 12px;color:var(--dim,#c8c8d8);line-height:1.5}
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -57,7 +69,11 @@ function offersHtml() {
   for (const k of (P.packs || []).slice(0, 1)) h += `<a class="offer" style="display:block;text-decoration:none;color:inherit" href="/p/${encodeURIComponent(k.slug)}">
       <h4>🔥 Llévate los ${k.items.length} por ${money(k.price)}</h4><p>${k.items.map((i) => escH(i.emoji) + ' ' + escH(i.title)).join(' · ')}</p>
       <p><b>Ahorras ${money(k.save)}</b> · <u>Ver el pack →</u></p></a>`;
-  if (!P.pack && !UPSELL) h += `<div class="offer" id="welcome"><h4>🎁 ¿Primera compra? 15% de descuento</h4>
+  if (!P.pack && !UPSELL) h += P.sample ? `<div class="offer" id="welcome"><h4>🎁 Pruébalo gratis + 15% de descuento</h4>
+      <p>Déjanos tu correo: te mandamos <b>${escH(P.sample.title)}</b> gratis y un cupón de 15% para tu primera compra.</p>
+      <div class="row"><input id="subEmail" type="email" placeholder="tu@correo.com" autocomplete="email"><button class="btn btn-main" id="subBtn">Quiero la muestra</button></div>
+      <p class="err" id="subErr"></p></div>`
+    : `<div class="offer" id="welcome"><h4>🎁 ¿Primera compra? 15% de descuento</h4>
       <p>Déjanos tu correo y te damos tu cupón al instante (también te avisamos de novedades).</p>
       <div class="row"><input id="subEmail" type="email" placeholder="tu@correo.com" autocomplete="email"><button class="btn btn-main" id="subBtn">Quiero mi 15%</button></div>
       <p class="err" id="subErr"></p></div>`;
@@ -70,12 +86,12 @@ function wireOffers() {
     $('#subErr').textContent = ''; sb.disabled = true;
     try {
       const email = $('#subEmail').value.trim();
-      const r = await api('/api/subscribe', { method: 'POST', body: { email, source: P.slug } });
-      try { localStorage.setItem('px_coupon', r.code); } catch {}
-      fbq('track', 'Lead', { content_name: 'cupon-bienvenida' });
-      await applyCoupon(r.code, true);
+      const r = await api('/api/subscribe', { method: 'POST', body: { email, source: P.slug, sample: !!P.sample } });
+      fbq('track', 'Lead', { content_name: P.sample ? 'muestra-gratis' : 'cupon-bienvenida' });
+      if (r.code) { try { localStorage.setItem('px_coupon', r.code); } catch {} await applyCoupon(r.code, true); }
       if ($('#email') && !$('#email').value) $('#email').value = email;
-      $('#welcome').innerHTML = `<h4 class="ok">✅ ¡Listo! Cupón <b>${escH(r.code)}</b> aplicado (-${r.off}%)</h4><p>También te lo enviamos por correo.</p>`;
+      $('#welcome').innerHTML = (r.sample ? `<h4 class="ok">✅ ¡Tu muestra está lista!</h4><p><a class="btn btn-main" style="display:inline-block;margin:4px 0" href="${escH(r.sample.url)}" target="_blank" rel="noopener">⬇️ Descargar ${escH(r.sample.title)}</a></p>` : '')
+        + (r.code ? `<p class="ok">🎟️ Cupón <b>${escH(r.code)}</b> aplicado (-${r.off}%). También te lo enviamos por correo.</p>` : '');
     } catch (e) { $('#subErr').textContent = e.message; sb.disabled = false; }
   };
 }
@@ -86,6 +102,31 @@ async function applyCoupon(code, silent) {
   const cl = $('#couponLine'); if (cl) cl.innerHTML = `<span class="ok">✅ Cupón ${escH(r.code)} aplicado: -${r.off}%</span>`;
   if (METHOD === 'paypal') pick('paypal');  // vuelve a dibujar PayPal con el precio nuevo
   return r;
+}
+
+function countdownHtml() {
+  if (!P.countdown || !P.countdown.date) return '';
+  const days = Math.ceil((Date.parse(P.countdown.date + 'T00:00:00') - Date.now()) / 864e5);
+  if (!(days > 0 && days < 400)) return '';
+  return `<div class="cd reveal">⏳ Faltan <b>${days}</b> ${days === 1 ? 'día' : 'días'} ${escH(P.countdown.label || '')}</div>`;
+}
+function galleryHtml() {
+  const G = P.gallery || [];
+  if (!G.length && !P.video) return '';
+  return `<h3 class="gal-h reveal">👀 Míralo por dentro</h3><div class="gal reveal">`
+    + (P.video ? `<figure><video src="${escH(P.video)}" autoplay muted loop playsinline preload="metadata"></video><figcaption>▶️ Así funciona</figcaption></figure>` : '')
+    + G.map((g) => `<figure><img loading="lazy" src="${escH(g.url)}" alt="${escH(g.cap || P.title)}"><figcaption>${escH(g.cap || '')}</figcaption></figure>`).join('') + '</div>';
+}
+const FAQ_GEN = [
+  ['¿Cómo lo recibo?', 'Apenas se confirma tu pago te llega a tu correo (y por WhatsApp o Telegram si los pones) con el enlace de descarga. Puedes descargarlo hasta 5 veces.'],
+  ['¿Cómo pago con Binance?', 'Elige "Binance", abre tu app de Binance → Pay → Enviar, y manda exactamente el monto en USDT que te mostramos al Pay ID (o escanea el QR). Luego pegas el ID de orden que te da Binance y tocas "Ya pagué". Normalmente lo confirmamos en pocos minutos.'],
+  ['¿Puedo pagar con tarjeta?', 'Sí, con PayPal puedes pagar con tu tarjeta de débito o crédito, aunque no tengas cuenta de PayPal.'],
+  ['¿Es una suscripción?', 'No. Pagas una sola vez y el archivo es tuyo.'],
+  ['¿Y si no me funciona?', 'Te lo arreglamos o te devolvemos el dinero. Escríbenos por Telegram y te ayudamos.'],
+];
+function faqHtml() {
+  const L = [...(P.faq || []).map((f) => [f.q, f.a]), ...FAQ_GEN].filter((f) => f[0] && f[1]);
+  return `<div class="faq reveal"><h3>❓ Preguntas frecuentes</h3>${L.map(([q, a]) => `<details><summary>${escH(q)}</summary><p>${escH(a)}</p></details>`).join('')}</div>`;
 }
 
 const RV_LAB = { compra: '✅ Compra verificada', regalo: '🎁 Descargó el regalo', gratis: '🎁 Lo recibió gratis para opinar' };
@@ -105,15 +146,18 @@ function view() {
   <div class="media reveal"><img src="${escH(P.cover)}" alt="${escH(P.title)}"></div>
   <div>
     <div class="crumbs reveal"><a href="/">Inicio</a> / <a href="/#catalogo">${escH(P.category)}</a></div>
-    <h1 class="reveal">${escH(P.emoji)} ${escH(P.title)}</h1>
+    ${P.gancho ? `<p class="gancho reveal">${escH(P.gancho)}</p><h1 class="sub reveal">${escH(P.emoji)} ${escH(P.title)}</h1>` : `<h1 class="reveal">${escH(P.emoji)} ${escH(P.title)}</h1>`}
     ${P.rating && P.rating.n ? `<a href="#resenas" class="reveal" style="display:inline-block;margin:-4px 0 8px;color:#ffc83d;text-decoration:none">${'★'.repeat(Math.round(P.rating.avg))}${'☆'.repeat(5 - Math.round(P.rating.avg))} <span style="color:var(--mut)">${P.rating.avg} · ${P.rating.n} ${P.rating.n === 1 ? 'opinión' : 'opiniones'}</span></a>` : ''}
     <p class="short reveal">${escH(P.short)}</p>
     <div class="big-price reveal">${priceBox()}</div>
-    ${offersHtml()}
+    ${countdownHtml()}
     <div class="checkout reveal" id="checkout"></div>
     <div class="feats reveal"><div>⚡ ${t('instant')}</div><div>📩 Correo · Telegram · WhatsApp</div><div>🔁 Descarga hasta 5 veces</div><div>💬 Soporte por Telegram</div><div>✅ Garantía: si tu archivo falla, lo arreglamos o te devolvemos el dinero</div></div>
+    ${offersHtml()}
+    ${galleryHtml()}
     <div class="desc reveal">${escH(P.description)}</div>
     ${reviewsHtml()}
+    ${faqHtml()}
   </div>`;
   enhance(); wireOffers();
 }
