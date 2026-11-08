@@ -11,6 +11,13 @@ import numpy as np
 ROOT = pathlib.Path(os.environ.get("PIXELIA_DIR", "/pixelia"))
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "estudio")); sys.path.insert(0, str(HERE))
+# las claves están en /pixelia/.env (el estudio las lee al arrancar; un script suelto tiene que leerlas él mismo)
+try:
+    for _l in (ROOT / ".env").read_text().splitlines():
+        if "=" in _l and not _l.strip().startswith("#"):
+            _k, _v = _l.split("=", 1); _k, _v = _k.strip(), _v.strip().strip('"').strip("'")
+            if _k.startswith(("ELEVENLABS", "ANTHROPIC")) and _v: os.environ.setdefault(_k, _v)
+except FileNotFoundError: pass
 import audio, voces  # noqa: E402
 try: import gasto  # noqa: E402
 except Exception: gasto = None
