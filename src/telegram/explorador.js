@@ -80,21 +80,47 @@ Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
 ${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas (máximo 1 planner/tracker/finanzas), solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 4-5 INVENTOS en "ideas" (fusiones audaces de varios hallazgos, personalizados o físico+digital), 2-3 productos en "mundo" y 2-3 en "plr".'}`;
 }
 
+/** Una llamada a Claude que no se cae si la respuesta llega vacía o cortada: reintenta 2 veces si Anthropic está saturado o falla la red. */
+async function claudeCall(body, fuente) {
+  let last = '';
+  for (let i = 0; i < 3; i++) {
+    if (i) await new Promise((ok) => setTimeout(ok, 15000 * i));
+    let r, raw = '';
+    try {
+      r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: AbortSignal.timeout(300000),
+        headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      raw = await r.text();
+    } catch (e) { last = `sin respuesta de Anthropic (${e.name === 'TimeoutError' ? 'tardó más de 5 min' : e.message})`; continue; }
+    let j = null; try { j = JSON.parse(raw); } catch {}
+    if (j) registrarClaude(fuente, j);
+    if (r.ok && j) return j;
+    last = j?.error?.message || `respuesta vacía o cortada de Anthropic (HTTP ${r.status})`;
+    if (r.status && r.status < 500 && r.status !== 429 && j) break;   // error nuestro (clave, saldo, petición): no sirve reintentar
+  }
+  throw new Error(last);
+}
+
 export async function askClaude(text, maxBusquedas) {
-  const body = { model: process.env.EXPLORER_MODEL || 'claude-sonnet-5-5', max_tokens: 12000,
+  const body = { model: process.env.EXPLORER_MODEL || 'claude-sonnet-5-5', max_tokens: 16000,
     tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(maxBusquedas || process.env.EXPLORER_SEARCHES || 10) }],
     messages: [{ role: 'user', content: text }] };
-  let out = '', searches = 0;
+  let out = '', searches = 0, j = null;
   for (let turn = 0; turn < 5; turn++) {  // las búsquedas largas pueden "pausarse": se continúa
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-      headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const j = await r.json(); registrarClaude('explorador / lecciones', j); if (!r.ok) throw new Error(j.error?.message || r.status);
+    j = await claudeCall(body, 'explorador / lecciones');
     searches += j.usage?.server_tool_use?.web_search_requests || 0;
     out += (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
-    if (j.stop_reason !== 'pause_turn') break;
     body.messages = [...body.messages, { role: 'assistant', content: j.content }];
+    if (j.stop_reason !== 'pause_turn') break;
+  }
+  if (!out.includes('{') || j?.stop_reason === 'max_tokens') {  // se le acabó el espacio buscando o no llegó al JSON: que lo entregue ya, sin buscar más
+    console.error('[explorador] sin JSON completo, stop_reason =', j?.stop_reason, '· pido el resultado final');
+    const k = await claudeCall({ ...body, tool_choice: { type: 'none' }, messages: [...body.messages,
+      { role: 'user', content: 'Con lo que ya encontraste, responde AHORA solo con el JSON final pedido (completo y válido), sin buscar más y sin texto fuera del JSON.' }] }, 'explorador / lecciones');
+    const fin = (k.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+    if (fin.includes('{')) out = fin;
   }
   out = out.replace(/<\/?cite[^>]*>/g, '');  // la búsqueda web marca citas: no deben salir en Telegram
+  if (!out.includes('{')) throw new Error(`la IA no devolvió resultados (${j?.stop_reason || 'sin motivo'}); prueba de nuevo en un rato`);
   return { data: await parseLoose(out), searches };
 }
 
@@ -107,12 +133,11 @@ async function parseLoose(text) {
     (x) => x.replace(/[\u0000-\u001f]+/g, ' ').replace(/,\s*([}\]])/g, '$1'),  // saltos de línea dentro de textos
     (x) => x.replace(/"\s*\n\s*"/g, '",\n"').replace(/}\s*{/g, '},{').replace(/]\s*"/g, '],"').replace(/,\s*([}\]])/g, '$1')]; // comas que faltan
   for (const f of tries) { try { return JSON.parse(f(s)); } catch {} }
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
-    headers: { 'x-api-key': config.anthropic.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || config.anthropic.model, max_tokens: 12000,
-      messages: [{ role: 'user', content: 'Corrige este JSON para que sea válido (comas, comillas, corchetes). No cambies el contenido. Devuelve SOLO el JSON:\n\n' + s.slice(0, 60000) }] }) });
-  const j = await r.json(); registrarClaude('arreglar respuesta', j); if (!r.ok) throw new Error('no pude leer la respuesta de la IA');
+  const j = await claudeCall({ model: process.env.ANTHROPIC_MODEL || config.anthropic.model, max_tokens: 16000,
+    messages: [{ role: 'user', content: 'Corrige este JSON para que sea válido (comas, comillas, corchetes). No cambies el contenido. Devuelve SOLO el JSON:\n\n' + s.slice(0, 60000) }] }, 'arreglar respuesta')
+    .catch(() => { throw new Error('no pude leer la respuesta de la IA'); });
   const fixed = (j.content || []).map((b) => b.text || '').join('').replace(/```json|```/g, '');
+  if (!fixed.includes('{')) throw new Error('no pude leer la respuesta de la IA (vino vacía)');
   return JSON.parse(fixed.slice(fixed.indexOf('{'), fixed.lastIndexOf('}') + 1));
 }
 
