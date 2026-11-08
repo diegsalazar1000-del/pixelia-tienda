@@ -176,7 +176,11 @@ on('GET', '/api/regalo/resenas', (req, res) => json(res, 200, { reviews: Object.
 on('GET', '/binance-qr.jpg', (req, res) => { const f = path.join(path.dirname(config.paths.files), 'binance-qr.jpg');
   serveFile(res, fs.existsSync(f) ? f : path.join(config.paths.public, 'img', 'binance-qr.jpg'), { 'cache-control': 'public, max-age=600' }); });
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
-on('GET', '/reto', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html')); });  // página corta del Reto 30 Días (reel → bio)
+on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
+  const p = Products.bySlug('regalo-reto-30-dias');
+  if (p && !/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '') && !esDueno(req)) Products.view(p.id);
+  res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html'));
+});  // página corta del Reto 30 Días (reel → bio)
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
   const n = (subHits.get(ip) || 0) + 1; subHits.set(ip, n); if (subHits.size > 5000) subHits.clear();
