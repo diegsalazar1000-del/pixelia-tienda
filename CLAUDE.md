@@ -110,6 +110,8 @@
 
 - 📦 ARCHIVADA (7-nov): APRENDE EXCEL JUGANDO, incluida la versión "pilla a la IA" (Diego: la IA ya hace el Excel y casi siempre bien, no tiene sentido). Descartadas también Rifa Pro y Precios Bs/$. NUEVO FILTRO para todas las ideas: "¿una IA lo hace gratis en 10 segundos?" → si sí, descartar (cursos de habilidades que la IA reemplaza, plantillas simples, textos).
 
+- 🧪 CRUCE DE TENDENCIAS en el explorador (7-nov, aprobado por Diego): explorar('cruce') / `/explorar cruce`, y solo cada CRUCE_DAYS=14 días (1 h después del explorador diario; estado lastCruce en data/explorador.json; CRUCE_SEARCHES=12). Prompt = método de cruce (señales de redes/búsquedas/ventas/noticias → problemas y emociones → cruce → filtros "¿existe?", "¿la IA lo hace gratis?", todo el año, lista de lo que Diego descartó y le gustó). Envía: 📡 señales + 🧹 descartadas, 1-2 💡 ideas que sobrevivieron (Candidates source 'cruce', botones Crear/Descartar) y 🎣 3 ganchos para vender lo nuestro. El explorador diario quedó igual. Skill inventor-pixelia: propuesta de mejora con el mismo método (Diego la guarda desde la tarjeta).
+
 ## Pendientes al 7-nov (Diego puede preguntar "¿qué tenemos pendiente para hoy?")
 - [en curso 6-nov noche] Primer anuncio del tracker de hábitos: /anuncios → reel → 📊 campaña $3/día → Activar.
 - Sábado 7-nov: APAGAR el anuncio de prueba ("¡Queremos crear lo próximo contigo!", creado a mano en la cuenta nueva; Diego lo dejó encendido la noche del 6 para no tocar tanto la cuenta nueva). Compra real de prueba con un amigo (pago → correo → descarga). Buscar 2 PLR más (explorador 🛒 / /explorar plr; revisar licencia ANTES de pagar).

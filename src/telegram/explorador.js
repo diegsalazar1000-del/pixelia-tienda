@@ -80,9 +80,9 @@ Pon SIEMPRE la url real donde viste cada hallazgo (listado, video o artículo).
 ${soloPlr ? 'Esta vez céntrate en PLR: 0-2 hallazgos, 0 ideas, 0 mundo y 5-7 productos en "plr" de categorías distintas (máximo 1 planner/tracker/finanzas), solo con licencia clara.' : soloMundo ? 'Esta vez céntrate en el MUNDO: 1-3 hallazgos, 1-2 ideas y 5-7 productos en "mundo", cada uno de una tendencia distinta.' : 'Entre 6 y 10 hallazgos de categorías DISTINTAS entre sí, 4-5 INVENTOS en "ideas" (fusiones audaces de varios hallazgos, personalizados o físico+digital), 2-3 productos en "mundo" y 2-3 en "plr".'}`;
 }
 
-export async function askClaude(text) {
+export async function askClaude(text, maxBusquedas) {
   const body = { model: process.env.EXPLORER_MODEL || 'claude-sonnet-5-5', max_tokens: 12000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(process.env.EXPLORER_SEARCHES || 10) }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Number(maxBusquedas || process.env.EXPLORER_SEARCHES || 10) }],
     messages: [{ role: 'user', content: text }] };
   let out = '', searches = 0;
   for (let turn = 0; turn < 5; turn++) {  // las búsquedas largas pueden "pausarse": se continúa
@@ -123,6 +123,7 @@ const kb = (c) => ({ inline_keyboard: [
 /** Busca tendencias y avisa al bot del radar. tema = opcional (ej. "cursos de cocina"). */
 export async function explorar(tema = '') {
   if (!config.anthropic.key || !token()) return;
+  if (/^cruce$/i.test(tema)) return cruce();
   const day = Math.floor(Date.now() / 864e5);
   const cats = [0, 1, 2, 3].map((k) => CATEGORIAS[(day * 4 + k) % CATEGORIAS.length]);  // rota categorías cada día
   if (/^plr$/i.test(tema)) await say('🛒 <b>Buscando productos PLR en inglés con licencia clara</b> (modificar, poner tu marca y revender) para rehacerlos en español… (2-4 min)'); else
@@ -172,5 +173,73 @@ export function startExplorador() {
   setInterval(() => {
     const now = new Date(); const today = now.toISOString().slice(0, 10);
     if (now.getUTCHours() === hour && state().last !== today) explorar().catch((e) => console.error('[explorador]', e.message));
+    // 🧪 Cruce de tendencias: cada N días (por defecto 14), una hora después del explorador diario.
+    const dias = Number(process.env.CRUCE_DAYS || 14), ult = state().lastCruce;
+    if (dias > 0 && now.getUTCHours() === (hour + 1) % 24 && (!ult || (Date.parse(today) - Date.parse(ult)) / 864e5 >= dias)) cruce().catch((e) => console.error('[cruce]', e.message));
   }, 10 * 60 * 1000);
+}
+
+// ===== 🧪 Cruce de tendencias (método de Diego, 7-nov) =====
+// Señales del momento (videos virales, búsquedas, lo que se vende, noticias) → PROBLEMAS y emociones → cruce con lo que
+// se vende y con nuestra ventaja → filtros con búsquedas reales → solo 1-2 ideas que sobreviven + ganchos para vender lo nuestro.
+function promptCruce(nuestros, ya) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  return `Hoy es ${hoy}. Eres el inventor de productos de Pixelia, tienda de productos DIGITALES en español neutro para Latinoamérica (precios de $3 a $10; la mayoría de clientes en Venezuela, pagan con Binance o PayPal).
+
+NUESTRA VENTAJA (úsala): no solo PDFs; fabricamos productos interactivos (páginas web en nuestra tienda, juegos en el teléfono, códigos QR que desbloquean audio/video/pistas), productos GENERADOS AUTOMÁTICAMENTE por cada pedido con los datos del cliente (nombres, fotos, ciudad), mezclas de papel + teléfono, y experiencias para vivir en familia o en grupo.
+
+MÉTODO (síguelo en orden, con búsquedas web reales):
+1. SEÑALES DE LAS ÚLTIMAS 2 SEMANAS: qué videos/audios/formatos crecen de golpe en TikTok, Instagram y YouTube (cuántos videos, cuánto crecen, PARA QUÉ los usa la gente), qué se busca más (Google Trends, Etsy), qué se vende en Etsy/Hotmart/Gumroad, y noticias que cambian la vida diaria. TODO EL AÑO: no te centres en Navidad ni en una sola fecha (máximo 1 idea de temporada).
+2. De cada señal saca el PROBLEMA real y cotidiano y la EMOCIÓN que hay detrás (como hacen los fabricantes chinos con sus productos virales: un problema de todos los días + una solución que se entiende al instante). No saques "un producto por noticia".
+3. CRUZA esos problemas con lo que ya se vende y con nuestra ventaja para crear productos digitales nuevos o poco comunes.
+4. FILTROS (descarta si falla y dilo en "descartadas"):
+   - ¿Ya existe? BÚSCALO de verdad (Etsy, Gumroad, Hotmart, apps; en inglés y en español). Puede existir algo parecido, pero el nuestro debe ser poco común y claramente mejor/distinto en español.
+   - ¿Una IA de chat lo hace gratis en 10 segundos? Si sí, descártalo (cursos de habilidades que la IA reemplaza, plantillas simples, textos).
+   - ¿Se entiende en 3 segundos en un reel? ¿Se fabrica barato (sin licencias de terceros ni personajes con derechos)? ¿Alguien pagaría $5?
+5. LO QUE DIEGO YA DESCARTÓ (no lo propongas): planners/agendas/trackers genéricos, personajes con licencia, cosas que ya existen como app (amigo secreto, lotería con fotos, sorteos), cursos que la IA reemplaza (Excel), rifas, calculadoras de bolívares, ideas que solo sirven en Navidad. LE GUSTARON: cuento personalizado, fiesta en una caja con QR y álbum, escape room con QR, mascota de papel que crece, kit antiestafas familiar con palabra clave, anuario del grupo con votos.
+6. NO repitas productos que ya tenemos o ya propusimos: ${JSON.stringify(ya)}.
+7. GANCHOS: con las señales más fuertes, escribe ganchos cortos para VENDER productos que YA tenemos (lista abajo). Nada de tragedias, muertes, política, guerras ni famosos usados como si recomendaran. Usa emoción (ej.: "Amor, no queremos que te enfermes, queremos que nos dures toda la vida").
+Productos que ya tenemos: ${JSON.stringify(nuestros)}.
+
+Habla como PRODUCTO (qué recibe el cliente, por qué es distinto, precio), corto y claro, en español neutro sencillo.
+Devuelve SOLO un JSON válido con esta forma:
+{"senales":[{"que":"qué está pasando (≤ 15 palabras)","dato":"número o hecho concreto","problema":"problema/emoción detrás (≤ 15 palabras)","url":"fuente real"}],
+ "descartadas":[{"idea":"nombre corto","por_que":"ya existe X / la IA lo hace / no se entiende… (≤ 15 palabras)"}],
+ "ideas":[{"titulo_tienda":"nombre comercial","emoji":"1 emoji","problema":"qué problema resuelve (≤ 20 palabras)","que_recibe":"qué recibe el cliente, concreto (≤ 40 palabras)","por_que_distinto":"por qué no es lo de siempre (≤ 25 palabras)","parecido":"lo más parecido que encontraste y en qué nos diferenciamos (≤ 25 palabras)","publico":"a quién","precio_sugerido":número,"gancho":"frase sentimental para el anuncio (≤ 18 palabras)","prueba_minima":"versión mínima para probar (≤ 20 palabras)","temporada":false,"nota":1-10}],
+ "ganchos":[{"producto":"uno de nuestros productos","gancho":"texto del anuncio (≤ 18 palabras)","de_donde":"señal que lo inspira (≤ 10 palabras)"}]}
+Cantidades: 5-7 señales, 3-6 descartadas, SOLO 1-2 ideas (las que sobrevivan; si ninguna sobrevive, devuelve 0 y explica en descartadas), 3 ganchos.`;
+}
+
+export async function cruce() {
+  if (!config.anthropic.key || !token()) return;
+  await say('🧪 <b>Cruce de tendencias</b> (cada 2 semanas): revisando redes, búsquedas, lo que se vende y noticias, y filtrando lo que ya existe… (3-5 min)');
+  const nuestros = Products.list().map((p) => p.title).slice(0, 40);
+  const ya = [...Products.list({ all: true }).map((p) => p.title), ...Candidates.list('', 80).map((c) => c.title)].map((t) => String(t).slice(0, 60)).slice(0, 100);
+  let res;
+  try { res = await askClaude(promptCruce(nuestros, ya), Number(process.env.CRUCE_SEARCHES || 12)); }
+  catch (e) { return say(`⚠️ El cruce falló: ${esc(e.message)}`); }
+  const { senales = [], descartadas = [], ideas = [], ganchos = [] } = JSON.parse(JSON.stringify(res.data || {}).replace(/<\\?\/?cite[^>]*>/g, ''));
+  const st = state(); st.lastCruce = new Date().toISOString().slice(0, 10); fs.writeFileSync(STATE, JSON.stringify(st));
+  // 1) Lo que está pasando
+  const lin = senales.slice(0, 7).map((x) => `• <b>${esc(x.que)}</b>${x.dato ? ` — ${esc(x.dato)}` : ''}\n   ↳ ${esc(x.problema || '')}${x.url ? ` · <a href="${esc(x.url)}">fuente</a>` : ''}`).join('\n');
+  const mue = descartadas.slice(0, 6).map((x) => `✖️ ${esc(x.idea)}: <i>${esc(x.por_que)}</i>`).join('\n');
+  await say(`🧪 <b>CRUCE DE TENDENCIAS</b>\n\n📡 <b>Lo que está pasando</b>\n${lin || '—'}${mue ? `\n\n🧹 <b>Murieron en el filtro</b>\n${mue}` : ''}`);
+  // 2) Las ideas que sobreviven (con los botones de siempre)
+  let n = 0;
+  for (const x of ideas.slice(0, 2)) {
+    if (!x.titulo_tienda) continue;
+    const nota = Math.max(1, Math.min(10, Number(x.nota) || 6));
+    const [c] = Candidates.addMany([{ source: 'cruce', external_id: hash('cruce' + x.titulo_tienda), url: '', title: x.titulo_tienda,
+      snippet: `🧩 ${x.problema || ''}\n🎁 ${x.que_recibe || ''}`, price: 0, currency: 'USD', keyword: 'cruce de tendencias', published_at: '', metrics: { publico: x.publico || '' }, trend_score: nota }]);
+    if (!c) continue;  // ya estaba en el radar
+    Candidates.update(c.id, { ai_score: nota, status: 'notified', ai: { titulo: x.titulo_tienda, frase_corta: x.que_recibe, descripcion: `${x.problema || ''} ${x.que_recibe || ''}`,
+      precio_sugerido: x.precio_sugerido, emoji: x.emoji, categoria: 'invento (cruce)', decision: 'recreate', como_recrear: x.prueba_minima, idea: x.que_recibe, publico: x.publico,
+      anuncio: x.gancho ? { gancho: x.gancho } : undefined } });
+    await say(`${esc(x.emoji || '💡')} <b>IDEA QUE SOBREVIVIÓ · ${esc(x.titulo_tienda)}</b>\n⭐ ${nota}/10 · 💰 $${esc(x.precio_sugerido || 4.99)}${x.temporada ? ' · 🗓️ de temporada' : ''}\n\n🧩 <b>Problema:</b> ${esc(x.problema || '')}\n🎁 <b>Qué recibe:</b> ${esc(x.que_recibe || '')}\n✨ <b>Por qué es distinto:</b> ${esc(x.por_que_distinto || '')}\n🔎 <b>Lo más parecido:</b> ${esc(x.parecido || '')}\n👥 ${esc(x.publico || '')}\n🧪 <b>Prueba mínima:</b> ${esc(x.prueba_minima || '')}\n\n💬 <i>"${esc(x.gancho || '')}"</i>`,
+      { reply_markup: { inline_keyboard: [[{ text: '🛠️ Crear este producto', callback_data: `rec:${c.id}` }, { text: '❌ Descartar', callback_data: `no:${c.id}` }]] } }).catch(() => {});
+    n++;
+  }
+  // 3) Ganchos para vender lo que ya tenemos
+  const gan = ganchos.slice(0, 3).map((g) => `• <b>${esc(g.producto)}</b>: "${esc(g.gancho)}"\n   <i>(${esc(g.de_donde || '')})</i>`).join('\n');
+  return say(`🎣 <b>Ganchos para vender lo que ya tenemos</b>\n${gan || '—'}\n\n✅ Cruce listo: ${n} idea(s) nuevas · ${descartadas.length} descartadas · ${res.searches} búsquedas. El próximo, en 2 semanas (o cuando quieras con <code>/explorar cruce</code>).`);
 }
