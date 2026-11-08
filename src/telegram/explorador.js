@@ -197,10 +197,12 @@ export function startExplorador() {
   const hour = Number(process.env.EXPLORER_HOUR_UTC || 14);
   setInterval(() => {
     const now = new Date(); const today = now.toISOString().slice(0, 10);
-    if (now.getUTCHours() === hour && state().last !== today) explorar().catch((e) => console.error('[explorador]', e.message));
-    // 🧪 Cruce de tendencias: cada N días (por defecto 14), una hora después del explorador diario.
+    // Se anota ANTES de correr: si falla, NO se reintenta cada 10 min (eso gastaba créditos). Un solo intento por día.
+    const marcar = (k) => { const st = state(); st[k] = today; fs.writeFileSync(STATE, JSON.stringify(st)); };
+    if (now.getUTCHours() === hour && state().last !== today && state().intento !== today) { marcar('intento'); explorar().catch((e) => console.error('[explorador]', e.message)); }
+    // 🧪 Cruce de tendencias: cada N días (por defecto 14), una hora después del explorador diario. También 1 solo intento.
     const dias = Number(process.env.CRUCE_DAYS || 14), ult = state().lastCruce;
-    if (dias > 0 && now.getUTCHours() === (hour + 1) % 24 && (!ult || (Date.parse(today) - Date.parse(ult)) / 864e5 >= dias)) cruce().catch((e) => console.error('[cruce]', e.message));
+    if (dias > 0 && now.getUTCHours() === (hour + 1) % 24 && state().intentoCruce !== today && (!ult || (Date.parse(today) - Date.parse(ult)) / 864e5 >= dias)) { marcar('intentoCruce'); cruce().catch((e) => console.error('[cruce]', e.message)); }
   }, 10 * 60 * 1000);
 }
 
