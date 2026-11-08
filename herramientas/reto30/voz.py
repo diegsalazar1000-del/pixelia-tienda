@@ -74,10 +74,30 @@ def voz_energica(genero):
     c[gender] = best; CACHE.write_text(json.dumps(c, ensure_ascii=False, indent=1))
     return best["id"], best.get("name", "")
 def tts(texto, vid, tmp, i):
-    mp3 = tmp / f"v{i}.mp3"
-    data = voces.call("POST", f"/text-to-speech/{vid}?output_format=mp3_44100_128", {"text": texto, "model_id": voces.MODEL, "voice_settings": VOZ}, raw=True, timeout=120)
-    mp3.write_bytes(data); v = audio.decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
-    return v[max(0, nz[0] - 600): nz[-1] + 1500] if len(nz) else v
+    """Voz de ElevenLabs con caché (si se rehace el reel no se paga otra vez la misma frase) y volumen PAREJO:
+    cada frase se lleva al mismo nivel, para que ninguna empiece 'bajitica' (pasó con la voz masculina)."""
+    import hashlib
+    cdir = ROOT / "storage" / "voz-cache"; cdir.mkdir(parents=True, exist_ok=True)
+    mp3 = cdir / ("r30-" + hashlib.sha1(f"{vid}|{json.dumps(VOZ, sort_keys=True)}|{texto}".encode()).hexdigest()[:20] + ".mp3")
+    if not mp3.exists():
+        mp3.write_bytes(voces.call("POST", f"/text-to-speech/{vid}?output_format=mp3_44100_128", {"text": texto, "model_id": voces.MODEL, "voice_settings": VOZ}, raw=True, timeout=120))
+    v = audio.decode(mp3); nz = np.flatnonzero(np.abs(v) > 0.02)
+    v = v[max(0, nz[0] - 600): nz[-1] + 1500] if len(nz) else v
+    return nivelar(v)
+
+def nivelar(v, objetivo=0.12):
+    """Volumen parejo dentro de la frase y entre frases: sube las partes bajas (ventanas de 0,3 s) sin pasarse."""
+    v = np.asarray(v, dtype=np.float64)
+    voz = v[np.abs(v) > 0.01]
+    if not len(voz): return v
+    v = v * (objetivo / (np.sqrt(np.mean(voz ** 2)) + 1e-9))            # misma fuerza en todas las frases
+    w = int(0.3 * SR); n = len(v)
+    rms = np.sqrt(np.convolve(v ** 2, np.ones(w) / w, "same")) + 1e-9
+    g = np.clip(objetivo / rms, 1.0, 3.5)                                  # solo sube lo que quedó bajito (máx ×3,5)
+    g[rms < objetivo * 0.15] = 1.0                                         # los silencios no se suben (nada de ruido)
+    g = np.convolve(g, np.ones(w) / w, "same")
+    v = v * g
+    return v / max(1.0, np.abs(v).max() / 0.98)
 
 # ---------- música compuesta para este reel (se reutiliza) ----------
 def musica(T, nueva):
