@@ -19,8 +19,8 @@ export const PAISES = ['MX', 'CO', 'VE', 'PE', 'CL', 'AR', 'EC', 'US'];
 // 📍 Dónde salen los anuncios (Diego 8-nov): SIN Audience Network ni Messenger (clics baratos que no compran) y con prioridad a Instagram:
 // Instagram en todos sus lugares y Facebook solo en Feed, Reels e Historias. META_SOLO_INSTAGRAM=1 → solo Instagram.
 export function ubicaciones() {
-  if (env('META_SOLO_INSTAGRAM') === '1') return { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'reels', 'explore', 'explore_home', 'profile_feed'] };
-  return { publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['stream', 'story', 'reels', 'explore', 'explore_home', 'profile_feed'],
+  if (env('META_SOLO_INSTAGRAM') === '1') return { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'reels', 'explore_home', 'profile_feed'] };
+  return { publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['stream', 'story', 'reels', 'explore_home', 'profile_feed'],
     facebook_positions: ['feed', 'facebook_reels', 'story'] };
 }
 const INTERESES = { finanzas: ['Personal finance', 'Saving', 'Budget'], navidad: ['Christmas', 'Gift'], planner: ['Planners', 'Personal organizer', 'Stationery'],
@@ -159,11 +159,15 @@ export async function porAnuncio(campId) {
 /** Pone las ubicaciones nuevas (sin Audience Network, prioridad Instagram) a los conjuntos de una campaña ya creada. */
 export async function aplicarUbicaciones(ids) {
   const sets = [...new Set([...(ids.sets || []), ids.set].filter(Boolean))], hechos = [];
-  for (const id of sets) {
-    const { targeting = {} } = await api('GET', id, { fields: 'targeting' });
-    for (const k of ['publisher_platforms', 'facebook_positions', 'instagram_positions', 'audience_network_positions', 'messenger_positions', 'device_platforms']) delete targeting[k];
-    await api('POST', id, { targeting: { ...targeting, ...ubicaciones() } }); hechos.push(id);
+  const fallos = [];
+  for (const id of sets) {   // cada conjunto por separado: si uno ya no existe, los demás igual se arreglan
+    try {
+      const { targeting = {} } = await api('GET', id, { fields: 'targeting' });
+      for (const k of ['publisher_platforms', 'facebook_positions', 'instagram_positions', 'audience_network_positions', 'messenger_positions', 'device_platforms']) delete targeting[k];
+      await api('POST', id, { targeting: { ...targeting, ...ubicaciones() } }); hechos.push(id);
+    } catch (e) { fallos.push(/does not exist|cannot be loaded/i.test(e.message) ? `${id}: ya no existe (borrado)` : `${id}: ${e.message}`); }
   }
+  hechos.fallos = fallos;
   return hechos;
 }
 export async function pausar(ids) { await api('POST', ids.camp, { status: 'PAUSED' }); }

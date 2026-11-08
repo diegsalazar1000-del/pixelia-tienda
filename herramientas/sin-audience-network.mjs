@@ -10,6 +10,6 @@ let cs = []; try { cs = JSON.parse(fs.readFileSync(F, 'utf8')); } catch {}
 const vivas = cs.filter((c) => c.estado !== 'borrada' && c.camp);
 if (!vivas.length) console.log('No hay campañas guardadas.');
 for (const c of vivas) {
-  try { const h = await aplicarUbicaciones(c); console.log(`✔ ${c.titulo || c.camp} (${c.estado}): ${h.length} conjunto(s) sin Audience Network, Instagram primero`); }
+  try { const h = await aplicarUbicaciones(c); console.log(`${h.length ? '✔' : '•'} ${c.titulo || c.camp} (${c.estado}): ${h.length} conjunto(s) sin Audience Network, Instagram primero`); for (const f of h.fallos || []) console.log('   ↳ ' + f); }
   catch (e) { console.log(`⚠️ ${c.titulo || c.camp}: ${e.message}`); }
 }
