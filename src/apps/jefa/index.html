@@ -40,7 +40,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rosa)}
 .det{font-size:14px;display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #F0DDE6}
 .det b{font-weight:800}
 nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -4px 18px rgba(0,0,0,.08);padding:6px 4px env(safe-area-inset-bottom)}
-nav button{flex:1;border:none;background:none;font:inherit;font-size:11px;padding:6px 0;color:#9b7f90;border-radius:12px}
+nav button{flex:1;border:none;background:none;font:inherit;font-size:10.5px;padding:6px 0;color:#9b7f90;border-radius:12px}
 nav button span{display:block;font-size:22px}
 nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
 .vista{display:none}.vista.on{display:block}
@@ -107,6 +107,21 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
   <button class="btn wa" id="walista">Copiar para WhatsApp</button>
 </section>
 
+<!-- ESTADOS -->
+<section class="vista" id="v-estados">
+  <div class="card">
+    <h2>🎨 Estados para WhatsApp</h2>
+    <label>Diseño</label><div class="chips" id="eplant"></div>
+    <label>Colores</label><div class="chips" id="ecol"></div>
+    <div id="eprodw"><label>Producto</label><select id="eprod"></select></div>
+    <label>Texto extra (opcional)</label><input id="etxt" placeholder="Ej: Solo este fin de semana · Hago entregas">
+    <label>Foto de tu producto (opcional)</label><input type="file" id="efoto" accept="image/*">
+  </div>
+  <canvas id="ecv" width="1080" height="1920" style="width:100%;border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.15)"></canvas>
+  <button class="btn wa" id="eshare">📲 Compartir en WhatsApp</button>
+  <button class="btn sec" id="esave">⬇️ Guardar imagen</button>
+</section>
+
 <!-- 3. CLIENTAS -->
 <section class="vista" id="v-clientas">
   <div class="card">
@@ -142,6 +157,7 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
   <button class="on" data-v="precio"><span>💰</span>Precios</button>
   <button data-v="lista"><span>📋</span>Mi lista</button>
   <button data-v="clientas"><span>💬</span>Clientas</button>
+  <button data-v="estados"><span>🎨</span>Estados</button>
   <button data-v="deben"><span>💸</span>Me deben</button>
 </nav>
 <div class="toast" id="toast"></div>
@@ -159,6 +175,7 @@ document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
   document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
   document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
   if (b.dataset.v === 'lista') pintarLista();
+  if (b.dataset.v === 'estados') prepEstados();
   window.scrollTo(0, 0);
 });
 
@@ -283,6 +300,82 @@ function pintarRec() {
 $('#addd').onclick = () => { const n = $('#dn').value.trim(), q = Number($('#dq').value); if (!n || !q) return toast('Pon nombre y monto'); deudas.push({ n, q }); guardar('deudas', deudas); $('#dn').value = $('#dq').value = ''; pintarDeudas(); };
 $('#coprec').onclick = () => copiar($('#rec').textContent);
 pintarDeudas();
+
+// estados de WhatsApp (imagen 1080x1920 dibujada en el teléfono, sin internet)
+const PAL = { rosa: ['🌸 Rosa', '#7A1846', '#E8337A', '#F5B83D'], menta: ['🌿 Menta', '#0F5C4D', '#22B39A', '#FFE08A'], lavanda: ['💜 Lavanda', '#3F2A7A', '#9B6BFF', '#FFC6E5'],
+  dorado: ['✨ Negro y oro', '#111111', '#3A2E1A', '#E9C46A'], cielo: ['🩵 Cielo', '#0B4F8A', '#3BA4F5', '#FFD166'] };
+const PL = { estrella: '⭐ Producto estrella', lista: '📋 Lista de precios', agenda: '📅 Agenda abierta', pedidos: '🛵 Pedidos abiertos' };
+let eplant = 'estrella', ecol = 'rosa', efoto = null;
+const cv = $('#ecv'), cx = cv.getContext('2d');
+function prepEstados() {
+  $('#eplant').innerHTML = Object.entries(PL).map(([k, v]) => `<button class="chip ${k === eplant ? 'on' : ''}" data-k="${k}">${v}</button>`).join('');
+  $('#ecol').innerHTML = Object.entries(PAL).map(([k, v]) => `<button class="chip ${k === ecol ? 'on' : ''}" data-k="${k}">${v[0]}</button>`).join('');
+  $('#eplant').querySelectorAll('button').forEach((b) => b.onclick = () => { eplant = b.dataset.k; prepEstados(); });
+  $('#ecol').querySelectorAll('button').forEach((b) => b.onclick = () => { ecol = b.dataset.k; prepEstados(); });
+  const items = productos.length ? productos : EJ;
+  const sel = $('#eprod').value; $('#eprod').innerHTML = items.map((p, i) => `<option value="${i}">${p.n} · ${money(p.p)}</option>`).join(''); if (sel) $('#eprod').value = sel;
+  $('#eprodw').style.display = eplant === 'estrella' ? 'block' : 'none';
+  dibujar();
+}
+$('#eprod').onchange = dibujar; $('#etxt').oninput = dibujar;
+$('#efoto').onchange = (e) => { const f = e.target.files[0]; if (!f) return; const im = new Image(); im.onload = () => { efoto = im; dibujar(); }; im.src = URL.createObjectURL(f); };
+const W = 1080, H = 1920;
+function wrap(t, x, y, maxW, lh, font, align = 'center') {
+  cx.font = font; cx.textAlign = align; const ws = String(t).split(' '); let line = '', ys = [];
+  for (const w of ws) { const n = line ? line + ' ' + w : w; if (cx.measureText(n).width > maxW && line) { ys.push(line); line = w; } else line = n; }
+  ys.push(line); ys.forEach((l, i) => cx.fillText(l, x, y + i * lh)); return y + ys.length * lh;
+}
+function pill(x, y, w, h, r, fill) { cx.fillStyle = fill; cx.beginPath(); cx.roundRect(x, y, w, h, r); cx.fill(); }
+async function dibujar() {
+  try { await document.fonts.load('800 80px Poppins'); } catch (e) {}
+  const [, c1, c2, ac] = PAL[ecol], neg = $('#neg').value || leer('neg', '') || 'Mi negocio', tel = $('#tel').value || leer('tel', ''), extra = $('#etxt').value.trim();
+  const items = productos.length ? productos : EJ, pr = items[Number($('#eprod').value) || 0] || items[0];
+  const g = cx.createLinearGradient(0, 0, W, H); g.addColorStop(0, c1); g.addColorStop(1, c2); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+  if (efoto) { const s = Math.max(W / efoto.width, H / efoto.height); cx.globalAlpha = eplant === 'estrella' ? 1 : .35;
+    cx.drawImage(efoto, (W - efoto.width * s) / 2, (H - efoto.height * s) / 2, efoto.width * s, efoto.height * s); cx.globalAlpha = 1;
+    const sh = cx.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(.45, 'rgba(0,0,0,.05)'); sh.addColorStop(1, 'rgba(0,0,0,.75)'); cx.fillStyle = sh; cx.fillRect(0, 0, W, H); }
+  else { cx.fillStyle = 'rgba(255,255,255,.07)'; [[160, 300, 260], [950, 1500, 330], [900, 250, 140]].forEach(([x, y, r]) => { cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); }); }
+  cx.fillStyle = '#fff'; cx.textAlign = 'center';
+  cx.font = '600 46px Poppins'; cx.fillText(neg, W / 2, 190);
+  cx.fillStyle = ac; cx.fillRect(W / 2 - 60, 220, 120, 6); cx.fillStyle = '#fff';
+  const pie = (txt) => { pill(140, H - 330, W - 280, 130, 65, '#fff'); cx.fillStyle = c1; cx.font = '800 50px Poppins'; cx.textAlign = 'center'; cx.fillText(txt, W / 2, H - 248);
+    if (tel) { cx.fillStyle = '#fff'; cx.font = '600 42px Poppins'; cx.fillText('📲 ' + tel, W / 2, H - 120); } };
+  if (eplant === 'estrella') {
+    cx.fillStyle = ac; cx.font = '800 54px Poppins'; cx.fillText('✨ DISPONIBLE HOY ✨', W / 2, 400);
+    cx.fillStyle = '#fff'; const yEnd = wrap(pr.n, W / 2, efoto ? 520 : 760, 900, 130, '800 118px Poppins');
+    const cy = efoto ? H - 620 : Math.max(yEnd + 230, 1200);
+    cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2, cy, 190, 0, 7); cx.fill();
+    cx.fillStyle = c1; cx.font = '800 112px Poppins'; cx.fillText(money(pr.p), W / 2, cy + 38);
+    if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, cy + 290, 880, 60, '600 46px Poppins'); }
+    pie('Escríbeme y te lo aparto 💕');
+  } else if (eplant === 'lista') {
+    cx.fillStyle = ac; cx.font = '800 96px Poppins'; cx.fillText('Lista de precios', W / 2, 400);
+    const L = items.slice(0, 9), h = Math.min(130, 900 / L.length); let y = 520;
+    for (const it of L) { pill(110, y, W - 220, h - 22, 28, 'rgba(255,255,255,.16)'); cx.fillStyle = '#fff'; cx.font = `600 ${Math.round(h * .36)}px Poppins`; cx.textAlign = 'left';
+      cx.fillText(it.n.length > 24 ? it.n.slice(0, 23) + '…' : it.n, 150, y + h * .52); cx.textAlign = 'right'; cx.fillStyle = ac; cx.font = `800 ${Math.round(h * .4)}px Poppins`; cx.fillText(money(it.p), W - 150, y + h * .54); y += h; }
+    cx.textAlign = 'center'; if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, y + 70, 880, 58, '600 44px Poppins'); }
+    pie('Haz tu pedido 💕');
+  } else if (eplant === 'agenda') {
+    cx.font = '800 120px Poppins'; cx.fillText('¡Agenda', W / 2, 560); cx.fillStyle = ac; cx.fillText('abierta!', W / 2, 700);
+    const d = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']; d.forEach((t, i) => { const x = 165 + (i % 3) * 375, y = 860 + Math.floor(i / 3) * 200; pill(x - 150, y, 300, 150, 40, 'rgba(255,255,255,.16)');
+      cx.fillStyle = '#fff'; cx.font = '800 56px Poppins'; cx.fillText(t, x, y + 70); cx.fillStyle = ac; cx.font = '600 34px Poppins'; cx.fillText('cupos ✓', x, y + 118); });
+    cx.fillStyle = '#fff'; wrap(extra || 'Aparta tu cita antes de que se llene 💅', W / 2, 1360, 880, 64, '600 50px Poppins');
+    pie('Escríbeme para tu cita ✨');
+  } else {
+    cx.font = '800 130px Poppins'; cx.fillText('Pedidos', W / 2, 600); cx.fillStyle = ac; cx.fillText('abiertos', W / 2, 750);
+    cx.font = '200px Poppins'; cx.fillText('🛵', W / 2, 1060);
+    cx.fillStyle = '#fff'; wrap(extra || 'Encarga hoy y recíbelo fresquito 💕', W / 2, 1260, 880, 64, '600 50px Poppins');
+    pie('Escríbeme tu pedido 📲');
+  }
+  cx.fillStyle = 'rgba(255,255,255,.55)'; cx.font = '600 26px Poppins'; cx.textAlign = 'center'; cx.fillText('Hecho con La Jefa 👑', W / 2, H - 40);
+}
+const blobEstado = () => new Promise((r) => cv.toBlob(r, 'image/jpeg', .92));
+$('#eshare').onclick = async () => {
+  const b = await blobEstado(), f = new File([b], 'estado.jpg', { type: 'image/jpeg' });
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  $('#esave').click(); toast('Guardada: súbela a tu estado desde la galería 📲');
+};
+$('#esave').onclick = async () => { const a = document.createElement('a'); a.href = URL.createObjectURL(await blobEstado()); a.download = `estado-${eplant}.jpg`; a.click(); toast('Imagen guardada 🎨'); };
 
 // ajustes: copia de seguridad (todo vive en este teléfono)
 const vista = (v) => { document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v)); document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v)); window.scrollTo(0, 0); };
