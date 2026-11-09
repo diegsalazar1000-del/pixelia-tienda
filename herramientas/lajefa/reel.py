@@ -2,7 +2,7 @@
 pantallas reales de la app (pantallas/*.png) + textos, subtítulos, música y efectos.
   python3 reel.py [salida.mp4]            (corre igual en la sesión o en el estudio; sin créditos: música sintetizada o de la biblioteca)
 Historia: susto ("¿Estoy perdiendo plata?") → frustración ("¡Con razón no me alcanza!") → la app → "aquí manda la jefa" → "¡Me pagaron!" → cierre."""
-import sys, math, shutil, subprocess, tempfile, pathlib, importlib.util, wave
+import sys, json, math, shutil, subprocess, tempfile, pathlib, importlib.util, wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -18,11 +18,14 @@ ROSA, VINO, ORO, ROJO, BLANCO = (232, 51, 122), (122, 24, 70), (245, 184, 61), (
 # (tipo, fuente, duración, subtítulo de lo que dice, texto grande)
 ESC = [("clip", "c1", 2.6, "¿Qué? ¿Estoy perdiendo plata?", "Pierdes $1,50 en cada torta 😱"),
        ("clip", "c2", 2.1, "¡Con razón no me alcanza!", "Y pones el precio “a ojo” 🙈"),
-       ("app", None, 2.9, None, "👑 La Jefa te dice la verdad"),
+       ("app", None, 4.2, None, "👑 Así de fácil"),
        ("clip", "c3", 2.6, "Ahora sí, aquí manda la jefa", "Precios · Clientas · Cobros"),
        ("clip", "c4", 2.0, "¡Me pagaron!", "Y te pagan sin pena 💸"),
        ("fin", None, 1.8, None, None)]
 PANTALLAS = [("precio", "💰 Tu precio justo"), ("lista", "📋 Tu lista para WhatsApp"), ("estado", "🎨 Estados bonitos"), ("cobro", "💸 Cobra sin pena 😂")]
+# la app EN USO (grabar_demo.py): fase → (duración en el reel, rótulo)
+DEMO = json.loads((HERE / "pantallas" / "demo.json").read_text()) if (HERE / "pantallas" / "demo.json").exists() else None
+FASES = [("precio", 1.7, "💰 Calcula tu precio justo"), ("cobro", 1.1, "💬 Cobra por WhatsApp"), ("estado", 1.4, "🎨 Tu estado en segundos")]
 
 def frames_clip(src, d, tmp):
     out = tmp / src; out.mkdir()
@@ -30,17 +33,24 @@ def frames_clip(src, d, tmp):
                     str(out / "%04d.jpg")], check=True)
     fs = sorted(out.glob("*.jpg")); return fs
 
-def subtitulo(img, txt, a):
-    for j, l in enumerate(partir(txt, F(62, "Black"), 940)):
-        linea(img, 1530 + j * 80, l, F(62, "Black"), BLANCO, alpha=a, stroke=7, sc=(0, 0, 0))
+def subtitulo(img, txt, a):   # abajo, compacto y legible: no tapa la cara
+    if a <= 0: return
+    f = F(46, "Black"); ls = partir(txt, f, 860); y0 = 1660 - (len(ls) - 1) * 30
+    w = max(S.ancho(l, f) for l in ls) + 56; h = len(ls) * 60 + 28
+    capa = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(capa).rounded_rectangle([W / 2 - w / 2, y0 - 44, W / 2 + w / 2, y0 - 44 + h], 22, fill=(0, 0, 0, int(140 * a)))
+    img.alpha_composite(capa)
+    for j, l in enumerate(ls): linea(img, y0 + j * 60, l, f, BLANCO, alpha=a)
 
-def cartel(img, txt, t, rojo=False, y=330):
+def cartel(img, txt, t, rojo=False, y=250):   # arriba y compacto: no tapa la cara
     s = back(t * 3.2)
     if s <= 0.02: return
-    ls = partir(txt, F(70, "Black"), 900); h = len(ls) * 90 + 60
+    ls = partir(txt, F(56, "Black"), 900); h = len(ls) * 70 + 40
     capa = Image.new("RGBA", (W, H), (0, 0, 0, 0)); g = ImageDraw.Draw(capa)
     g.rounded_rectangle([70, y - h / 2, W - 70, y + h / 2], 36, fill=(ROJO if rojo else ROSA) + (240,))
-    for j, l in enumerate(ls): linea(capa, y - h / 2 + 75 + j * 90, l, F(70, "Black"), BLANCO)
+    ww = max(S.ancho(l, F(56, "Black")) for l in ls) + 70
+    capa = Image.new("RGBA", (W, H), (0, 0, 0, 0)); g = ImageDraw.Draw(capa)
+    g.rounded_rectangle([W / 2 - ww / 2, y - h / 2, W / 2 + ww / 2, y + h / 2], 30, fill=(ROJO if rojo else ROSA) + (235,))
+    for j, l in enumerate(ls): linea(capa, y - h / 2 + 55 + j * 70, l, F(56, "Black"), BLANCO)
     if s != 1:
         capa = capa.resize((int(W * s), int(H * s)), Image.LANCZOS); z = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         ox, oy = int(W / 2 - W * s / 2), int(y - y * s); z.alpha_composite(capa.crop((max(0, -ox), max(0, -oy), capa.width, capa.height)), (max(0, ox), max(0, oy))); capa = z
@@ -70,7 +80,31 @@ def fondo_marca(t):
         img.alpha_composite(c, (int(x - r + 30 * math.sin(t + i)), int(y - r)))
     return img
 
+_demo = {}
+def demo_frame(real):
+    ts = DEMO["t"]; i = max(0, max((k for k, x in enumerate(ts) if x <= real), default=0))
+    if i not in _demo:
+        sc = Image.open(HERE / "pantallas" / "demo" / f"{i:04d}.jpg").convert("RGB"); _demo.clear(); _demo[i] = sc
+    return _demo[i]
+def esc_demo(t, d, titulo):
+    img = fondo_marca(t); fs = DEMO["fases"]; orden = ["precio", "cobro", "estado", "fin"]
+    acc = 0.0
+    for nombre, dur, rot in FASES:
+        if t < acc + dur or nombre == FASES[-1][0]: break
+        acc += dur
+    lt = t - acc; a, b = fs[nombre], fs[orden[orden.index(nombre) + 1]]
+    sc = demo_frame(a + min(1, lt / dur) * (b - a))
+    ancho = 600; sc = sc.resize((ancho, round(sc.height * ancho / sc.width)), Image.LANCZOS)
+    b_ = 20; ph = Image.new("RGBA", (ancho + 2 * b_, sc.height + 2 * b_), (0, 0, 0, 0))
+    ImageDraw.Draw(ph).rounded_rectangle([0, 0, ph.width - 1, ph.height - 1], 64, fill=(20, 16, 26))
+    m = Image.new("L", sc.size, 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, sc.width - 1, sc.height - 1], 48, fill=255); ph.paste(sc, (b_, b_), m)
+    linea(img, 150, titulo, F(60, "Black"), BLANCO, alpha=ease(t * 4), stroke=4, sc=VINO)
+    img.alpha_composite(ph, (int(W / 2 - ph.width / 2), 230))
+    S.pastilla(img, 1740, rot, F(52, "Black"), ORO + (255,), fg=VINO, s=back(lt * 5))
+    return img
+
 def esc_app(t, d, titulo):
+    if DEMO: return esc_demo(t, d, titulo)
     img = fondo_marca(t); n = len(PANTALLAS); k = min(n - 1, int(t / (d / n))); lt = t - k * d / n
     linea(img, 210, titulo, F(64, "Black"), BLANCO, alpha=ease(t * 4), stroke=4, sc=VINO)
     ph = telefono(PANTALLAS[k][0]); s = 0.86 + 0.14 * back(lt * 5) if lt < 0.3 else 1.0
@@ -123,7 +157,11 @@ def main(out):
         A.add(fx, A.impact(), 0.55, 0.6)
         for c in cortes[1:]: A.add(fx, A.whoosh(0.35), max(0, c - 0.2), 0.6)
         ca = cortes[2]
-        for j in range(len(PANTALLAS)): A.add(fx, A.pop(1.0 + 0.1 * j), ca + j * ESC[2][2] / len(PANTALLAS), 0.7)
+        if DEMO:
+            acc = 0.0
+            for j, (_, dur, _) in enumerate(FASES): A.add(fx, A.pop(1.0 + 0.1 * j), ca + acc, 0.7); acc += dur
+        else:
+            for j in range(len(PANTALLAS)): A.add(fx, A.pop(1.0 + 0.1 * j), ca + j * ESC[2][2] / len(PANTALLAS), 0.7)
         A.add(fx, A.sparkle(), cortes[-1] + 0.1, 0.8)
         x = mix + fx; x = x / max(1.0, np.abs(x).max() / 0.95)
         with wave.open(str(tmp / "a.wav"), "w") as wf:
