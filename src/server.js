@@ -132,13 +132,29 @@ const esDueno = (req) => /(^|;\s*)pxd=1/.test(req.headers.cookie || '');
 const routes = [];
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
+// ===== Visitas reales (sin robots, sin recargas, sin el dueño) =====
+// Solo cuenta navegadores de verdad (Mozilla + idioma + cabeceras de navegador), nada de robots/previsualizadores/scripts,
+// y UNA visita por persona (IP) por producto por día: recargar la página no suma.
+const ROBOT = /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|meta-external|whatsapp|telegram|python|curl|wget|node|axios|go-http|java|okhttp|scrapy|ahrefs|semrush|bytespider|gptbot|claude|petalbot|bingpreview/i;
+const vistos = new Map();   // "día|producto|ip" → 1 (se limpia cada día)
+function visitaReal(req, productId) {
+  const ua = req.headers['user-agent'] || '';
+  if (!/Mozilla\//.test(ua) || ROBOT.test(ua) || !req.headers['accept-language'] || esDueno(req) || /[?&]soy=dueno/.test(req.url)) return false;
+  if (req.headers['purpose'] === 'prefetch' || req.headers['sec-purpose']?.includes('prefetch')) return false;
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const dia = new Date().toISOString().slice(0, 10), k = `${dia}|${productId}|${ip}`;
+  if (vistos.has(k)) return false;
+  if (vistos.size > 50000 || ![...vistos.keys()].slice(0, 1).every((x) => x.startsWith(dia))) vistos.clear();
+  vistos.set(k, 1); return true;
+}
+
 // ===== Páginas =====
 on('GET', '/', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('index.html')); });
 on('GET', '/p/:slug', (req, res, { slug }) => {
   const p = Products.bySlug(slug);
   if (!p || !p.active) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }
   const pp = publicProduct(p);
-  if (!/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '') && !esDueno(req) && !/[?&]soy=dueno/.test(req.url)) Products.view(p.id);
+  if (visitaReal(req, p.id)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] });
   res.end(renderPage('product.html', { TITLE: esc(pp.title) + ' · ' + esc(config.storeName), DESC: esc(pp.short),
     IMAGE: pp.cover.startsWith('http') ? pp.cover : config.baseUrl + pp.cover,
@@ -179,7 +195,7 @@ on('GET', '/binance-qr.jpg', (req, res) => { const f = path.join(path.dirname(co
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
   const p = Products.bySlug('regalo-reto-30-dias');
-  if (p && !/bot|crawl|spider|facebookexternalhit|preview/i.test(req.headers['user-agent'] || '') && !esDueno(req)) Products.view(p.id);
+  if (p && visitaReal(req, p.id)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html'));
 });  // página corta del Reto 30 Días (reel → bio)
 on('POST', '/api/regalo', async (req, res) => {
