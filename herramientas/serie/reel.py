@@ -2,7 +2,8 @@
 Los textos están en serie.json. Cada reel: gancho → 3 trucos (número grande, título, visual) → cierre con pregunta.
   Vista previa sin voz (no gasta):  python3 reel.py 1 silencio
   Con voz REAL de ElevenLabs (en el estudio):
-    docker exec pixelia-estudio python3 /pixelia/herramientas/serie/reel.py 1 femenina   [--musica-nueva]
+    docker exec pixelia-estudio python3 /pixelia/herramientas/serie/reel.py 1 masculina   [--musica-nueva] [--energica]
+  Voz "coach" (motivador seguro) por defecto; --energica = la voz del Reto 30. Música propia de la serie (storage/musica/serie-metas/).
 Sale en storage/anuncios/serie-metas/parte1-femenina.mp4 (+ -sin-musica.mp4, portada y el texto para Instagram)."""
 import sys, json, re, math, shutil, subprocess, tempfile, pathlib, importlib.util
 from PIL import Image, ImageDraw, ImageFont
@@ -188,6 +189,10 @@ def esc_cierre(img, t, d, P):
     linea(img, 1480, "🎁 Reto 30 Días GRATIS en el perfil", F(48, "Bold"), WHITE, alpha=ease((t - 1.4) * 3))
     linea(img, 1580, SERIE["cuenta"], F(46, "Medium"), (220, 200, 240), alpha=ease((t - 1.5) * 3))
 
+# Música propia de la serie (se compone 1 vez y se reutiliza en las 5 partes): motivadora con ritmo, no de fiesta
+MUSICA = ("Inspiring motivational hip hop instrumental for a short self-improvement tips video: steady confident boom-bap drums, "
+          "warm piano chords and soft strings, a subtle rise every few seconds, determined and hopeful mood like a coach talking, "
+          "starts with the beat immediately, no long intro, no vocals. Length about {seg} seconds.")
 BASE = [2.8, 4.2, 4.2, 4.2, 3.8]
 def frame(P, D, t):
     img = fondo(t); ini = 0.0
@@ -224,17 +229,18 @@ def main():
         out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else str(OUT / f"parte{n}-sin-voz.mp4")
         return render(P, BASE, out, poster=out.replace(".mp4", ".jpg"))
     sys.path.insert(0, str(HERE.parent)); import numpy as np, reels_audio as RA
+    estilo = "energica" if "--energica" in sys.argv else "coach"
     RA.preparar(); A = RA.audio; SR = RA.SR
     tmp = pathlib.Path(tempfile.mkdtemp())
     try:
-        vid, nombre = RA.voz_energica(genero)
+        vid, nombre = RA.voz_energica(genero, estilo)
         frases = [P["voz_gancho"]] + [t["voz"] for t in P["trucos"]] + [P["voz_cierre"]]
         vs = [RA.tts(f, vid, tmp, i) for i, f in enumerate(frases)]
         D = [round(max(b, len(v) / SR + 0.45), 2) for b, v in zip(BASE, vs)]
         T = sum(D); m = int(T * SR); voz = np.zeros(m); t = 0.0; cortes = []
         for d, v in zip(D, vs):
             k = int((t + 0.1) * SR); voz[k:k + len(v)] += v[: max(0, m - k)]; cortes.append(t); t += d
-        mus = RA.musica(T, "--musica-nueva" in sys.argv)
+        mus = RA.musica(T, "--musica-nueva" in sys.argv, "serie-metas/motivadora.mp3", MUSICA)
         w = int(0.2 * SR); env_ = np.convolve((np.abs(voz) > 0.02).astype(float), np.ones(w) / w, "same")
         mix = voz + mus * (0.40 - 0.26 * np.clip(env_ * 3, 0, 1))
         fx = np.zeros(m)

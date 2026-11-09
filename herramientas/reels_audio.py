@@ -24,26 +24,31 @@ def puntaje(v, gender):
     if any(w in txt for w in ("advert", "social", "commercial", "promo")): s += 3
     if "young" in txt or "middle" in txt: s += 1
     return s + min(2, (v.get("cloned_by_count") or 0) / 5000)
-def voz_energica(genero):
+ESTILOS = {"energica": ("energetic", "upbeat"), "coach": ("motivational", "confident", "inspiring")}
+def voz_energica(genero, estilo="energica"):
+    """estilo 'energica' (Reto 30) o 'coach' (motivador seguro, para consejos/series)."""
     gender = "female" if genero == "femenina" else "male"
+    clave = gender if estilo == "energica" else f"{gender}-{estilo}"
     c = {}
     try: c = json.loads(CACHE.read_text())
     except Exception: pass
-    if c.get(gender): return c[gender]["id"], c[gender].get("name", "")
+    if c.get(clave): return c[clave]["id"], c[clave].get("name", "")
+    global ENERGIA
+    if estilo == "coach": ENERGIA = ("motivational", "confident", "inspiring", "coach", "warm", "deep") + ENERGIA[6:]
     cands = []
-    for p in ({"language": "es", "gender": gender, "search": "energetic", "page_size": 50},
-              {"language": "es", "gender": gender, "use_cases": "advertisement", "page_size": 50},
-              {"language": "es", "gender": gender, "search": "upbeat", "page_size": 50}):
+    for p in ([{"language": "es", "gender": gender, "search": w, "page_size": 50} for w in ESTILOS.get(estilo, ESTILOS["energica"])]
+              + [{"language": "es", "gender": gender, "use_cases": "advertisement", "page_size": 50}]):
         try: cands += voces.call("GET", "/shared-voices?" + urllib.parse.urlencode(p)).get("voices", [])
         except Exception as e: print("biblioteca:", e)
     cands = sorted({v["voice_id"]: v for v in cands}.values(), key=lambda v: puntaje(v, gender), reverse=True)
     best = None
     if cands and puntaje(cands[0], gender) > 0:
         v = cands[0]
-        try: best = {"id": voces.call("POST", f"/voices/add/{v['public_owner_id']}/{v['voice_id']}", {"new_name": f"Pixelia {gender} enérgica"}).get("voice_id", v["voice_id"]), "name": v.get("name")}
+        try: best = {"id": voces.call("POST", f"/voices/add/{v['public_owner_id']}/{v['voice_id']}", {"new_name": f"Pixelia {gender} {estilo}"}).get("voice_id", v["voice_id"]), "name": v.get("name")}
         except Exception as e: print("no pude agregar la voz enérgica (uso la de siempre):", e)
     if not best: best = {"id": voces.pick_voice(genero), "name": "voz Pixelia de siempre"}
-    c[gender] = best; CACHE.write_text(json.dumps(c, ensure_ascii=False, indent=1))
+    if estilo != "energica" and best["name"] == "voz Pixelia de siempre" and c.get(gender): best = c[gender]
+    c[clave] = best; CACHE.write_text(json.dumps(c, ensure_ascii=False, indent=1))
     return best["id"], best.get("name", "")
 def tts(texto, vid, tmp, i):
     """Voz de ElevenLabs con caché (si se rehace el reel no se paga otra vez la misma frase) y volumen PAREJO:
@@ -72,10 +77,10 @@ def nivelar(v, objetivo=0.12):
     return v / max(1.0, np.abs(v).max() / 0.98)
 
 # ---------- música compuesta para este reel (se reutiliza) ----------
-def musica(T, nueva):
-    f = ROOT / "storage" / "musica" / "reto30" / "energetica.mp3"; f.parent.mkdir(parents=True, exist_ok=True)
+def musica(T, nueva, archivo="reto30/energetica.mp3", prompt=None):
+    f = ROOT / "storage" / "musica" / archivo; f.parent.mkdir(parents=True, exist_ok=True)
     if nueva or not f.exists():
-        prompt = (f"Energetic motivational Latin pop / electro instrumental for a fast social media reel about finally achieving your goals. "
+        prompt = (prompt.format(seg=int(T) + 2) if prompt else None) or (f"Energetic motivational Latin pop / electro instrumental for a fast social media reel about finally achieving your goals. "
                   f"Punchy drums and claps from the very first second, 124 BPM, bright synth hook, a short riser around second 4 and a big "
                   f"uplifting drop right after, confident and fun, no long intro, no vocals. Length about {int(T) + 2} seconds.")
         data = voces.call("POST", "/music?output_format=mp3_44100_128", {"prompt": prompt, "music_length_ms": int((T + 2) * 1000),
