@@ -25,7 +25,7 @@ try {
   console.log('\n📊 META');
   for (const c of cs) {
     const st = await api('GET', c.camp, { fields: 'name,effective_status' }).catch((e) => ({ error: e.message }));
-    if (st.error) { console.log(`  ${c.titulo}: ⚠️ ${st.error}`); continue; }
+    if (st.error) { if (!/#10|does not exist/i.test(st.error)) console.log(`  ${c.titulo}: ⚠️ ${st.error}`); continue; }   // campañas de la cuenta vieja bloqueada: no se muestran
     console.log(`\n▶ ${c.titulo} — ${st.effective_status}`);
     for (const [nom, pr] of [['hoy', 'today'], ['ayer', 'yesterday'], ['7 días', 'last_7d']]) {
       const r = await ins(c.camp, pr);
