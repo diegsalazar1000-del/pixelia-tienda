@@ -71,10 +71,12 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
     <h2>💰 ¿Cuánto ganas de verdad?</h2>
     <label>¿Qué vendes?</label><input id="prod" value="Torta de chocolate">
     <label>¿A cuánto lo cobras? ($)</label><input id="cobro" type="number" step="0.5" value="15">
-    <label>Lo que te cuesta hacerlo</label>
+    <label>¿Cómo lo consigues?</label>
+    <div class="chips"><button class="chip on" data-modo="hago">🧁 Lo hago yo</button><button class="chip" data-modo="revendo">🛍️ Lo compro y revendo</button></div>
+    <label id="lcostos">Lo que te cuesta hacerlo</label>
     <div id="costos"></div>
     <button class="btn sec" id="addc">+ Agregar gasto</button>
-    <label>¿Cuánto tiempo te lleva? (horas)</label><input id="horas" type="number" step="0.25" value="2">
+    <label id="lhoras">¿Cuánto tiempo te lleva? (horas)</label><input id="horas" type="number" step="0.25" value="2">
     <label>¿Cuánto vale tu hora? ($) <span class="mini">— tu tiempo también cuesta, jefa</span></label><input id="vhora" type="number" step="0.5" value="2">
     <button class="btn" id="calc">Dime la verdad 👀</button>
   </div>
@@ -115,7 +117,8 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
     <label>Colores</label><div class="chips" id="ecol"></div>
     <div id="eprodw"><label>Producto</label><select id="eprod"></select></div>
     <label>Texto extra (opcional)</label><input id="etxt" placeholder="Ej: Solo este fin de semana · Hago entregas">
-    <label>Foto de tu producto (opcional)</label><input type="file" id="efoto" accept="image/*">
+    <label>Foto del producto <span class="mini">— se guarda en tu teléfono</span></label><input type="file" id="efoto" accept="image/*">
+    <label>Forma de la foto</label><div class="chips" id="eforma"></div>
   </div>
   <canvas id="ecv" width="1080" height="1920" style="width:100%;border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.15)"></canvas>
   <button class="btn wa" id="eshare">📲 Compartir en WhatsApp</button>
@@ -124,6 +127,20 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
 
 <!-- 3. CLIENTAS -->
 <section class="vista" id="v-clientas">
+  <div class="card">
+    <h2>👥 Mis clientas</h2>
+    <input id="cbus" placeholder="🔎 Buscar clienta">
+    <div id="clist" style="margin-top:6px"></div>
+    <button class="btn sec" id="cnueva">+ Nueva clienta</button>
+    <div id="cform" style="display:none">
+      <label>Nombre</label><input id="cn" placeholder="Carla Pérez">
+      <label>WhatsApp</label><input id="ctel" type="tel" placeholder="+58 412 000 0000">
+      <label>Cumpleaños (opcional)</label><input id="ccum" type="date">
+      <label>Notas (gustos, alergias, dirección…)</label><input id="cnota" placeholder="Le encanta el de fresa · Sin nueces">
+      <button class="btn" id="cadd">Guardar clienta</button>
+    </div>
+  </div>
+  <div class="card" id="cdet" style="display:none"></div>
   <div class="card">
     <h2>💬 Consigue clientas</h2>
     <label>¿A qué te dedicas?</label>
@@ -170,6 +187,16 @@ const leer = (k, d) => { try { return JSON.parse(localStorage.getItem('jefa-' + 
 const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); };
 const copiar = async (t) => { try { await navigator.clipboard.writeText(t); toast('¡Copiado! Pégalo en WhatsApp 📲'); } catch (e) { toast('Mantén presionado el texto para copiarlo'); } };
 
+// fotos de productos: en ESTE teléfono (IndexedDB), achicadas a buena resolución
+const idb = new Promise((ok, no) => { try { const r = indexedDB.open('jefa', 1); r.onupgradeneeded = () => r.result.createObjectStore('fotos'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); } catch (e) { no(e); } });
+idb.catch(() => {});
+const fotoSet = async (k, blob) => { try { const db = await idb; await new Promise((ok) => { const t = db.transaction('fotos', 'readwrite'); blob ? t.objectStore('fotos').put(blob, k) : t.objectStore('fotos').delete(k); t.oncomplete = ok; t.onerror = ok; }); } catch (e) {} delete fotosCache[k]; };
+const fotoGet = async (k) => { try { const db = await idb; return await new Promise((ok) => { const r = db.transaction('fotos').objectStore('fotos').get(k); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); }); } catch (e) { return null; } };
+const achicar = (file, max = 1400) => new Promise((ok) => { const im = new Image(); im.onload = () => { const s = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); c.toBlob(ok, 'image/jpeg', .9); }; im.onerror = () => ok(null); im.src = URL.createObjectURL(file); });
+const blobImg = (b) => new Promise((ok) => { if (!b) return ok(null); const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = URL.createObjectURL(b); });
+const fotosCache = {};
+const fotoImg = async (k) => (k in fotosCache) ? fotosCache[k] : (fotosCache[k] = await blobImg(await fotoGet(k)));
+
 // navegación
 document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
   document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
@@ -187,7 +214,16 @@ function pintarCostos() {
   $('#costos').querySelectorAll('[data-del]').forEach((el) => el.onclick = () => { costos.splice(el.dataset.del, 1); pintarCostos(); });
 }
 pintarCostos();
-function cargar(p) { $('#prod').value = p.n; $('#cobro').value = p.cobro ?? p.p; costos = JSON.parse(JSON.stringify(p.costos || [['', 0]])); $('#horas').value = p.horas ?? 1; $('#vhora').value = p.vhora ?? 2; pintarCostos(); $('#res').innerHTML = ''; }
+let modo = 'hago';
+const COSTOS_MODO = { hago: [['', 0]], revendo: [['Lo que me costó (por unidad)', 0], ['Envío o pasaje (por unidad)', 0], ['Bolsa o empaque', 0]] };
+function ponerModo(m, reset) {
+  modo = m; document.querySelectorAll('[data-modo]').forEach((b) => b.classList.toggle('on', b.dataset.modo === m));
+  $('#lcostos').textContent = m === 'revendo' ? 'Lo que te cuesta comprarlo y traerlo' : 'Lo que te cuesta hacerlo';
+  $('#lhoras').textContent = m === 'revendo' ? '¿Cuánto tiempo le dedicas a cada venta? (horas: buscar, empacar, entregar)' : '¿Cuánto tiempo te lleva? (horas)';
+  if (reset) { costos = JSON.parse(JSON.stringify(COSTOS_MODO[m])); $('#horas').value = m === 'revendo' ? 0.25 : 1; pintarCostos(); $('#res').innerHTML = ''; }
+}
+document.querySelectorAll('[data-modo]').forEach((b) => b.onclick = () => b.dataset.modo !== modo && ponerModo(b.dataset.modo, true));
+function cargar(p) { ponerModo(p.modo || 'hago', false); $('#prod').value = p.n; $('#cobro').value = p.cobro ?? p.p; costos = JSON.parse(JSON.stringify(p.costos || [['', 0]])); $('#horas').value = p.horas ?? 1; $('#vhora').value = p.vhora ?? 2; pintarCostos(); $('#res').innerHTML = ''; }
 function pintarMisProd() {
   $('#misprod').style.display = productos.length ? 'block' : 'none';
   $('#chipsprod').innerHTML = productos.map((p, i) => `<button class="chip" data-i="${i}">${p.n} · ${money(p.p)}</button>`).join('') + '<button class="chip" data-i="nuevo">➕ Nuevo</button>';
@@ -209,7 +245,7 @@ $('#calc').onclick = () => {
       <small>en cada ${nombre.toLowerCase()} ${dif < 0 ? '😱' : '💪'}</small>
     </div>
     <div class="card">
-      <div class="det"><span>Materiales</span><b>${money(mat)}</b></div>
+      <div class="det"><span>${modo === 'revendo' ? 'Mercancía y envío' : 'Materiales'}</span><b>${money(mat)}</b></div>
       <div class="det"><span>Tu tiempo</span><b>${money(tiempo)}</b></div>
       <div class="det"><span>Te cuesta en total</span><b>${money(total)}</b></div>
       <div class="det"><span>Lo cobras a</span><b>${money(cobro)}</b></div>
@@ -229,10 +265,10 @@ $('#calc').onclick = () => {
   $('#res').querySelectorAll('[data-pv]').forEach((b) => b.onclick = () => { $('#pv').value = b.dataset.pv; verPv(); });
   $('#usar').onclick = () => {
     const v = Number($('#pv').value) || justo;
-    productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: v, cobro: v, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value });
+    productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: v, cobro: v, modo, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value });
     guardar('productos', productos); pintarMisProd(); $('#instalar').style.display = 'none'; toast(`${nombre} guardado a ${money(v)} 📋`); $('#otro').style.display = 'block';
   };
-  $('#otro').onclick = () => { cargar({ n: '', cobro: '', costos: [['', 0]], horas: 1, vhora: $('#vhora').value || 2 }); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 400); };
+  $('#otro').onclick = () => { cargar({ n: '', cobro: '', modo, costos: JSON.parse(JSON.stringify(COSTOS_MODO[modo])), horas: modo === 'revendo' ? 0.25 : 1, vhora: $('#vhora').value || 2 }); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 400); };
   $('#res').scrollIntoView({ behavior: 'smooth' });
 };
 
@@ -240,9 +276,11 @@ $('#calc').onclick = () => {
 const EJ = [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
 function pintarLista() {
   const items = productos.length ? productos : EJ;
-  $('#editlista').innerHTML = productos.length ? productos.map((p, i) => `<div class="deuda"><span>${p.n}</span><span class="row" style="gap:6px"><input class="m" type="number" step="0.5" value="${p.p}" data-ep="${i}" style="width:90px"><button class="x" data-ed="${i}">×</button></span></div>`).join('')
+  $('#editlista').innerHTML = productos.length ? productos.map((p, i) => `<div class="deuda"><span class="row" style="gap:8px"><img data-th="${i}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#F7E4EC"><span>${p.n}</span></span><span class="row" style="gap:6px"><label class="x" style="display:flex;align-items:center;justify-content:center;margin:0">📷<input type="file" accept="image/*" data-ef="${i}" hidden></label><input class="m" type="number" step="0.5" value="${p.p}" data-ep="${i}" style="width:90px"><button class="x" data-ed="${i}">×</button></span></div>`).join('')
     : '<p class="mini">👇 Así se verá (es un ejemplo). Agrega tus productos y aparecen aquí.</p>';
   $('#editlista').querySelectorAll('[data-ep]').forEach((el) => el.onchange = () => { productos[el.dataset.ep].p = Number(el.value) || 0; guardar('productos', productos); pintarMisProd(); pintarLista(); });
+  $('#editlista').querySelectorAll('[data-th]').forEach(async (el) => { const im = await fotoImg(productos[el.dataset.th].n); if (im) el.src = im.src; });
+  $('#editlista').querySelectorAll('[data-ef]').forEach((el) => el.onchange = async () => { const f = el.files[0]; if (!f) return; await fotoSet(productos[el.dataset.ef].n, await achicar(f)); pintarLista(); toast('Foto guardada 📷'); });
   $('#editlista').querySelectorAll('[data-ed]').forEach((el) => el.onclick = () => { productos.splice(el.dataset.ed, 1); guardar('productos', productos); pintarMisProd(); pintarLista(); });
   $('#tarjeta').innerHTML = `<h3>${$('#neg').value || 'Mi negocio'}</h3><p class="mini" style="color:#ffd9e6">Lista de precios</p>` +
     items.map((i) => `<div class="it"><span>${i.n}</span><span>${money(i.p)}</span></div>`).join('') +
@@ -278,6 +316,48 @@ function pintarMsg() {
 pintarMsg();
 $('#copmsg').onclick = () => copiar($('#msg').textContent);
 
+// 👥 mis clientas (todo en este teléfono)
+let clientas = leer('clientas', []), csel = -1;
+const hoyISO = () => new Date().toISOString().slice(0, 10);
+const digitos = (t) => String(t || '').replace(/\D/g, '');
+const cumpleCerca = (c) => { if (!c.cumple) return false; const h = new Date(), d = new Date(h.getFullYear() + '-' + c.cumple.slice(5)); if (d < new Date(h.toDateString())) d.setFullYear(h.getFullYear() + 1); return (d - h) / 864e5 <= 7; };
+function pintarClientas() {
+  const q = $('#cbus').value.trim().toLowerCase(), L = clientas.map((c, i) => ({ c, i })).filter(({ c }) => !q || c.n.toLowerCase().includes(q));
+  $('#clist').innerHTML = L.length ? L.map(({ c, i }) => { const tot = (c.compras || []).reduce((s, x) => s + x.m, 0), ult = (c.compras || []).slice(-1)[0];
+    return `<div class="deuda" data-ci="${i}" style="cursor:pointer"><span><b>${c.n}</b>${cumpleCerca(c) ? ' 🎂' : ''}<br><span class="mini">${ult ? 'Última: ' + ult.f.split('-').reverse().join('/') : 'Sin compras aún'}</span></span><span style="font-weight:800;color:var(--vino)">${money(tot)}</span></div>`; }).join('')
+    : `<p class="mini">${clientas.length ? 'No encontré a nadie con ese nombre.' : 'Anota a tus clientas: qué te compran, cuánto gastan, sus gustos y cumpleaños 🎂'}</p>`;
+  $('#clist').querySelectorAll('[data-ci]').forEach((el) => el.onclick = () => { csel = Number(el.dataset.ci); pintarDetalle(); $('#cdet').scrollIntoView({ behavior: 'smooth' }); });
+}
+function pintarDetalle() {
+  const c = clientas[csel]; if (!c) { $('#cdet').style.display = 'none'; return; }
+  const tot = (c.compras || []).reduce((s, x) => s + x.m, 0), items = productos.length ? productos : [];
+  $('#cdet').style.display = 'block';
+  $('#cdet').innerHTML = `<h2>👤 ${c.n}${cumpleCerca(c) ? ' 🎂' : ''}</h2>
+    <p class="mini">${c.tel ? '📲 ' + c.tel : 'Sin WhatsApp'}${c.cumple ? ' · 🎂 ' + c.cumple.slice(8) + '/' + c.cumple.slice(5, 7) : ''}</p>
+    ${c.nota ? `<div class="aviso" style="margin-top:8px">📝 ${c.nota}</div>` : ''}
+    <div class="det"><span>Compras</span><b>${(c.compras || []).length}</b></div><div class="det"><span>Ha gastado contigo</span><b>${money(tot)}</b></div>
+    ${(c.compras || []).slice(-6).reverse().map((x) => `<div class="det"><span>${x.f.split('-').reverse().join('/')} · ${x.d}</span><span>${money(x.m)}${x.debe ? ' ⏳' : ''}</span></div>`).join('')}
+    <label>Anotar compra</label>
+    <select id="cprod"><option value="">— Elige producto —</option>${items.map((p, i) => `<option value="${i}">${p.n} · ${money(p.p)}</option>`).join('')}<option value="otro">Otro…</option></select>
+    <div class="row" style="margin-top:6px"><input id="cdesc" placeholder="¿Qué compró?"><input id="cmonto" class="m" type="number" step="0.5" placeholder="$"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="cdebe" style="width:auto"> Quedó debiendo (va a 💸 Me deben)</label>
+    <button class="btn" id="ccomp">+ Anotar compra</button>
+    ${c.tel ? `<a class="btn wa" style="text-align:center;text-decoration:none" target="_blank" href="https://wa.me/${digitos(c.tel)}?text=${encodeURIComponent('¡Hola, ' + c.n.split(' ')[0] + '! 💕')}">💬 Escribirle por WhatsApp</a>` : ''}
+    <button class="btn sec" id="cdel">🗑️ Borrar clienta</button>`;
+  $('#cprod').onchange = () => { const v = $('#cprod').value, p = items[v]; if (p) { $('#cdesc').value = p.n; $('#cmonto').value = p.p; } else if (v === 'otro') $('#cdesc').focus(); };
+  $('#ccomp').onclick = () => { const d = $('#cdesc').value.trim(), m = Number($('#cmonto').value); if (!d || !m) return toast('Pon qué compró y el monto');
+    const debe = $('#cdebe').checked; (c.compras = c.compras || []).push({ f: hoyISO(), d, m, debe }); guardar('clientas', clientas);
+    if (debe) { deudas.push({ n: c.n, q: m }); guardar('deudas', deudas); pintarDeudas(); }
+    pintarClientas(); pintarDetalle(); toast(debe ? 'Anotado y pasado a 💸 Me deben' : 'Compra anotada ✅'); };
+  $('#cdel').onclick = () => { if ($('#cdel').dataset.ok) { clientas.splice(csel, 1); csel = -1; guardar('clientas', clientas); pintarClientas(); pintarDetalle(); toast('Clienta borrada'); }
+    else { $('#cdel').dataset.ok = 1; $('#cdel').textContent = '¿Segura? Toca otra vez para borrar'; } };
+}
+$('#cbus').oninput = pintarClientas;
+$('#cnueva').onclick = () => { $('#cform').style.display = $('#cform').style.display === 'none' ? 'block' : 'none'; $('#cn').focus(); };
+$('#cadd').onclick = () => { const n = $('#cn').value.trim(); if (!n) return toast('Ponle nombre 😉');
+  clientas.push({ n, tel: $('#ctel').value.trim(), cumple: $('#ccum').value, nota: $('#cnota').value.trim(), compras: [] }); guardar('clientas', clientas);
+  ['#cn', '#ctel', '#ccum', '#cnota'].forEach((k) => $(k).value = ''); $('#cform').style.display = 'none'; csel = clientas.length - 1; pintarClientas(); pintarDetalle(); toast('Clienta guardada 👥'); };
+
 // 4. me deben
 let deudas = leer('deudas', []), sel = 0, tono = 'amable';
 const TONOS = {
@@ -300,12 +380,14 @@ function pintarRec() {
 $('#addd').onclick = () => { const n = $('#dn').value.trim(), q = Number($('#dq').value); if (!n || !q) return toast('Pon nombre y monto'); deudas.push({ n, q }); guardar('deudas', deudas); $('#dn').value = $('#dq').value = ''; pintarDeudas(); };
 $('#coprec').onclick = () => copiar($('#rec').textContent);
 pintarDeudas();
+pintarClientas();
 
 // estados de WhatsApp (imagen 1080x1920 dibujada en el teléfono, sin internet)
 const PAL = { rosa: ['🌸 Rosa', '#7A1846', '#E8337A', '#F5B83D'], menta: ['🌿 Menta', '#0F5C4D', '#22B39A', '#FFE08A'], lavanda: ['💜 Lavanda', '#3F2A7A', '#9B6BFF', '#FFC6E5'],
   dorado: ['✨ Negro y oro', '#111111', '#3A2E1A', '#E9C46A'], cielo: ['🩵 Cielo', '#0B4F8A', '#3BA4F5', '#FFD166'] };
 const PL = { estrella: '⭐ Producto estrella', lista: '📋 Lista de precios', agenda: '📅 Agenda abierta', pedidos: '🛵 Pedidos abiertos' };
-let eplant = 'estrella', ecol = 'rosa', efoto = null;
+let eplant = 'estrella', ecol = 'rosa', efoto = null, eforma = leer('eforma', 'circulo');
+const FORMAS = { circulo: '⭕ Círculo', arco: '🌈 Arco', polaroid: '🖼️ Polaroid', fondo: '🌄 De fondo' };
 const cv = $('#ecv'), cx = cv.getContext('2d');
 function prepEstados() {
   $('#eplant').innerHTML = Object.entries(PL).map(([k, v]) => `<button class="chip ${k === eplant ? 'on' : ''}" data-k="${k}">${v}</button>`).join('');
@@ -315,10 +397,29 @@ function prepEstados() {
   const items = productos.length ? productos : EJ;
   const sel = $('#eprod').value; $('#eprod').innerHTML = items.map((p, i) => `<option value="${i}">${p.n} · ${money(p.p)}</option>`).join(''); if (sel) $('#eprod').value = sel;
   $('#eprodw').style.display = eplant === 'estrella' ? 'block' : 'none';
+  $('#eforma').innerHTML = Object.entries(FORMAS).map(([k, v]) => `<button class="chip ${k === eforma ? 'on' : ''}" data-k="${k}">${v}</button>`).join('');
+  $('#eforma').querySelectorAll('button').forEach((b) => b.onclick = () => { eforma = b.dataset.k; guardar('eforma', eforma); prepEstados(); });
   dibujar();
 }
 $('#eprod').onchange = dibujar; $('#etxt').oninput = dibujar;
-$('#efoto').onchange = (e) => { const f = e.target.files[0]; if (!f) return; const im = new Image(); im.onload = () => { efoto = im; dibujar(); }; im.src = URL.createObjectURL(f); };
+$('#efoto').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const b = await achicar(f), items = productos.length ? productos : EJ, pr = items[Number($('#eprod').value) || 0];
+  if (productos.length && pr) { await fotoSet(pr.n, b); toast('Foto guardada en ' + pr.n + ' 📷'); fotosCache[pr.n] = await blobImg(b); } else efoto = await blobImg(b);
+  e.target.value = ''; dibujar(); };
+function sombra(on) { cx.shadowColor = on ? 'rgba(0,0,0,.35)' : 'transparent'; cx.shadowBlur = on ? 40 : 0; cx.shadowOffsetY = on ? 16 : 0; }
+function cubrir(im, x, y, w, h) { const s = Math.max(w / im.width, h / im.height); cx.drawImage(im, x + (w - im.width * s) / 2, y + (h - im.height * s) / 2, im.width * s, im.height * s); }
+function fotoForma(im, cxm, cym, size, forma, ac) {   // foto más pequeña, nítida, con borde blanco y sombra
+  cx.save();
+  if (forma === 'polaroid') {
+    cx.translate(cxm, cym); cx.rotate(-0.05); sombra(true); pill(-size / 2 - 26, -size / 2 - 26, size + 52, size + 130, 18, '#fff'); sombra(false);
+    cx.beginPath(); cx.rect(-size / 2, -size / 2, size, size); cx.clip(); cubrir(im, -size / 2, -size / 2, size, size);
+  } else {
+    const path = () => { cx.beginPath(); if (forma === 'arco') { const w = size, h = size * 1.18, x = cxm - w / 2, y = cym - h / 2; cx.moveTo(x, y + h); cx.lineTo(x, y + w / 2); cx.arc(cxm, y + w / 2, w / 2, Math.PI, 0); cx.lineTo(x + w, y + h); cx.closePath(); } else cx.arc(cxm, cym, size / 2, 0, 7); };
+    sombra(true); cx.fillStyle = '#fff'; path(); cx.fill(); sombra(false);
+    cx.save(); path(); cx.clip(); const h = forma === 'arco' ? size * 1.18 : size; cubrir(im, cxm - size / 2, cym - h / 2, size, h); cx.restore();
+    path(); cx.lineWidth = 18; cx.strokeStyle = '#fff'; cx.stroke(); cx.lineWidth = 6; cx.strokeStyle = ac; cx.save(); cx.translate(cxm, cym); cx.scale(1.045, 1.045); cx.translate(-cxm, -cym); path(); cx.stroke(); cx.restore();
+  }
+  cx.restore();
+}
 const W = 1080, H = 1920;
 function wrap(t, x, y, maxW, lh, font, align = 'center') {
   cx.font = font; cx.textAlign = align; const ws = String(t).split(' '); let line = '', ys = [];
@@ -330,9 +431,10 @@ async function dibujar() {
   try { await document.fonts.load('800 80px Poppins'); } catch (e) {}
   const [, c1, c2, ac] = PAL[ecol], neg = $('#neg').value || leer('neg', '') || 'Mi negocio', tel = $('#tel').value || leer('tel', ''), extra = $('#etxt').value.trim();
   const items = productos.length ? productos : EJ, pr = items[Number($('#eprod').value) || 0] || items[0];
+  const foto = (eplant === 'estrella' && productos.length ? await fotoImg(pr.n) : null) || efoto, deFondo = foto && eforma === 'fondo';
+  const thumbs = eplant === 'lista' ? await Promise.all(items.slice(0, 9).map((it) => productos.length ? fotoImg(it.n) : null)) : [];
   const g = cx.createLinearGradient(0, 0, W, H); g.addColorStop(0, c1); g.addColorStop(1, c2); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
-  if (efoto) { const s = Math.max(W / efoto.width, H / efoto.height); cx.globalAlpha = eplant === 'estrella' ? 1 : .35;
-    cx.drawImage(efoto, (W - efoto.width * s) / 2, (H - efoto.height * s) / 2, efoto.width * s, efoto.height * s); cx.globalAlpha = 1;
+  if (deFondo) { cx.globalAlpha = eplant === 'estrella' ? 1 : .35; cubrir(foto, 0, 0, W, H); cx.globalAlpha = 1;
     const sh = cx.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(.45, 'rgba(0,0,0,.05)'); sh.addColorStop(1, 'rgba(0,0,0,.75)'); cx.fillStyle = sh; cx.fillRect(0, 0, W, H); }
   else { cx.fillStyle = 'rgba(255,255,255,.07)'; [[160, 300, 260], [950, 1500, 330], [900, 250, 140]].forEach(([x, y, r]) => { cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); }); }
   cx.fillStyle = '#fff'; cx.textAlign = 'center';
@@ -342,17 +444,26 @@ async function dibujar() {
     if (tel) { cx.fillStyle = '#fff'; cx.font = '600 42px Poppins'; cx.fillText('📲 ' + tel, W / 2, H - 120); } };
   if (eplant === 'estrella') {
     cx.fillStyle = ac; cx.font = '800 54px Poppins'; cx.fillText('✨ DISPONIBLE HOY ✨', W / 2, 400);
-    cx.fillStyle = '#fff'; const yEnd = wrap(pr.n, W / 2, efoto ? 520 : 760, 900, 130, '800 118px Poppins');
-    const cy = efoto ? H - 620 : Math.max(yEnd + 230, 1200);
-    cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2, cy, 190, 0, 7); cx.fill();
-    cx.fillStyle = c1; cx.font = '800 112px Poppins'; cx.fillText(money(pr.p), W / 2, cy + 38);
-    if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, cy + 290, 880, 60, '600 46px Poppins'); }
+    if (foto && !deFondo) {   // foto en forma + precio en sello encima
+      const yEnd = wrap(pr.n, W / 2, 530, 920, 104, '800 96px Poppins'), fy = Math.max(yEnd + 330, 1000);
+      fotoForma(foto, W / 2, fy, 620, eforma, ac);
+      sombra(true); cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2 + 270, fy + 250, 145, 0, 7); cx.fill(); sombra(false);
+      cx.fillStyle = c1; cx.font = '800 80px Poppins'; cx.textAlign = 'center'; cx.fillText(money(pr.p), W / 2 + 270, fy + 278);
+      if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, fy + 480, 880, 56, '600 44px Poppins'); }
+    } else {
+      cx.fillStyle = '#fff'; const yEnd = wrap(pr.n, W / 2, deFondo ? 520 : 760, 900, 130, '800 118px Poppins');
+      const cy = deFondo ? H - 620 : Math.max(yEnd + 230, 1200);
+      cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2, cy, 190, 0, 7); cx.fill();
+      cx.fillStyle = c1; cx.font = '800 112px Poppins'; cx.fillText(money(pr.p), W / 2, cy + 38);
+      if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, cy + 290, 880, 60, '600 46px Poppins'); }
+    }
     pie('Escríbeme y te lo aparto 💕');
   } else if (eplant === 'lista') {
     cx.fillStyle = ac; cx.font = '800 96px Poppins'; cx.fillText('Lista de precios', W / 2, 400);
     const L = items.slice(0, 9), h = Math.min(130, 900 / L.length); let y = 520;
-    for (const it of L) { pill(110, y, W - 220, h - 22, 28, 'rgba(255,255,255,.16)'); cx.fillStyle = '#fff'; cx.font = `600 ${Math.round(h * .36)}px Poppins`; cx.textAlign = 'left';
-      cx.fillText(it.n.length > 24 ? it.n.slice(0, 23) + '…' : it.n, 150, y + h * .52); cx.textAlign = 'right'; cx.fillStyle = ac; cx.font = `800 ${Math.round(h * .4)}px Poppins`; cx.fillText(money(it.p), W - 150, y + h * .54); y += h; }
+    for (const [i, it] of L.entries()) { pill(110, y, W - 220, h - 22, 28, 'rgba(255,255,255,.16)'); cx.fillStyle = '#fff'; cx.font = `600 ${Math.round(h * .36)}px Poppins`; cx.textAlign = 'left';
+      let tx = 150; if (thumbs[i]) { const r = (h - 40) / 2; cx.save(); cx.beginPath(); cx.arc(150 + r, y + (h - 22) / 2, r, 0, 7); cx.clip(); cubrir(thumbs[i], 150, y + (h - 22) / 2 - r, r * 2, r * 2); cx.restore(); tx = 150 + r * 2 + 22; }
+      cx.fillText(it.n.length > 22 ? it.n.slice(0, 21) + '…' : it.n, tx, y + h * .52); cx.textAlign = 'right'; cx.fillStyle = ac; cx.font = `800 ${Math.round(h * .4)}px Poppins`; cx.fillText(money(it.p), W - 150, y + h * .54); y += h; }
     cx.textAlign = 'center'; if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, y + 70, 880, 58, '600 44px Poppins'); }
     pie('Haz tu pedido 💕');
   } else if (eplant === 'agenda') {
@@ -380,15 +491,17 @@ $('#esave').onclick = async () => { const a = document.createElement('a'); a.hre
 // ajustes: copia de seguridad (todo vive en este teléfono)
 const vista = (v) => { document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v)); document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v)); window.scrollTo(0, 0); };
 $('#cfgb').onclick = () => vista('ajustes'); $('#volver').onclick = () => vista('precio');
-$('#bak').onclick = () => {
-  const data = { app: 'la-jefa', fecha: new Date().toISOString(), productos, deudas, neg: $('#neg').value, tel: $('#tel').value };
+$('#bak').onclick = async () => {
+  const fotos = {}; for (const p of productos) { const b = await fotoGet(p.n); if (b) fotos[p.n] = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }); }
+  const data = { app: 'la-jefa', fecha: new Date().toISOString(), productos, deudas, clientas, fotos, neg: $('#neg').value, tel: $('#tel').value };
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
   a.download = `la-jefa-copia-${new Date().toISOString().slice(0, 10)}.json`; a.click(); toast('Copia guardada en tus descargas 💾');
 };
 $('#res-file').onchange = async (e) => {
   try { const d = JSON.parse(await e.target.files[0].text()); if (d.app !== 'la-jefa') throw 0;
-    productos = d.productos || []; deudas = d.deudas || []; guardar('productos', productos); guardar('deudas', deudas); guardar('neg', d.neg || ''); guardar('tel', d.tel || '');
-    $('#neg').value = d.neg || ''; $('#tel').value = d.tel || ''; pintarMisProd(); pintarDeudas(); toast('¡Todo restaurado! 👑'); vista('precio');
+    productos = d.productos || []; deudas = d.deudas || []; clientas = d.clientas || []; guardar('clientas', clientas);
+    for (const [k, u] of Object.entries(d.fotos || {})) await fotoSet(k, await (await fetch(u)).blob()); guardar('productos', productos); guardar('deudas', deudas); guardar('neg', d.neg || ''); guardar('tel', d.tel || '');
+    $('#neg').value = d.neg || ''; $('#tel').value = d.tel || ''; pintarMisProd(); pintarDeudas(); pintarClientas(); toast('¡Todo restaurado! 👑'); vista('precio');
   } catch (err) { toast('Ese archivo no es una copia de La Jefa'); }
 };
 const ios = /iphone|ipad/i.test(navigator.userAgent);
