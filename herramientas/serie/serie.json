@@ -1,0 +1,86 @@
+{
+  "nombre": "Cumple tus metas",
+  "cuenta": "@pixelia.digitalstore",
+  "partes": [
+    {
+      "n": 1,
+      "gancho": ["3 trucos para", "no abandonar", "tus metas"], "sub": "(el #3 casi nadie lo hace)",
+      "voz_gancho": "Tres trucos para no abandonar tus metas… y el tercero casi nadie lo hace.",
+      "trucos": [
+        {"emoji": "⏱️", "titulo": "Regla de los 2 minutos", "texto": "¿Te da flojera? Hazlo solo 2 minutos. Empezar es lo difícil.", "visual": "timer",
+         "voz": "Uno: la regla de los dos minutos. ¿Te da flojera? Hazlo solo dos minutos. Lo difícil es empezar."},
+        {"emoji": "⛓️", "titulo": "No rompas la cadena", "texto": "Marca cada día que cumples. Después te va a doler romper la racha.", "visual": "hoja",
+         "voz": "Dos: no rompas la cadena. Marca cada día que cumples… y vas a ver que después te duele romper la racha."},
+        {"emoji": "🚫", "titulo": "Nunca falles 2 días seguidos", "texto": "Fallar uno es humano. Fallar dos es el inicio del abandono.", "visual": "calendario",
+         "voz": "Y tres: nunca falles dos días seguidos. Fallar uno es humano… fallar dos es el inicio del abandono."}
+      ],
+      "pregunta": "¿Qué meta abandonas siempre? 👇",
+      "voz_cierre": "Esta es la parte uno de cinco. ¡Síguenos para la dos! Y cuéntanos: ¿qué meta abandonas siempre?",
+      "copy": "3 trucos para no abandonar tus metas 🔥 (el #3 casi nadie lo hace)\n\n1️⃣ Regla de los 2 minutos\n2️⃣ No rompas la cadena\n3️⃣ Nunca falles 2 días seguidos\n\n👉 Parte 1 de 5 · Síguenos para la 2\n💬 ¿Qué meta abandonas siempre?\n\n🎁 Tu Reto 30 Días GRATIS en el link del perfil\n#metas #habitos #productividad #motivacion #disciplina"
+    },
+    {
+      "n": 2,
+      "gancho": ["Por qué abandonas", "tus metas", "a la semana"], "sub": "(y no es flojera)",
+      "voz_gancho": "¿Por qué abandonas tus metas a la semana? Spoiler: no es flojera.",
+      "trucos": [
+        {"emoji": "🐜", "titulo": "Son demasiado grandes", "texto": "Hazlas ridículamente pequeñas: 1 página, 1 vaso, 1 flexión.", "visual": "icono",
+         "voz": "Uno: son demasiado grandes. Hazlas ridículamente pequeñas: una página, un vaso, una flexión."},
+        {"emoji": "👀", "titulo": "No las ves", "texto": "Lo que no está a la vista, se olvida. Ponlas donde las mires cada día.", "visual": "icono",
+         "voz": "Dos: no las ves. Lo que no está a la vista, se olvida. Ponlas donde las mires todos los días."},
+        {"emoji": "🎉", "titulo": "No celebras", "texto": "Cada ✓ cuenta. Tu cerebro repite lo que se siente bien.", "visual": "hoja",
+         "voz": "Tres: no celebras. Cada check cuenta… tu cerebro repite lo que se siente bien."}
+      ],
+      "pregunta": "¿Cuál de las 3 te pasa a ti? 👇",
+      "voz_cierre": "Parte dos de cinco. ¡Síguenos para la tres! ¿Cuál de las tres te pasa a ti?",
+      "copy": "Por qué abandonas tus metas a la semana (y no es flojera) 🫠\n\n1️⃣ Son demasiado grandes\n2️⃣ No las ves\n3️⃣ No celebras\n\n👉 Parte 2 de 5 · Síguenos para la 3\n💬 ¿Cuál te pasa a ti?\n\n🎁 Reto 30 Días GRATIS en el link del perfil\n#metas #habitos #productividad #motivacion"
+    },
+    {
+      "n": 3,
+      "gancho": ["La frase que", "duplica tus", "ganas de cumplir"], "sub": "(está comprobado)",
+      "voz_gancho": "Hay una frase que hace mucho más probable que cumplas tus metas. Y está comprobado.",
+      "trucos": [
+        {"emoji": "❌", "titulo": "\"Voy a leer más\"", "texto": "Así no. Es un deseo, no un plan.", "visual": "icono",
+         "voz": "Si dices: voy a leer más… eso es un deseo, no un plan."},
+        {"emoji": "✅", "titulo": "\"Leo 10 páginas después del café\"", "texto": "Cuándo + dónde + cuánto. Tu cerebro ya sabe qué hacer.", "visual": "icono",
+         "voz": "En cambio: leo diez páginas después del café. Cuándo, dónde y cuánto. Tu cerebro ya sabe qué hacer."},
+        {"emoji": "📝", "titulo": "Escríbelo", "texto": "Al lado de cada meta: ¿cuándo lo hago?", "visual": "hoja",
+         "voz": "Escríbelo al lado de cada meta: ¿cuándo lo hago?"}
+      ],
+      "pregunta": "Escribe tu frase aquí 👇",
+      "voz_cierre": "Parte tres de cinco. ¡Síguenos para la cuatro! Y escribe tu frase en los comentarios.",
+      "copy": "La frase que hace que SÍ cumplas tus metas 🔥\n\n❌ \"Voy a leer más\"\n✅ \"Leo 10 páginas después del café\"\nCuándo + dónde + cuánto.\n\n👉 Parte 3 de 5 · Síguenos para la 4\n💬 Escribe tu frase en los comentarios\n\n🎁 Reto 30 Días GRATIS en el link del perfil\n#metas #habitos #productividad"
+    },
+    {
+      "n": 4,
+      "gancho": ["Fallaste un día.", "Ahora qué?"], "sub": "(no esperes al lunes)",
+      "voz_gancho": "Fallaste un día. ¿Y ahora qué? Por favor, no esperes al lunes.",
+      "trucos": [
+        {"emoji": "🙅", "titulo": "No esperes al lunes", "texto": "El \"empiezo el lunes\" es el que mata tus metas.", "visual": "calendario",
+         "voz": "Uno: no esperes al lunes. El famoso empiezo el lunes es el que mata tus metas."},
+        {"emoji": "🤏", "titulo": "Haz la versión mínima", "texto": "¿No puedes 5 horas? Haz 30 minutos. Cuenta igual.", "visual": "hoja",
+         "voz": "Dos: haz la versión mínima. ¿No puedes cinco horas? Haz treinta minutos. Cuenta igual."},
+        {"emoji": "💛", "titulo": "Sin culpa", "texto": "Un mal día no borra 10 buenos.", "visual": "icono",
+         "voz": "Y tres: sin culpa. Un mal día no borra diez buenos."}
+      ],
+      "pregunta": "¿Cuántas veces has \"empezado el lunes\"? 😅",
+      "voz_cierre": "Parte cuatro de cinco. ¡Síguenos para la última! ¿Cuántas veces has empezado el lunes?",
+      "copy": "Fallaste un día. ¿Y ahora qué? 😅\n\n1️⃣ No esperes al lunes\n2️⃣ Haz la versión mínima\n3️⃣ Sin culpa: un mal día no borra 10 buenos\n\n👉 Parte 4 de 5 · Síguenos para la última\n💬 ¿Cuántas veces has \"empezado el lunes\"?\n\n🎁 Reto 30 Días GRATIS en el link del perfil\n#metas #habitos #motivacion"
+    },
+    {
+      "n": 5,
+      "gancho": ["Mide esto", "y no vuelves", "a abandonar"], "sub": "(el truco final)",
+      "voz_gancho": "Mide esto… y no vuelves a abandonar una meta.",
+      "trucos": [
+        {"emoji": "🔥", "titulo": "Tu racha", "texto": "Ver los días seguidos te da ganas de no romperla.", "visual": "hoja",
+         "voz": "Uno: tu racha. Ver los días seguidos te da ganas de no romperla."},
+        {"emoji": "📦", "titulo": "Cuánto llevas", "texto": "\"84 de 150 horas\" motiva más que un ✓.", "visual": "icono",
+         "voz": "Dos: cuánto llevas. Ochenta y cuatro de ciento cincuenta horas motiva más que un simple check."},
+        {"emoji": "🎁", "titulo": "Te lo regalamos", "texto": "El Reto 30 Días mide todo solo. Gratis en el perfil.", "visual": "hoja",
+         "voz": "Y tres: te lo regalamos. El Reto treinta días mide todo solo. Está gratis en el link del perfil."}
+      ],
+      "pregunta": "¿Empiezas hoy? Comenta RETO 👇",
+      "voz_cierre": "¡Esa fue la última parte! Comenta RETO y empieza hoy. Y síguenos, que viene una serie nueva.",
+      "copy": "Mide esto y no vuelves a abandonar una meta 🔥\n\n1️⃣ Tu racha\n2️⃣ Cuánto llevas\n3️⃣ … y te lo regalamos: Reto 30 Días GRATIS\n\n👉 Parte 5 de 5 · Síguenos: viene una serie nueva\n💬 Comenta RETO y te lo pasamos\n\n🎁 Link en el perfil: pixeliadigital.app/reto\n#reto #reto30dias #metas #habitos"
+    }
+  ]
+}
