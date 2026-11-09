@@ -510,7 +510,6 @@ async function dibujar() {
     cx.fillStyle = '#fff'; wrap(extra, W / 2, 1260, 880, 64, '600 50px Poppins');
     pie(V.boton);
   }
-  cx.fillStyle = 'rgba(255,255,255,.55)'; cx.font = '600 26px Poppins'; cx.textAlign = 'center'; cx.fillText('Hecho con La Jefa 👑', W / 2, H - 40);
 }
 const blobEstado = () => new Promise((r) => cv.toBlob(r, 'image/jpeg', .92));
 $('#eshare').onclick = async () => {
