@@ -18,7 +18,7 @@ header{background:linear-gradient(135deg,var(--vino),var(--rosa));color:#fff;pad
 header h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
 header{position:relative}.cfg{position:absolute;right:14px;top:18px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%}
 .aviso{background:#FFF1C7;border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px}
-header p{opacity:.9;font-size:14px}
+header p{opacity:.9;font-size:14px;max-width:calc(100% - 110px)}
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:#fff;border-radius:20px;padding:18px;box-shadow:0 6px 20px rgba(122,24,70,.08);margin-bottom:14px}
 h2{font-size:18px;margin-bottom:10px}
@@ -62,7 +62,7 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 </style>
 </head>
 <body>
-<header><h1>👑 La Jefa</h1><p>Tu negocio desde casa: precios, clientas y cobros.</p><button class="cfg" id="cfgb" aria-label="Ajustes">⚙️</button></header>
+<header><h1>👑 La Jefa</h1><p>Tu negocio desde casa: precios, clientas y cobros.</p><button class="cfg" id="cfgb" aria-label="Ajustes">⚙️</button><button id="monb" style="position:absolute;right:64px;top:22px;background:rgba(255,255,255,.2);border:none;color:#fff;font:inherit;font-size:13px;font-weight:600;padding:8px 12px;border-radius:999px"></button></header>
 <div class="wrap">
 
 <!-- 1. DETECTOR -->
@@ -72,14 +72,14 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
   <div class="card">
     <h2>💰 ¿Cuánto ganas de verdad?</h2>
     <label>¿Qué vendes?</label><input id="prod" value="Torta de chocolate">
-    <label>¿A cuánto lo cobras? ($)</label><input id="cobro" type="number" step="0.5" value="15">
+    <label>¿A cuánto lo cobras? (<span class="sym"></span>)</label><input id="cobro" type="number" step="any" value="15">
     <label>¿Cómo lo consigues?</label>
     <div class="chips"><button class="chip on" data-modo="hago">🧁 Lo hago yo</button><button class="chip" data-modo="revendo">🛍️ Lo compro y revendo</button></div>
     <label id="lcostos">Lo que te cuesta hacerlo</label>
     <div id="costos"></div>
     <button class="btn sec" id="addc">+ Agregar gasto</button>
     <label id="lhoras">¿Cuánto tiempo te lleva? (horas)</label><input id="horas" type="number" step="0.25" value="2">
-    <label>¿Cuánto vale tu hora? ($) <span class="mini">— tu tiempo también cuesta, jefa</span></label><input id="vhora" type="number" step="0.5" value="2">
+    <label>¿Cuánto vale tu hora? (<span class="sym"></span>) <span class="mini">— tu tiempo también cuesta, jefa</span></label><input id="vhora" type="number" step="any" value="2">
     <button class="btn" id="calc">Dime la verdad 👀</button>
   </div>
   <div id="res"></div>
@@ -87,6 +87,11 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 
 <!-- ajustes -->
 <section class="vista" id="v-ajustes">
+  <div class="card">
+    <h2>💱 Tu moneda</h2>
+    <p class="mini">¿En qué moneda vendes? Todo se muestra en esa moneda (precios, lista, estados y cobros).</p>
+    <select id="moneda" style="margin-top:8px"></select>
+  </div>
   <div class="card">
     <h2>⚙️ Tu información</h2>
     <p class="mini">Todo se guarda en ESTE teléfono. Si cambias de teléfono o borras el navegador, usa la copia de seguridad.</p>
@@ -104,7 +109,7 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
     <label>Nombre de tu negocio</label><input id="neg" placeholder="Dulces de Mari">
     <label>Tu WhatsApp (para que te pidan)</label><input id="tel" placeholder="+58 412 000 0000">
     <p class="mini" style="margin-top:8px">Lo que calculas en 💰 entra aquí solo. También puedes agregar algo directo:</p>
-    <div class="row" style="margin-top:6px"><input id="qn" placeholder="Ej: Quesillo"><input id="qp" class="m" type="number" step="0.5" placeholder="$"><button class="x" id="qadd" style="background:var(--rosa);color:#fff">+</button></div>
+    <div class="row" style="margin-top:6px"><input id="qn" placeholder="Ej: Quesillo"><input id="qp" class="m" type="number" step="any" placeholder="$"><button class="x" id="qadd" style="background:var(--rosa);color:#fff">+</button></div>
     <div id="editlista" style="margin-top:10px"></div>
   </div>
   <div class="lista" id="tarjeta"></div>
@@ -163,7 +168,7 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
     <h2>💸 Quién te debe</h2>
     <div id="deudas"></div>
     <label>Nombre</label><input id="dn" placeholder="Carla">
-    <label>¿Cuánto te debe? ($)</label><input id="dq" type="number" step="0.5" placeholder="12">
+    <label>¿Cuánto te debe? (<span class="sym"></span>)</label><input id="dq" type="number" step="any">
     <button class="btn sec" id="addd">+ Anotar</button>
   </div>
   <div class="card">
@@ -188,7 +193,23 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 
 <script>
 const $ = (s) => document.querySelector(s);
-const money = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2).replace('.00', '');
+// 💱 moneda según el país (se elige en ⚙️; la primera vez se adivina por la zona horaria del teléfono)
+const MONEDAS = {
+  USD: ['🇺🇸', 'Dólar (USD)', '$', 'en-US', 2, .5, 1], VES: ['🇻🇪', 'Bolívar (Bs)', 'Bs ', 'es-VE', 2, 5, 300], COP: ['🇨🇴', 'Peso colombiano (COP)', '$', 'es-CO', 0, 500, 4000],
+  MXN: ['🇲🇽', 'Peso mexicano (MXN)', '$', 'es-MX', 2, 5, 18], PEN: ['🇵🇪', 'Sol (S/)', 'S/ ', 'es-PE', 2, .5, 3.7], CLP: ['🇨🇱', 'Peso chileno (CLP)', '$', 'es-CL', 0, 100, 950],
+  ARS: ['🇦🇷', 'Peso argentino (ARS)', '$', 'es-AR', 0, 100, 1200], EUR: ['🇪🇸', 'Euro (€)', '€', 'es-ES', 2, .5, .9], GTQ: ['🇬🇹', 'Quetzal (Q)', 'Q', 'es-GT', 2, 1, 7.7],
+  DOP: ['🇩🇴', 'Peso dominicano (RD$)', 'RD$', 'es-DO', 0, 10, 60], BOB: ['🇧🇴', 'Boliviano (Bs)', 'Bs ', 'es-BO', 2, 1, 6.9], CRC: ['🇨🇷', 'Colón (₡)', '₡', 'es-CR', 0, 100, 510],
+  HNL: ['🇭🇳', 'Lempira (L)', 'L ', 'es-HN', 2, 5, 26], NIO: ['🇳🇮', 'Córdoba (C$)', 'C$', 'es-NI', 2, 5, 37], PYG: ['🇵🇾', 'Guaraní (₲)', '₲', 'es-PY', 0, 1000, 7500],
+  UYU: ['🇺🇾', 'Peso uruguayo ($U)', '$U ', 'es-UY', 0, 10, 40] };
+const ZONA = { Caracas: 'VES', Bogota: 'COP', Mexico_City: 'MXN', Monterrey: 'MXN', Cancun: 'MXN', Tijuana: 'MXN', Lima: 'PEN', Santiago: 'CLP', Buenos_Aires: 'ARS', Madrid: 'EUR',
+  Guatemala: 'GTQ', Santo_Domingo: 'DOP', La_Paz: 'BOB', Costa_Rica: 'CRC', Tegucigalpa: 'HNL', Managua: 'NIO', Asuncion: 'PYG', Montevideo: 'UYU' };
+let MON = (() => { let m; try { m = JSON.parse(localStorage.getItem('jefa-moneda')); } catch (e) {} if (m && MONEDAS[m]) return m;
+  let z = ''; try { z = Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop(); } catch (e) {} return ZONA[z] || 'USD'; })();
+const money = (n) => { const [, , sym, loc, dec] = MONEDAS[MON], v = Number(n) || 0, ent = Math.abs(v - Math.round(v)) < 1e-9;
+  let t; try { t = new Intl.NumberFormat(loc, { minimumFractionDigits: ent ? 0 : dec, maximumFractionDigits: dec }).format(v); } catch (e) { t = v.toFixed(ent ? 0 : dec); }
+  return sym + t; };
+const redondeo = (x) => { const r = MONEDAS[MON][5]; return Math.ceil(x / r) * r; };
+const FX = () => MONEDAS[MON][6];
 const guardar = (k, v) => { try { localStorage.setItem('jefa-' + k, JSON.stringify(v)); } catch (e) {} };
 const leer = (k, d) => { try { return JSON.parse(localStorage.getItem('jefa-' + k)) ?? d; } catch (e) { return d; } };
 const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); };
@@ -214,9 +235,11 @@ document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
 });
 
 // 1. detector
-let costos = [['Harina', 1.2], ['Huevos', 1.5], ['Chocolate', 4], ['Azúcar', .8], ['Mantequilla', 2.5], ['Gas y luz', 1], ['Caja y empaque', 1.5]];
+const COSTOS_EJ = [['Harina', 1.2], ['Huevos', 1.5], ['Chocolate', 4], ['Azúcar', .8], ['Mantequilla', 2.5], ['Gas y luz', 1], ['Caja y empaque', 1.5]];
+const ajustar = (v) => { const f = FX(), x = v * f; return f >= 100 ? Math.round(x / 50) * 50 : f > 5 ? Math.round(x) : Math.round(x * 10) / 10; };
+let costos = COSTOS_EJ.map(([n, v]) => [n, ajustar(v)]);
 function pintarCostos() {
-  $('#costos').innerHTML = costos.map((c, i) => `<div class="row" style="margin-top:6px"><input value="${c[0]}" data-i="${i}" data-k="0"><input class="m" type="number" step="0.1" value="${c[1]}" data-i="${i}" data-k="1"><button class="x" data-del="${i}">×</button></div>`).join('');
+  $('#costos').innerHTML = costos.map((c, i) => `<div class="row" style="margin-top:6px"><input value="${c[0]}" data-i="${i}" data-k="0"><input class="m" type="number" step="any" value="${c[1]}" data-i="${i}" data-k="1"><button class="x" data-del="${i}">×</button></div>`).join('');
   $('#costos').querySelectorAll('input').forEach((el) => el.oninput = () => { costos[el.dataset.i][el.dataset.k] = el.dataset.k === '1' ? Number(el.value) : el.value; });
   $('#costos').querySelectorAll('[data-del]').forEach((el) => el.onclick = () => { costos.splice(el.dataset.del, 1); pintarCostos(); });
 }
@@ -243,7 +266,7 @@ if (!productos.length) { $('#instalar').style.display = 'block'; $('#instalar').
 $('#calc').onclick = () => {
   const cobro = Number($('#cobro').value) || 0, tiempo = (Number($('#horas').value) || 0) * (Number($('#vhora').value) || 0);
   const mat = costos.reduce((s, c) => s + (Number(c[1]) || 0), 0), total = mat + tiempo, dif = cobro - total;
-  const justo = Math.ceil(total * 1.3 * 2) / 2;   // 30% de ganancia, redondeado a 0,50
+  const justo = redondeo(total * 1.3);   // 30% de ganancia, redondeado según la moneda
   const nombre = $('#prod').value || 'tu producto';
   $('#res').innerHTML = `
     <div class="veredicto ${dif < 0 ? 'pierde' : 'gana'}">
@@ -260,7 +283,7 @@ $('#calc').onclick = () => {
       <p class="mini">Con ese precio ganas ${money(justo - total)} por venta, ya pagado tu tiempo.</p>
       <label>¿A cuánto lo vas a vender tú?</label>
       <div class="chips" style="margin-bottom:8px"><button class="chip" data-pv="${justo}">👑 Precio justo ${money(justo)}</button>${cobro ? `<button class="chip" data-pv="${cobro}">Lo que cobro hoy ${money(cobro)}</button>` : ''}</div>
-      <input id="pv" type="number" step="0.5" value="${justo}">
+      <input id="pv" type="number" step="any" value="${justo}">
       <p id="pvres" style="font-weight:800;margin-top:8px"></p>
       <button class="btn" id="usar">📋 Guardar en mi lista</button>
       <button class="btn sec" id="otro" style="display:none">➕ Calcular otro producto</button>
@@ -280,10 +303,11 @@ $('#calc').onclick = () => {
 };
 
 // 2. lista
-const EJ = [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+const EJ_BASE = [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+let EJ = EJ_BASE.map((x) => ({ ...x, p: redondeo(x.p * FX()) }));
 function pintarLista() {
   const items = productos.length ? productos : EJ;
-  $('#editlista').innerHTML = productos.length ? productos.map((p, i) => `<div class="deuda"><span class="row" style="gap:8px"><img data-th="${i}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#F7E4EC"><span>${p.n}</span></span><span class="row" style="gap:6px"><label class="x" style="display:flex;align-items:center;justify-content:center;margin:0">📷<input type="file" accept="image/*" data-ef="${i}" hidden></label><input class="m" type="number" step="0.5" value="${p.p}" data-ep="${i}" style="width:90px"><button class="x" data-ed="${i}">×</button></span></div>`).join('')
+  $('#editlista').innerHTML = productos.length ? productos.map((p, i) => `<div class="deuda"><span class="row" style="gap:8px"><img data-th="${i}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#F7E4EC"><span>${p.n}</span></span><span class="row" style="gap:6px"><label class="x" style="display:flex;align-items:center;justify-content:center;margin:0">📷<input type="file" accept="image/*" data-ef="${i}" hidden></label><input class="m" type="number" step="any" value="${p.p}" data-ep="${i}" style="width:90px"><button class="x" data-ed="${i}">×</button></span></div>`).join('')
     : '<p class="mini">👇 Así se verá (es un ejemplo). Agrega tus productos y aparecen aquí.</p>';
   $('#editlista').querySelectorAll('[data-ep]').forEach((el) => el.onchange = () => { productos[el.dataset.ep].p = Number(el.value) || 0; guardar('productos', productos); pintarMisProd(); pintarLista(); });
   $('#editlista').querySelectorAll('[data-th]').forEach(async (el) => { const im = await fotoImg(productos[el.dataset.th].n); if (im) el.src = im.src; });
@@ -348,7 +372,7 @@ function pintarDetalle() {
     ${(c.compras || []).slice(-6).reverse().map((x) => `<div class="det"><span>${x.f.split('-').reverse().join('/')} · ${x.d}</span><span>${money(x.m)}${x.debe ? ' ⏳' : ''}</span></div>`).join('')}
     <label>Anotar compra</label>
     <select id="cprod"><option value="">— Elige producto —</option>${items.map((p, i) => `<option value="${i}">${p.n} · ${money(p.p)}</option>`).join('')}<option value="otro">Otro…</option></select>
-    <div class="row" style="margin-top:6px"><input id="cdesc" placeholder="¿Qué compró?"><input id="cmonto" class="m" type="number" step="0.5" placeholder="$"></div>
+    <div class="row" style="margin-top:6px"><input id="cdesc" placeholder="¿Qué compró?"><input id="cmonto" class="m" type="number" step="any" placeholder="$"></div>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="cdebe" style="width:auto"> Quedó debiendo (va a 💸 Me deben)</label>
     <button class="btn" id="ccomp">+ Anotar compra</button>
     ${c.tel ? `<a class="btn wa" style="text-align:center;text-decoration:none" target="_blank" href="https://wa.me/${digitos(c.tel)}?text=${encodeURIComponent('¡Hola, ' + c.n.split(' ')[0] + '! 💕')}">💬 Escribirle por WhatsApp</a>` : ''}
@@ -520,6 +544,19 @@ $('#eshare').onclick = async () => {
 $('#esave').onclick = async () => { const a = document.createElement('a'); a.href = URL.createObjectURL(await blobEstado()); a.download = `estado-${eplant}.jpg`; a.click(); toast('Imagen guardada 🎨'); };
 
 // ajustes: copia de seguridad (todo vive en este teléfono)
+function pintarMoneda() {
+  $('#moneda').innerHTML = Object.entries(MONEDAS).map(([k, v]) => `<option value="${k}" ${k === MON ? 'selected' : ''}>${v[0]} ${v[1]}</option>`).join('');
+  $('#monb').textContent = MONEDAS[MON][0] + ' ' + MONEDAS[MON][2].trim();
+  document.querySelectorAll('.sym').forEach((e) => e.textContent = MONEDAS[MON][2].trim());
+  ['#qp', '#cmonto'].forEach((k) => { const el = document.querySelector(k); if (el) el.placeholder = MONEDAS[MON][2].trim(); });
+}
+function ejemploMoneda() {   // si todavía no tiene productos, el ejemplo se pasa a su moneda
+  EJ = EJ_BASE.map((x) => ({ ...x, p: redondeo(x.p * FX()) }));
+  if (!productos.length) { costos = COSTOS_EJ.map(([n, v]) => [n, ajustar(v)]); $('#cobro').value = ajustar(15); $('#vhora').value = ajustar(2); pintarCostos(); $('#res').innerHTML = ''; }
+}
+$('#moneda').onchange = () => { MON = $('#moneda').value; guardar('moneda', MON); ejemploMoneda(); pintarMoneda(); pintarMisProd(); pintarLista(); pintarDeudas(); pintarClientas(); toast('Moneda: ' + MONEDAS[MON][1] + ' ✅'); };
+$('#monb').onclick = () => vista('ajustes');
+ejemploMoneda(); pintarMoneda();
 const vista = (v) => { document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v)); document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v)); window.scrollTo(0, 0); };
 $('#cfgb').onclick = () => vista('ajustes'); $('#volver').onclick = () => vista('precio');
 $('#bak').onclick = async () => {
