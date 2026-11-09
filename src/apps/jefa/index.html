@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Jefa 👑</title>
+<link rel="manifest" href="/app/jefa/manifest.webmanifest?k={{LIC}}">
+<meta name="theme-color" content="#E8337A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Jefa">
+<link rel="apple-touch-icon" href="/img/app-jefa-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--rosa:#E8337A;--vino:#7A1846;--oro:#F5B83D;--crema:#FFF6EE;--tinta:#2B1630;--verde:#16A34A;--rojo:#DC2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Poppins,system-ui,sans-serif;background:var(--crema);color:var(--tinta);min-height:100vh;padding-bottom:84px}
+header{background:linear-gradient(135deg,var(--vino),var(--rosa));color:#fff;padding:22px 18px 26px;border-radius:0 0 26px 26px}
+header h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
+header{position:relative}.cfg{position:absolute;right:14px;top:18px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%}
+.aviso{background:#FFF1C7;border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px}
+header p{opacity:.9;font-size:14px}
+.wrap{max-width:480px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:20px;padding:18px;box-shadow:0 6px 20px rgba(122,24,70,.08);margin-bottom:14px}
+h2{font-size:18px;margin-bottom:10px}
+label{font-size:13px;font-weight:600;display:block;margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:11px 12px;border:2px solid #F0DDE6;border-radius:12px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rosa)}
+.row{display:flex;gap:8px;align-items:center}
+.row input{flex:1}.row .m{width:90px;flex:none}
+.x{border:none;background:#F7E4EC;color:var(--vino);border-radius:10px;width:38px;height:42px;font-size:18px}
+.btn{display:block;width:100%;border:none;border-radius:14px;padding:14px;font:inherit;font-weight:800;font-size:16px;background:var(--rosa);color:#fff;margin-top:12px}
+.btn.sec{background:#F7E4EC;color:var(--vino)}
+.btn.wa{background:#25D366}
+.veredicto{border-radius:20px;padding:20px;text-align:center;color:#fff;margin-bottom:14px;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.veredicto.pierde{background:linear-gradient(135deg,#B91C1C,#EF4444)}
+.veredicto.gana{background:linear-gradient(135deg,#15803D,#22C55E)}
+.veredicto .big{font-size:34px;font-weight:800;line-height:1.1;margin:6px 0}
+.veredicto small{opacity:.92}
+@keyframes pop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+.det{font-size:14px;display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #F0DDE6}
+.det b{font-weight:800}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -4px 18px rgba(0,0,0,.08);padding:6px 4px env(safe-area-inset-bottom)}
+nav button{flex:1;border:none;background:none;font:inherit;font-size:11px;padding:6px 0;color:#9b7f90;border-radius:12px}
+nav button span{display:block;font-size:22px}
+nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
+.vista{display:none}.vista.on{display:block}
+.lista{background:linear-gradient(160deg,var(--vino),var(--rosa));color:#fff;border-radius:24px;padding:24px 20px;text-align:center}
+.lista h3{font-size:24px;font-weight:800}
+.lista .it{display:flex;justify-content:space-between;background:rgba(255,255,255,.14);border-radius:12px;padding:10px 14px;margin-top:8px;font-weight:600}
+.lista .pie{margin-top:14px;font-size:13px;opacity:.9}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:2px solid #F0DDE6;background:#fff;border-radius:999px;padding:8px 12px;font:inherit;font-size:14px}
+.chip.on{background:var(--rosa);border-color:var(--rosa);color:#fff;font-weight:600}
+.msg{background:#E7FFDB;border-radius:14px 14px 14px 4px;padding:12px 14px;font-size:14px;white-space:pre-wrap;margin-top:10px}
+.deuda{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px dashed #F0DDE6}
+.deuda .q{font-weight:800;color:var(--rojo)}
+.mini{font-size:12px;color:#8a6f80}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header><h1>👑 La Jefa</h1><p>Tu negocio desde casa: precios, clientas y cobros.</p><button class="cfg" id="cfgb" aria-label="Ajustes">⚙️</button></header>
+<div class="wrap">
+
+<!-- 1. DETECTOR -->
+<section class="vista on" id="v-precio">
+  <div class="aviso" id="instalar" style="display:none"></div>
+  <div class="card" id="misprod" style="display:none"><h2>📦 Mis productos</h2><div class="chips" id="chipsprod"></div></div>
+  <div class="card">
+    <h2>💰 ¿Cuánto ganas de verdad?</h2>
+    <label>¿Qué vendes?</label><input id="prod" value="Torta de chocolate">
+    <label>¿A cuánto lo cobras? ($)</label><input id="cobro" type="number" step="0.5" value="15">
+    <label>Lo que te cuesta hacerlo</label>
+    <div id="costos"></div>
+    <button class="btn sec" id="addc">+ Agregar gasto</button>
+    <label>¿Cuánto tiempo te lleva? (horas)</label><input id="horas" type="number" step="0.25" value="2">
+    <label>¿Cuánto vale tu hora? ($) <span class="mini">— tu tiempo también cuesta, jefa</span></label><input id="vhora" type="number" step="0.5" value="2">
+    <button class="btn" id="calc">Dime la verdad 👀</button>
+  </div>
+  <div id="res"></div>
+</section>
+
+<!-- ajustes -->
+<section class="vista" id="v-ajustes">
+  <div class="card">
+    <h2>⚙️ Tu información</h2>
+    <p class="mini">Todo se guarda en ESTE teléfono. Si cambias de teléfono o borras el navegador, usa la copia de seguridad.</p>
+    <button class="btn" id="bak">💾 Guardar copia de seguridad</button>
+    <label>Restaurar una copia</label><input type="file" id="res-file" accept=".json,application/json">
+    <button class="btn sec" id="volver">⬅️ Volver</button>
+  </div>
+  <div class="card"><h2>📲 Tenerla como app</h2><p class="mini" id="instr"></p></div>
+</section>
+
+<!-- 2. LISTA DE PRECIOS -->
+<section class="vista" id="v-lista">
+  <div class="card">
+    <h2>📋 Tu lista de precios</h2>
+    <label>Nombre de tu negocio</label><input id="neg" placeholder="Dulces de Mari">
+    <label>Tu WhatsApp (para que te pidan)</label><input id="tel" placeholder="+58 412 000 0000">
+    <p class="mini" style="margin-top:8px">Cada producto que calculas en 💰 entra aquí con su precio justo.</p>
+  </div>
+  <div class="lista" id="tarjeta"></div>
+  <button class="btn wa" id="walista">Copiar para WhatsApp</button>
+</section>
+
+<!-- 3. CLIENTAS -->
+<section class="vista" id="v-clientas">
+  <div class="card">
+    <h2>💬 Consigue clientas</h2>
+    <label>¿A qué te dedicas?</label>
+    <div class="chips" id="oficios"></div>
+    <label>¿Para qué es el mensaje?</label>
+    <div class="chips" id="tipos"></div>
+    <div class="msg" id="msg"></div>
+    <button class="btn wa" id="copmsg">Copiar mensaje</button>
+  </div>
+</section>
+
+<!-- 4. ME DEBEN -->
+<section class="vista" id="v-deben">
+  <div class="card">
+    <h2>💸 Quién te debe</h2>
+    <div id="deudas"></div>
+    <label>Nombre</label><input id="dn" placeholder="Carla">
+    <label>¿Cuánto te debe? ($)</label><input id="dq" type="number" step="0.5" placeholder="12">
+    <button class="btn sec" id="addd">+ Anotar</button>
+  </div>
+  <div class="card">
+    <h2>Recordatorio</h2>
+    <div class="chips" id="tonos"></div>
+    <div class="msg" id="rec"></div>
+    <button class="btn wa" id="coprec">Copiar recordatorio</button>
+  </div>
+</section>
+</div>
+
+<nav>
+  <button class="on" data-v="precio"><span>💰</span>Precios</button>
+  <button data-v="lista"><span>📋</span>Mi lista</button>
+  <button data-v="clientas"><span>💬</span>Clientas</button>
+  <button data-v="deben"><span>💸</span>Me deben</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const money = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2).replace('.00', '');
+const guardar = (k, v) => { try { localStorage.setItem('jefa-' + k, JSON.stringify(v)); } catch (e) {} };
+const leer = (k, d) => { try { return JSON.parse(localStorage.getItem('jefa-' + k)) ?? d; } catch (e) { return d; } };
+const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); };
+const copiar = async (t) => { try { await navigator.clipboard.writeText(t); toast('¡Copiado! Pégalo en WhatsApp 📲'); } catch (e) { toast('Mantén presionado el texto para copiarlo'); } };
+
+// navegación
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
+  if (b.dataset.v === 'lista') pintarLista();
+  window.scrollTo(0, 0);
+});
+
+// 1. detector
+let costos = [['Harina', 1.2], ['Huevos', 1.5], ['Chocolate', 4], ['Azúcar', .8], ['Mantequilla', 2.5], ['Gas y luz', 1], ['Caja y empaque', 1.5]];
+function pintarCostos() {
+  $('#costos').innerHTML = costos.map((c, i) => `<div class="row" style="margin-top:6px"><input value="${c[0]}" data-i="${i}" data-k="0"><input class="m" type="number" step="0.1" value="${c[1]}" data-i="${i}" data-k="1"><button class="x" data-del="${i}">×</button></div>`).join('');
+  $('#costos').querySelectorAll('input').forEach((el) => el.oninput = () => { costos[el.dataset.i][el.dataset.k] = el.dataset.k === '1' ? Number(el.value) : el.value; });
+  $('#costos').querySelectorAll('[data-del]').forEach((el) => el.onclick = () => { costos.splice(el.dataset.del, 1); pintarCostos(); });
+}
+pintarCostos();
+function cargar(p) { $('#prod').value = p.n; $('#cobro').value = p.cobro ?? p.p; costos = JSON.parse(JSON.stringify(p.costos || [['', 0]])); $('#horas').value = p.horas ?? 1; $('#vhora').value = p.vhora ?? 2; pintarCostos(); $('#res').innerHTML = ''; }
+function pintarMisProd() {
+  $('#misprod').style.display = productos.length ? 'block' : 'none';
+  $('#chipsprod').innerHTML = productos.map((p, i) => `<button class="chip" data-i="${i}">${p.n} · ${money(p.p)}</button>`).join('') + '<button class="chip" data-i="nuevo">➕ Nuevo</button>';
+  $('#chipsprod').querySelectorAll('button').forEach((b) => b.onclick = () => b.dataset.i === 'nuevo' ? cargar({ n: '', cobro: '', costos: [['', 0]], horas: 1, vhora: 2 }) : cargar(productos[b.dataset.i]));
+}
+$('#addc').onclick = () => { costos.push(['', 0]); pintarCostos(); };
+let productos = leer('productos', []);
+pintarMisProd();
+if (!productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '👋 <b>¡Bienvenida, jefa!</b> Te dejé una torta de ejemplo: toca <b>"Dime la verdad"</b> para ver cómo funciona y luego cámbiala por lo que tú vendes.'; }
+$('#calc').onclick = () => {
+  const cobro = Number($('#cobro').value) || 0, tiempo = (Number($('#horas').value) || 0) * (Number($('#vhora').value) || 0);
+  const mat = costos.reduce((s, c) => s + (Number(c[1]) || 0), 0), total = mat + tiempo, dif = cobro - total;
+  const justo = Math.ceil(total * 1.3 * 2) / 2;   // 30% de ganancia, redondeado a 0,50
+  const nombre = $('#prod').value || 'tu producto';
+  $('#res').innerHTML = `
+    <div class="veredicto ${dif < 0 ? 'pierde' : 'gana'}">
+      <small>${dif < 0 ? 'Jefa, siéntate…' : '¡Bien, jefa!'}</small>
+      <div class="big">${dif < 0 ? `Pierdes ${money(-dif)}` : `Ganas ${money(dif)}`}</div>
+      <small>en cada ${nombre.toLowerCase()} ${dif < 0 ? '😱' : '💪'}</small>
+    </div>
+    <div class="card">
+      <div class="det"><span>Materiales</span><b>${money(mat)}</b></div>
+      <div class="det"><span>Tu tiempo</span><b>${money(tiempo)}</b></div>
+      <div class="det"><span>Te cuesta en total</span><b>${money(total)}</b></div>
+      <div class="det"><span>Lo cobras a</span><b>${money(cobro)}</b></div>
+      <h2 style="margin-top:14px">👑 Precio justo: ${money(justo)}</h2>
+      <p class="mini">Así ganas ${money(justo - total)} por venta, ya pagado tu tiempo.</p>
+      <button class="btn" id="usar">Usar ${money(justo)} en mi lista</button>
+    </div>`;
+  $('#usar').onclick = () => { productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: justo, cobro, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value }); guardar('productos', productos); pintarMisProd(); toast('Guardado en tu lista 📋'); };
+  $('#res').scrollIntoView({ behavior: 'smooth' });
+};
+
+// 2. lista
+function pintarLista() {
+  const items = productos.length ? productos : [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+  $('#tarjeta').innerHTML = `<h3>${$('#neg').value || 'Mi negocio'}</h3><p class="mini" style="color:#ffd9e6">Lista de precios</p>` +
+    items.map((i) => `<div class="it"><span>${i.n}</span><span>${money(i.p)}</span></div>`).join('') +
+    `<div class="pie">Pedidos por WhatsApp ${$('#tel').value || ''} 💬</div>`;
+}
+$('#neg').value = leer('neg', ''); $('#tel').value = leer('tel', '');
+['#neg', '#tel'].forEach((s) => $(s).oninput = () => { guardar(s.slice(1), $(s).value); pintarLista(); });
+$('#walista').onclick = () => {
+  const items = productos.length ? productos : [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+  copiar(`✨ *${$('#neg').value}* ✨\n\n` + items.map((i) => `• ${i.n}: *${money(i.p)}*`).join('\n') + `\n\n📲 Haz tu pedido por aquí 💕`);
+};
+
+// 3. clientas
+const OF = { postres: '🧁 Postres', unas: '💅 Uñas', tienda: '🏪 Tiendita', comida: '🍲 Comida', costura: '🧵 Costura', otro: '✨ Otro' };
+const QUE = { postres: 'postres caseros', unas: 'uñas', tienda: 'productos de mi tiendita', comida: 'comida casera', costura: 'arreglos y costura', otro: 'mis servicios' };
+const TIPOS = {
+  estreno: ['🎉 Estoy empezando', (q) => `¡Hola! 💕 Te cuento que estoy empezando mi negocio de ${q}. Me haría mucha ilusión que fueras de mis primeras clientas: esta semana tengo un detallito especial para ti. ¿Te paso la lista? ✨`],
+  volver: ['🔁 Que vuelva', (q) => `¡Hola, hermosa! 😊 Hace rato no te veo por aquí. Esta semana tengo ${q} nuevos y me acordé de ti. ¿Te aparto algo? 💕`],
+  recomienda: ['🗣️ Que me recomiende', (q) => `¡Gracias por confiar en mí! 💖 Si te gustó, ¿me ayudas compartiendo mi número con una amiga? A las dos les regalo un detallito en su próximo pedido de ${q} 🎁`],
+  estado: ['📲 Para mi estado', (q) => `✨ ¡Agenda abierta esta semana! ✨\n${q[0].toUpperCase() + q.slice(1)} hechos con amor 💕\n📩 Escríbeme y te paso precios`]
+};
+let of = 'postres', tipo = 'estreno';
+function pintarMsg() {
+  $('#oficios').innerHTML = Object.entries(OF).map(([k, v]) => `<button class="chip ${k === of ? 'on' : ''}" data-o="${k}">${v}</button>`).join('');
+  $('#tipos').innerHTML = Object.entries(TIPOS).map(([k, v]) => `<button class="chip ${k === tipo ? 'on' : ''}" data-t="${k}">${v[0]}</button>`).join('');
+  $('#oficios').querySelectorAll('button').forEach((b) => b.onclick = () => { of = b.dataset.o; pintarMsg(); });
+  $('#tipos').querySelectorAll('button').forEach((b) => b.onclick = () => { tipo = b.dataset.t; pintarMsg(); });
+  $('#msg').textContent = TIPOS[tipo][1](QUE[of]);
+}
+pintarMsg();
+$('#copmsg').onclick = () => copiar($('#msg').textContent);
+
+// 4. me deben
+let deudas = leer('deudas', []), sel = 0, tono = 'amable';
+const TONOS = {
+  amable: ['😊 Amable', (d) => `¡Hola, ${d.n}! 😊 Te escribo por lo de los ${money(d.q)} pendientes. Cuando puedas me avisas, ¡gracias! 💕`],
+  firme: ['📌 Firme', (d) => `Hola, ${d.n}. Te recuerdo el pago pendiente de ${money(d.q)}. ¿Me confirmas para cuándo lo tienes? Gracias.`],
+  drama: ['🎭 Dramático', (d) => `${d.n}… 😭 mis ${money(d.q)} me preguntan por ti todas las noches. Lloran. No comen. Dicen que tú sabes dónde está su familia 💔😂 ¿Cuándo los traes a casa?`]
+};
+function pintarDeudas() {
+  $('#deudas').innerHTML = deudas.length ? deudas.map((d, i) => `<div class="deuda"><label style="margin:0;display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="d" ${i === sel ? 'checked' : ''} data-i="${i}" style="width:auto"> ${d.n}</label><span class="q">${money(d.q)}</span><button class="x" data-del="${i}">✓</button></div>`).join('') +
+    `<p class="mini" style="margin-top:8px">Total por cobrar: <b>${money(deudas.reduce((s, d) => s + d.q, 0))}</b> · ✓ = ya pagó</p>` : '<p class="mini">Nadie te debe. ¡Así se hace, jefa! 👑</p>';
+  $('#deudas').querySelectorAll('input[type=radio]').forEach((el) => el.onchange = () => { sel = Number(el.dataset.i); pintarRec(); });
+  $('#deudas').querySelectorAll('[data-del]').forEach((el) => el.onclick = () => { deudas.splice(el.dataset.del, 1); sel = 0; guardar('deudas', deudas); pintarDeudas(); toast('¡Cobrado! 💸'); });
+  pintarRec();
+}
+function pintarRec() {
+  $('#tonos').innerHTML = Object.entries(TONOS).map(([k, v]) => `<button class="chip ${k === tono ? 'on' : ''}" data-t="${k}">${v[0]}</button>`).join('');
+  $('#tonos').querySelectorAll('button').forEach((b) => b.onclick = () => { tono = b.dataset.t; pintarRec(); });
+  $('#rec').textContent = deudas[sel] ? TONOS[tono][1](deudas[sel]) : '—';
+}
+$('#addd').onclick = () => { const n = $('#dn').value.trim(), q = Number($('#dq').value); if (!n || !q) return toast('Pon nombre y monto'); deudas.push({ n, q }); guardar('deudas', deudas); $('#dn').value = $('#dq').value = ''; pintarDeudas(); };
+$('#coprec').onclick = () => copiar($('#rec').textContent);
+pintarDeudas();
+
+// ajustes: copia de seguridad (todo vive en este teléfono)
+const vista = (v) => { document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v)); document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v)); window.scrollTo(0, 0); };
+$('#cfgb').onclick = () => vista('ajustes'); $('#volver').onclick = () => vista('precio');
+$('#bak').onclick = () => {
+  const data = { app: 'la-jefa', fecha: new Date().toISOString(), productos, deudas, neg: $('#neg').value, tel: $('#tel').value };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  a.download = `la-jefa-copia-${new Date().toISOString().slice(0, 10)}.json`; a.click(); toast('Copia guardada en tus descargas 💾');
+};
+$('#res-file').onchange = async (e) => {
+  try { const d = JSON.parse(await e.target.files[0].text()); if (d.app !== 'la-jefa') throw 0;
+    productos = d.productos || []; deudas = d.deudas || []; guardar('productos', productos); guardar('deudas', deudas); guardar('neg', d.neg || ''); guardar('tel', d.tel || '');
+    $('#neg').value = d.neg || ''; $('#tel').value = d.tel || ''; pintarMisProd(); pintarDeudas(); toast('¡Todo restaurado! 👑'); vista('precio');
+  } catch (err) { toast('Ese archivo no es una copia de La Jefa'); }
+};
+const ios = /iphone|ipad/i.test(navigator.userAgent);
+$('#instr').innerHTML = ios ? 'En Safari toca <b>Compartir</b> (el cuadrito con flecha ⬆️) → <b>"Agregar a inicio"</b>. Te queda con su corona 👑 como cualquier app.'
+  : 'En Chrome toca los <b>tres puntitos ⋮</b> → <b>"Agregar a pantalla de inicio"</b> o <b>"Instalar app"</b>. Te queda con su corona 👑 como cualquier app.';
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '📲 <b>Tenla como app:</b> ' + $('#instr').innerHTML; guardar('vio-instalar', true); }
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/app/jefa/sw.js', { scope: '/app/jefa/' }).catch(() => {});
+</script>
+</body>
+</html>

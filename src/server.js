@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { config } from './config.js';
 import { Products, Orders, Subscribers, COUPON_OFF } from './db.js';
 import { sendEmail } from './delivery/email.js';
-import { deliver, verifyDownload, downloadLink } from './delivery/index.js';
+import { deliver, verifyDownload, downloadLink, appLicense, verifyApp } from './delivery/index.js';
 import { whatsappEnabled } from './delivery/whatsapp.js';
 import { paypalEnabled, createPaypalOrder, capturePaypalOrder } from './payments/paypal.js';
 import { binanceEnabled, binanceAutoVerify, uniqueAmount, findBinancePayment } from './payments/binance.js';
@@ -193,6 +193,30 @@ on('GET', '/api/regalo/resenas', (req, res) => json(res, 200, { reviews: Object.
 on('GET', '/binance-qr.jpg', (req, res) => { const f = path.join(path.dirname(config.paths.files), 'binance-qr.jpg');
   serveFile(res, fs.existsSync(f) ? f : path.join(config.paths.public, 'img', 'binance-qr.jpg'), { 'cache-control': 'public, max-age=600' }); });
 on('GET', '/regalo', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('regalo.html')); });
+// ===== Apps web de pago (La Jefa…): solo con licencia (?k= del pedido pagado) o en modo dueño. El código NO está en public/.
+const APPS = { jefa: { dir: 'jefa', nombre: 'La Jefa', corto: 'La Jefa', color: '#E8337A', slug: 'la-jefa' } };
+const licOk = (req, k) => { const id = verifyApp(k); if (id) { const o = Orders.withProduct(id); return !!o && o.status === 'paid'; } return esDueno(req); };
+on('GET', '/app/:app', (req, res, { app }) => { if (!APPS[app]) return fail(res, 404, 'No existe'); res.writeHead(301, { location: `/app/${app}/${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}` }); res.end(); });
+on('GET', '/app/:app/', (req, res, { app }, url) => {
+  const A = APPS[app]; if (!A) return fail(res, 404, 'No existe');
+  const k = url.searchParams.get('k') || '';
+  if (!licOk(req, k)) { res.writeHead(302, { location: `/p/${A.slug}` }); return res.end(); }   // sin licencia → a la página de venta
+  let html = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'apps', A.dir, 'index.html'), 'utf8');
+  res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' });
+  res.end(html.replaceAll('{{LIC}}', encodeURIComponent(k)));
+});
+on('GET', '/app/:app/manifest.webmanifest', (req, res, { app }, url) => {
+  const A = APPS[app]; if (!A) return fail(res, 404, 'No existe'); const k = encodeURIComponent(url.searchParams.get('k') || '');
+  res.writeHead(200, { 'content-type': 'application/manifest+json' });
+  res.end(JSON.stringify({ name: A.nombre, short_name: A.corto, start_url: `/app/${app}/?k=${k}`, scope: `/app/${app}/`, display: 'standalone',
+    background_color: '#FFF6EE', theme_color: A.color, icons: [192, 512].map((n) => ({ src: `/img/app-${app}-${n}.png`, sizes: `${n}x${n}`, type: 'image/png', purpose: 'any maskable' })) }));
+});
+on('GET', '/app/:app/sw.js', (req, res, { app }) => {   // funciona sin internet: guarda la última versión de la app
+  res.writeHead(200, { 'content-type': MIME['.js'], 'service-worker-allowed': `/app/${app}/` });
+  res.end(`const C='app-${app}-v1';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));}return r;}).catch(()=>caches.match(e.request,{ignoreSearch:true})));});`);
+});
+
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
   const p = Products.bySlug('regalo-reto-30-dias');
   if (p && visitaReal(req, p.id)) Products.view(p.id);
@@ -383,6 +407,7 @@ on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }, url) => {
   const limit = config.maxDownloads * (o.bundle_ids ? Math.max(1, Products.bundleItems(o).length) : 1);
   if (o.downloads >= limit) return msg('Llegaste al máximo de descargas de este pedido. Escríbenos si necesitas ayuda.');
   Orders.update(o.id, { downloads: o.downloads + 1 });
+  if (item.external_url?.startsWith('/app/')) { res.writeHead(302, { location: `${item.external_url}?k=${appLicense(o.id)}` }); return res.end(); }  // app web: su enlace con licencia
   if (item.external_url) { res.writeHead(302, { location: item.external_url }); return res.end(); }
   const file = path.join(config.paths.files, path.basename(item.file_name || ''));
   if (!item.file_name || !fs.existsSync(file)) return msg('El archivo no está disponible todavía. Te lo enviaremos pronto.');
