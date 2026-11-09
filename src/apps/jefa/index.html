@@ -99,7 +99,9 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
     <h2>📋 Tu lista de precios</h2>
     <label>Nombre de tu negocio</label><input id="neg" placeholder="Dulces de Mari">
     <label>Tu WhatsApp (para que te pidan)</label><input id="tel" placeholder="+58 412 000 0000">
-    <p class="mini" style="margin-top:8px">Cada producto que calculas en 💰 entra aquí con su precio justo.</p>
+    <p class="mini" style="margin-top:8px">Lo que calculas en 💰 entra aquí solo. También puedes agregar algo directo:</p>
+    <div class="row" style="margin-top:6px"><input id="qn" placeholder="Ej: Quesillo"><input id="qp" class="m" type="number" step="0.5" placeholder="$"><button class="x" id="qadd" style="background:var(--rosa);color:#fff">+</button></div>
+    <div id="editlista" style="margin-top:10px"></div>
   </div>
   <div class="lista" id="tarjeta"></div>
   <button class="btn wa" id="walista">Copiar para WhatsApp</button>
@@ -195,24 +197,47 @@ $('#calc').onclick = () => {
       <div class="det"><span>Te cuesta en total</span><b>${money(total)}</b></div>
       <div class="det"><span>Lo cobras a</span><b>${money(cobro)}</b></div>
       <h2 style="margin-top:14px">👑 Precio justo: ${money(justo)}</h2>
-      <p class="mini">Así ganas ${money(justo - total)} por venta, ya pagado tu tiempo.</p>
-      <button class="btn" id="usar">Usar ${money(justo)} en mi lista</button>
+      <p class="mini">Con ese precio ganas ${money(justo - total)} por venta, ya pagado tu tiempo.</p>
+      <label>¿A cuánto lo vas a vender tú?</label>
+      <div class="chips" style="margin-bottom:8px"><button class="chip" data-pv="${justo}">👑 Precio justo ${money(justo)}</button>${cobro ? `<button class="chip" data-pv="${cobro}">Lo que cobro hoy ${money(cobro)}</button>` : ''}</div>
+      <input id="pv" type="number" step="0.5" value="${justo}">
+      <p id="pvres" style="font-weight:800;margin-top:8px"></p>
+      <button class="btn" id="usar">📋 Guardar en mi lista</button>
+      <button class="btn sec" id="otro" style="display:none">➕ Calcular otro producto</button>
     </div>`;
-  $('#usar').onclick = () => { productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: justo, cobro, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value }); guardar('productos', productos); pintarMisProd(); toast('Guardado en tu lista 📋'); };
+  const verPv = () => { const v = Number($('#pv').value) || 0, g = v - total;
+    $('#pvres').style.color = g < 0 ? 'var(--rojo)' : 'var(--verde)';
+    $('#pvres').textContent = v ? (g < 0 ? `Con ${money(v)} pierdes ${money(-g)} por venta 😬` : `Con ${money(v)} ganas ${money(g)} por venta (${Math.round(g / v * 100)}%) 💪`) : ''; };
+  $('#pv').oninput = verPv; verPv();
+  $('#res').querySelectorAll('[data-pv]').forEach((b) => b.onclick = () => { $('#pv').value = b.dataset.pv; verPv(); });
+  $('#usar').onclick = () => {
+    const v = Number($('#pv').value) || justo;
+    productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: v, cobro: v, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value });
+    guardar('productos', productos); pintarMisProd(); $('#instalar').style.display = 'none'; toast(`${nombre} guardado a ${money(v)} 📋`); $('#otro').style.display = 'block';
+  };
+  $('#otro').onclick = () => { cargar({ n: '', cobro: '', costos: [['', 0]], horas: 1, vhora: $('#vhora').value || 2 }); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 400); };
   $('#res').scrollIntoView({ behavior: 'smooth' });
 };
 
 // 2. lista
+const EJ = [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
 function pintarLista() {
-  const items = productos.length ? productos : [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+  const items = productos.length ? productos : EJ;
+  $('#editlista').innerHTML = productos.length ? productos.map((p, i) => `<div class="deuda"><span>${p.n}</span><span class="row" style="gap:6px"><input class="m" type="number" step="0.5" value="${p.p}" data-ep="${i}" style="width:90px"><button class="x" data-ed="${i}">×</button></span></div>`).join('')
+    : '<p class="mini">👇 Así se verá (es un ejemplo). Agrega tus productos y aparecen aquí.</p>';
+  $('#editlista').querySelectorAll('[data-ep]').forEach((el) => el.onchange = () => { productos[el.dataset.ep].p = Number(el.value) || 0; guardar('productos', productos); pintarMisProd(); pintarLista(); });
+  $('#editlista').querySelectorAll('[data-ed]').forEach((el) => el.onclick = () => { productos.splice(el.dataset.ed, 1); guardar('productos', productos); pintarMisProd(); pintarLista(); });
   $('#tarjeta').innerHTML = `<h3>${$('#neg').value || 'Mi negocio'}</h3><p class="mini" style="color:#ffd9e6">Lista de precios</p>` +
     items.map((i) => `<div class="it"><span>${i.n}</span><span>${money(i.p)}</span></div>`).join('') +
     `<div class="pie">Pedidos por WhatsApp ${$('#tel').value || ''} 💬</div>`;
 }
 $('#neg').value = leer('neg', ''); $('#tel').value = leer('tel', '');
 ['#neg', '#tel'].forEach((s) => $(s).oninput = () => { guardar(s.slice(1), $(s).value); pintarLista(); });
+$('#qadd').onclick = () => { const n = $('#qn').value.trim(), v = Number($('#qp').value); if (!n || !v) return toast('Pon el nombre y el precio');
+  productos = productos.filter((p) => p.n !== n); productos.push({ n, p: v }); guardar('productos', productos); $('#qn').value = $('#qp').value = ''; pintarMisProd(); pintarLista(); toast('Agregado 📋'); };
 $('#walista').onclick = () => {
-  const items = productos.length ? productos : [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+  if (!productos.length) return toast('Primero agrega tus productos 😉');
+  const items = productos;
   copiar(`✨ *${$('#neg').value}* ✨\n\n` + items.map((i) => `• ${i.n}: *${money(i.p)}*`).join('\n') + `\n\n📲 Haz tu pedido por aquí 💕`);
 };
 
