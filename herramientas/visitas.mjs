@@ -37,5 +37,16 @@ try {
       const rev = a.ad_review_feedback ? ' · ⚠️ ' + JSON.stringify(a.ad_review_feedback).slice(0, 120) : '';
       console.log(`   • ${a.name.split('·').slice(-1)[0].trim()} [${a.effective_status}]: ${r ? `$${r.spend} · CTR ${Number(r.ctr || 0).toFixed(2)}% · ${acc(r) || 'sin acciones'}` : 'sin datos'}${rev}`);
     }
+    // 🌎 por país (7 días): resultado principal y cuánto costó cada uno → para quedarnos con los países que rinden
+    const pais = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', date_preset: 'last_7d', breakdowns: 'country', limit: 50 }).then((r) => r.data || []).catch(() => []);
+    if (pais.length) {
+      const BAND = (cc) => String.fromCodePoint(...[...cc.toUpperCase()].map((ch) => 0x1F1A5 + ch.charCodeAt(0)));
+      const res = (r) => { const a = r.actions || []; for (const t of ['offsite_conversion.fb_pixel_purchase', 'offsite_conversion.fb_pixel_lead', 'landing_page_view', 'onsite_conversion_profile_visit', 'profile_visit', 'link_click']) { const x = a.find((y) => y.action_type === t); if (x) return [ACC[t], Number(x.value)]; } return ['', 0]; };
+      console.log('   🌎 Por país (7 días):');
+      for (const r of pais.sort((a, b) => b.spend - a.spend)) {
+        const [nom, v] = res(r);
+        console.log(`     ${BAND(r.country)} ${r.country}: $${Number(r.spend).toFixed(2)} · ${v ? `${v} ${nom} · $${(r.spend / v).toFixed(3)} c/u` : 'sin resultados'} · CTR ${Number(r.ctr || 0).toFixed(1)}%`);
+      }
+    }
   }
 } catch (e) { console.log('\n📊 Meta: ' + e.message); }
