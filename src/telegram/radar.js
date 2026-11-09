@@ -338,6 +338,17 @@ Devuelve SOLO JSON: {"prompts": [{"estilo": "realista|impacto", "idea": "la situ
     reply_markup: { inline_keyboard: [[{ text: '🔄 Otros 2 prompts', callback_data: `gem:${p.id}:` }]] } });
 }
 
+/** Corre una herramienta del servidor (herramientas/*.mjs) y manda lo que imprime. Así Diego no necesita la terminal. */
+async function herramienta(rel, args = [], titulo = '') {
+  const { execFile } = await import('node:child_process');
+  const file = new URL(`../../herramientas/${rel}`, import.meta.url).pathname;
+  if (titulo) await send(titulo);
+  const out = await new Promise((ok) => execFile(process.execPath, ['--no-warnings', file, ...args], { timeout: 600000, maxBuffer: 4 << 20 },
+    (e, so, se) => ok(String(so || '') + (e ? '\n⚠️ ' + String(se || e.message).split('\n').filter((l) => /Error|⚠️|❌/.test(l)).slice(0, 3).join('\n') : ''))));
+  const txt = out.replace(/\[aviso\][^\n]*\n?/g, '').trim() || '(sin resultado)';
+  for (let i = 0; i < txt.length; i += 3800) await send(esc(txt.slice(i, i + 3800)));
+}
+
 const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 
 🎬 <b>Anuncios</b>
@@ -354,7 +365,15 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 /explorar — buscar ya productos digitales en tendencia (gasta Claude: unos $0.40-0.70).
 /explorar <i>tema</i> — buscar de un tema, ej. <code>/explorar cursos de cocina</code>.
 /explorar mundo — productos para lo que pasa en el mundo (noticias, virales, fechas que vienen).
+/explorar plr — productos PLR en inglés con licencia clara para rehacerlos en español.
+/explorar cruce — cruce de tendencias (redes + búsquedas + lo que se vende → 1-2 ideas filtradas y ganchos). Sale solo cada 2 semanas.
+/exotico <i>país</i> — 🧭 Buscador Exótico: lo que se vende y se vuelve viral en culturas lejanas y cómo lo traemos aquí.
 /fusionar — combinar productos del radar en uno mejor o en un pack de 3.
+
+📈 <b>Ver cómo vamos</b>
+/visitas — visitas a la tienda y a /reto, correos nuevos, pedidos reales y cada campaña de Meta en detalle (hoy, ayer, 7 días y por anuncio).
+/promocionar — 🔥 campaña de SEGUIDORES con los reels del Reto 30 Días publicados ($3/día, sin fecha de fin; te pide confirmar).
+/sinan — quitar Audience Network y Messenger de las campañas ya creadas (las nuevas ya salen así).
 
 🎵 <b>Música</b>
 /musica — ver cuántas canciones hay por género.
@@ -363,6 +382,8 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 
 /publicar — subir las 9 publicaciones del kit a Instagram y Facebook (te pide confirmar).\n/campanas — ver tus campañas de anuncios (gasto, vistas, clics) y activarlas o pausarlas.\n/reporte — qué anuncio va ganando (A o B), embudo de interesados y qué te recomiendo (llega solo cada lunes).\n/publicos — crea en Meta los públicos de interesados reales (web, Instagram y Facebook).\n/calendario — publicaciones automáticas: 1 consejo + 2 reels por semana en los días y horas en que más se mueve tu gente (aprende solo; al inicio lun/mié/vie 6 pm). Avisa 3 h antes. <code>/calendario off</code> lo apaga.\n/leccion — la lección de la semana + consejo para Instagram ahora (llega sola cada lunes).\n/remarketing — campaña para quienes ya te conocen (visitaron, bajaron el regalo, te siguen), sin gastar en compradores.\n/similares — crea públicos parecidos a tus interesados y te deja hacerles una campaña.\n/comentarios — revisar ya los comentarios (lo hace solo cada 5 min: responde a quien pide el regalo y oculta spam/insultos).
 /lista — esta lista.
+
+🔥 <b>Reto 30 Días</b> (desde el servidor, tarda): rehacer reels → <code>docker exec pixelia-estudio python3 /pixelia/herramientas/reto30/voz.py</code> · publicar → <code>docker exec pixelia node --no-warnings /app/herramientas/reto30/publicar.mjs</code>
 
 🖥️ <b>En el servidor</b> (Termius o CMD: <code>ssh root@162.33.179.6</code>)
 <code>echo inicio; cd /opt/pixelia && bash update.sh; echo fin</code>
@@ -562,6 +583,11 @@ export async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
+  if (text.startsWith('/visitas')) return herramienta('visitas.mjs', [], '📈 Revisando visitas, correos, pedidos y campañas… (≈30 s)');
+  if (text.startsWith('/sinan')) return herramienta('sin-audience-network.mjs', [], '🧹 Quitando Audience Network de las campañas…');
+  if (text.startsWith('/promocionar')) return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
+    text: '🔥 <b>Campaña de seguidores</b> con los reels del Reto 30 Días que están publicados ahora: objetivo visitas al perfil de Instagram, LatAm 20-45 (productividad, desarrollo personal, motivación), solo Instagram, <b>$3/día sin fecha de fin</b>.\n\n⚠️ Si ya tienes una activa, esto crea OTRA. ¿La creo?',
+    reply_markup: { inline_keyboard: [[{ text: '✅ Sí, crearla activa', callback_data: 'promo:si' }, { text: '⏸️ Crearla en pausa', callback_data: 'promo:pausa' }], [{ text: '❌ No', callback_data: 'x:0' }]] } });
   if (text.startsWith('/publicos') || text.startsWith('/públicos')) {
     if (!adsListos()) return send('Falta conectar la cuenta publicitaria.');
     await send('🎯 Creando en Meta los públicos de interesados reales (vieron un producto, bajaron el regalo, empezaron a pagar, compraron, interactuaron en Instagram y Facebook)…');
@@ -664,6 +690,10 @@ export async function onMessage(m) {
 export async function onCallback(q) {
   const [action, id, opts] = String(q.data || '').split(':');
   const esAdmin = String(q.from?.id) === String(config.telegram.adminChatId);
+  if (action === 'promo' && esAdmin) {
+    await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+    return herramienta('reto30/promocionar.mjs', id === 'pausa' ? ['--pausada'] : [], '⏳ Creando la campaña de seguidores…');
+  }
   if (action === 'cal' && esAdmin) {  // 📅 calendario: cal:<día>:no|ya  ·  cal:on|off
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     if (opts === 'no' || opts === 'ya' || id === 'on' || id === 'off') rtg('editMessageReplyMarkup', { chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
@@ -870,7 +900,7 @@ export async function startRadarBot() {
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['calendario', 'Publicaciones automáticas'], ['leccion', 'Lección de la semana'], ['remarketing', 'Campaña a quienes ya te conocen'], ['similares', 'Públicos similares'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
-    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'],
+    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'], ['visitas', 'Cómo vamos: visitas, correos, pedidos y campañas'], ['promocionar', 'Campaña de seguidores (Reto 30 Días)'], ['sinan', 'Quitar Audience Network de campañas'], ['comentarios', 'Revisar comentarios ya'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;
