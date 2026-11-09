@@ -584,14 +584,31 @@ if (window.APP_DEMO) {
   const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
   const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Demo gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'} · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida</a>` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
   document.body.prepend(barra); pintarBarra();
+  const ofrecerCorreo = () => {   // opcional: guardar el enlace en su correo (+15%); nunca obliga
+    const m = document.createElement('div'); m.style.cssText = 'position:fixed;left:12px;right:12px;bottom:86px;z-index:60;max-width:460px;margin:auto';
+    m.innerHTML = `<div class="card" style="margin:0;box-shadow:0 10px 40px rgba(0,0,0,.35)"><button class="ej" style="float:right;margin:0;text-decoration:none;font-size:20px" id="oc-x">×</button>
+      <b>📩 ¿Te mando la demo a tu correo?</b><p class="mini" style="margin:4px 0 8px">Para que no la pierdas, y con <b>15% de descuento</b> si te la quedas.</p>
+      <div class="row"><input id="oc-mail" type="email" placeholder="tu@correo.com"><button class="x" id="oc-ok" style="background:var(--rosa);color:#fff;width:auto;padding:0 14px">Enviar</button></div>
+      <label class="mini" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-weight:400"><input type="checkbox" id="oc-chk" style="width:auto;margin-top:2px"> Acepto recibir correos con la demo, consejos y ofertas.</label></div>`;
+    document.body.appendChild(m); m.querySelector('#oc-x').onclick = () => { m.remove(); guardar('demo-correo', 'no'); };
+    m.querySelector('#oc-ok').onclick = async () => {
+      const email = m.querySelector('#oc-mail').value.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Revisa tu correo 📩'); if (!m.querySelector('#oc-chk').checked) return toast('Marca la casilla 😉');
+      try { const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, regalos: ['jefa'], consent: true }) });
+        const j = await r.json(); if (!r.ok) throw new Error(j.error); guardar('demo-correo', email); if (j.code) guardar('demo-cupon', j.code);
+        try { fbq('track', 'Lead', { content_name: 'demo-la-jefa' }); } catch (e) {}
+        m.remove(); toast('¡Listo! Revisa tu correo 💌'); } catch (e) { toast(e.message || 'No se pudo, prueba otra vez'); }
+    };
+  };
   const muro = () => { const m = document.createElement('div'); m.style.cssText = 'position:fixed;inset:0;z-index:99;background:rgba(43,22,48,.75);display:flex;align-items:center;justify-content:center;padding:20px';
     m.innerHTML = `<div class="card" style="max-width:380px;text-align:center"><div style="font-size:54px">👑</div><h2>¿Te gustó, jefa?</h2><p style="margin:8px 0 4px">Ya usaste tus ${D.usos} usos gratis.</p><p class="mini">Llévatela completa: precios, clientas, estados y cobros, sin límites. Lo que hiciste aquí se queda guardado en este teléfono.</p>
-      <a class="btn" style="display:block;text-decoration:none" href="${D.comprar}">Quiero La Jefa · $4.99 de por vida</a><button class="btn sec" id="muro-x">Ahora no</button></div>`;
+      <a class="btn" style="display:block;text-decoration:none" href="${D.comprar}${leer('demo-cupon', '') ? '&cupon=' + encodeURIComponent(leer('demo-cupon', '')) : ''}">Quiero La Jefa · $4.99 de por vida${leer('demo-cupon', '') ? ' (−15%)' : ''}</a><button class="btn sec" id="muro-x">Ahora no</button></div>`;
     document.body.appendChild(m); m.querySelector('#muro-x').onclick = () => m.remove(); };
   document.addEventListener('click', (e) => {
     const el = e.target.closest(ACC.join(',')); if (!el) return;
     if (!quedan()) { e.preventDefault(); e.stopImmediatePropagation(); muro(); return; }
     guardar('demo-usados', (leer('demo-usados', 0) || 0) + 1); pintarBarra();
+    if (leer('demo-usados', 0) === 1 && !leer('demo-correo', false)) setTimeout(ofrecerCorreo, 2200);
     if (!quedan()) setTimeout(muro, 1600);
   }, true);
 }

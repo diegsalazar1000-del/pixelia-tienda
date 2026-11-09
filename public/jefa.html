@@ -66,7 +66,7 @@ h2{font-size:1.4rem;margin:34px 0 12px}
   <p class="sub">La mayoría pone el precio "a ojo"… y pierde plata sin saberlo. La Jefa te dice la verdad en segundos.</p>
   <div class="demo"><video id="vid" src="/video/lajefa-reel.mp4" poster="/video/lajefa-reel.jpg" autoplay muted loop playsinline preload="auto"></video>
     <button class="sound" id="snd">🔊 Toca para oír</button></div>
-  <button class="cta" data-open>🎁 Probar la demo gratis <small>3 usos gratis · sin tarjeta · te llega a tu correo</small></button>
+  <a class="cta" href="/app/jefa/demo" data-demo>🎁 Probar la demo gratis <small>Al instante · 3 usos gratis · sin tarjeta ni registro</small></a>
   <a class="buy" href="/p/la-jefa?ref=jefa">o llévatela completa por $4.99 de por vida →</a>
 
   <h2>Así te ayuda</h2>
@@ -90,12 +90,13 @@ h2{font-size:1.4rem;margin:34px 0 12px}
     <li>🌎 En la <b>moneda de tu país</b> · funciona sin internet · tus datos quedan en tu teléfono</li>
   </ul>
   <div class="precio">Pagas una vez y es tuya para siempre<br><b>$4.99</b><br><span style="color:var(--mut);font-size:.9rem">Sin mensualidad · PayPal, tarjeta o Binance</span></div>
-  <button class="cta" data-open>🎁 Quiero mi demo gratis <small>Lo que hagas en la demo se queda guardado</small></button>
+  <a class="cta" href="/app/jefa/demo" data-demo>🎁 Probar la demo gratis <small>Lo que hagas en la demo se queda guardado</small></a>
+  <a class="buy" href="#" data-open style="color:#ffb3d0;font-weight:600">📩 ¿La pruebas después? Te la mandamos al correo (+15% de descuento)</a>
   <a class="buy" href="/p/la-jefa?ref=jefa">Comprar ya · $4.99 de por vida →</a>
   <p class="mini">Hecho con 💜 por <a href="/">{{STORE}}</a> · <a href="/legal">Términos y privacidad</a></p>
 </main>
 
-<div class="bar" id="bar"><button class="cta" data-open>🎁 Probar La Jefa gratis</button></div>
+<div class="bar" id="bar"><a class="cta" href="/app/jefa/demo" data-demo>🎁 Probar La Jefa gratis</a></div>
 
 <div class="sheet" id="sheet">
   <div class="box">
@@ -126,7 +127,8 @@ document.querySelectorAll('.pts li').forEach((li, i) => { li.style.transitionDel
 const first = document.querySelector('.cta');
 new IntersectionObserver(([e]) => $('bar').classList.toggle('on', !e.isIntersecting && !$('sheet').classList.contains('on'))).observe(first);
 const abrir = () => { $('sheet').classList.add('on'); setTimeout(() => $('email').focus(), 250); try { fbq('track', 'ViewContent', { content_name: 'demo-la-jefa' }); } catch {} };
-document.querySelectorAll('[data-open]').forEach((b) => b.onclick = abrir);
+document.querySelectorAll('[data-open]').forEach((b) => b.onclick = (e) => { e.preventDefault(); abrir(); });
+document.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => { try { fbq('track', 'ViewContent', { content_name: 'abrio-demo-la-jefa' }); } catch {} }));
 if (location.hash === '#demo') setTimeout(abrir, 600);
 $('close').onclick = () => $('sheet').classList.remove('on');
 $('sheet').onclick = (e) => { if (e.target.id === 'sheet') $('sheet').classList.remove('on'); };

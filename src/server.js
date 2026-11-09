@@ -210,7 +210,7 @@ on('GET', '/app/:app/', (req, res, { app }, url) => {
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
   const A = APPS[app]; if (!A) return fail(res, 404, 'No existe');
   let html = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'apps', A.dir, 'index.html'), 'utf8');
-  html = html.replace(/<link rel="manifest"[^>]*>/, '').replace('<head>', `<head><script>window.APP_DEMO={usos:${Number(process.env.APP_DEMO_USOS || 3)},comprar:'/p/${A.slug}?ref=demo'}</script>`);
+  html = html.replace(/<link rel="manifest"[^>]*>/, '').replace('<head>', `<head><script>window.APP_DEMO={usos:${Number(process.env.APP_DEMO_USOS || 3)},comprar:'/p/${A.slug}?ref=demo'}</script>${esDueno(req) ? '' : pixelSnippet()}`);
   res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(html);
 });
 on('GET', '/app/:app/manifest.webmanifest', (req, res, { app }, url) => {
