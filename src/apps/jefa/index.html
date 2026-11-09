@@ -577,7 +577,25 @@ $('#instr').innerHTML = ios ? 'En Safari toca <b>Compartir</b> (el cuadrito con 
   : 'En Chrome toca los <b>tres puntitos ⋮</b> → <b>"Agregar a pantalla de inicio"</b> o <b>"Instalar app"</b>. Te queda con su corona 👑 como cualquier app.';
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '📲 <b>Tenla como app:</b> ' + $('#instr').innerHTML; guardar('vio-instalar', true); }
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/app/jefa/sw.js', { scope: '/app/jefa/' }).catch(() => {});
+// 🎁 DEMO: 3 usos gratis (calcular, copiar mensaje/lista/recordatorio, compartir o guardar estado); lo que haga se queda si la compra
+if (window.APP_DEMO) {
+  const D = window.APP_DEMO, ACC = ['#calc', '#copmsg', '#coprec', '#walista', '#eshare', '#esave'];
+  const quedan = () => Math.max(0, D.usos - (leer('demo-usados', 0) || 0));
+  const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
+  const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Demo gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'} · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida</a>` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
+  document.body.prepend(barra); pintarBarra();
+  const muro = () => { const m = document.createElement('div'); m.style.cssText = 'position:fixed;inset:0;z-index:99;background:rgba(43,22,48,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+    m.innerHTML = `<div class="card" style="max-width:380px;text-align:center"><div style="font-size:54px">👑</div><h2>¿Te gustó, jefa?</h2><p style="margin:8px 0 4px">Ya usaste tus ${D.usos} usos gratis.</p><p class="mini">Llévatela completa: precios, clientas, estados y cobros, sin límites. Lo que hiciste aquí se queda guardado en este teléfono.</p>
+      <a class="btn" style="display:block;text-decoration:none" href="${D.comprar}">Quiero La Jefa · $4.99 de por vida</a><button class="btn sec" id="muro-x">Ahora no</button></div>`;
+    document.body.appendChild(m); m.querySelector('#muro-x').onclick = () => m.remove(); };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest(ACC.join(',')); if (!el) return;
+    if (!quedan()) { e.preventDefault(); e.stopImmediatePropagation(); muro(); return; }
+    guardar('demo-usados', (leer('demo-usados', 0) || 0) + 1); pintarBarra();
+    if (!quedan()) setTimeout(muro, 1600);
+  }, true);
+}
+if (!window.APP_DEMO && 'serviceWorker' in navigator) navigator.serviceWorker.register('/app/jefa/sw.js', { scope: '/app/jefa/' }).catch(() => {});
 </script>
 </body>
 </html>

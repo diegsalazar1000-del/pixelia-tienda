@@ -20,14 +20,16 @@ La Jefa te lo dice clarito:
 • 💸 Quién te debe: anotas, y le mandas un recordatorio amable, firme… o dramático 😂.
 
 Se instala en tu teléfono como una app (sin Play Store), funciona sin internet y tus datos se quedan en TU teléfono.
-Pagas una sola vez. Sin suscripción. Es tuya para siempre.`,
+Pagas una sola vez: $4.99 de por vida. Sin suscripción.
+¿Dudas? Prueba la demo gratis (3 usos) y lo que hagas se queda guardado cuando la compres.`,
   faq: JSON.stringify([
     { q: '¿Cómo la recibo?', a: 'Al pagar te llega un enlace por correo (y por Telegram si compraste ahí). Lo abres y la agregas a la pantalla de inicio de tu teléfono: queda con su corona 👑 como cualquier app.' },
     { q: '¿Sirve para mi negocio?', a: 'Si vendes algo que tú haces o revendes desde casa (postres, comida, uñas, pestañas, costura, tiendita, manualidades…), sí.' },
     { q: '¿Hay que pagar mensualidad?', a: 'No. Pagas una vez y es tuya para siempre.' },
     { q: '¿Y si cambio de teléfono?', a: 'En ⚙️ guardas una copia de seguridad y la restauras en el teléfono nuevo con el mismo enlace.' }]),
-  price_cents: 699, compare_cents: 0, cover_url: config.baseUrl + '/img/app-jefa-512.png', external_url: '/app/jefa/', file_name: '',
+  price_cents: 499, compare_cents: 0, cover_url: config.baseUrl + '/img/app-jefa-512.png', external_url: '/app/jefa/', file_name: '',
   license_type: 'Propio', license_note: 'Para uso personal de quien la compra. No se permite compartir el enlace.',
+  regalo_url: '/app/jefa/demo', regalo_title: 'la demo de La Jefa (3 usos gratis)',
   active: process.argv.includes('--publicar') ? 1 : (old?.active ?? 0) });
 console.log(`✔ ${p.emoji} ${p.title} · $${(p.price_cents / 100).toFixed(2)} · ${p.active ? 'PUBLICADA' : 'oculta (actívala con --publicar)'}`);
 console.log(`Pruébala (abre antes la tienda con ?soy=dueno en ese teléfono): ${config.baseUrl}/app/jefa/`);

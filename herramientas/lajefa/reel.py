@@ -118,7 +118,7 @@ def esc_fin(t):
     linea(img, 640, "👑", F(220, "Black"), BLANCO, alpha=ease(t * 5))
     linea(img, 860, "La Jefa", F(150, "Black"), BLANCO, alpha=ease((t - .1) * 5), stroke=6, sc=VINO)
     linea(img, 990, "La app de tu negocio desde casa", F(52, "Bold"), (255, 230, 240), alpha=ease((t - .3) * 4))
-    pastilla(img, 1160, "Pago único · sin mensualidad", F(52, "Black"), ORO + (255,), fg=VINO, s=back((t - .45) * 4))
+    pastilla(img, 1160, "Pruébala gratis · $4.99 de por vida", F(52, "Black"), ORO + (255,), fg=VINO, s=back((t - .45) * 4))
     linea(img, 1340, "📲 Link en el perfil", F(60, "Black"), BLANCO, alpha=ease((t - .7) * 4))
     return img
 
