@@ -16,8 +16,8 @@ export function darDeBaja(t) {
   db.prepare('UPDATE subscribers SET unsub = 1 WHERE email = ?').run(String(tok.e).toLowerCase()); return true;
 }
 
-const tema = (s) => (/ahorro/.test(s.source) ? 'ahorro' : /navidad/.test(s.source) ? 'navidad' : /regalo:.*\breto\b/.test(s.source) ? 'habitos' : 'general');
-const PREF = { ahorro: /financ|ahorro|dinero|presupuesto|gasto/i, navidad: /2027|planner|agenda|hábito|habito|año/i, habitos: /hábito|habito/i, general: /hábito|habito|planner|2027|financ/i };
+const tema = (s) => (/regalo:.*\bjefa\b/.test(s.source) ? 'jefa' : /ahorro/.test(s.source) ? 'ahorro' : /navidad/.test(s.source) ? 'navidad' : /regalo:.*\breto\b/.test(s.source) ? 'habitos' : 'general');
+const PREF = { jefa: /jefa|emprend/i, ahorro: /financ|ahorro|dinero|presupuesto|gasto/i, navidad: /2027|planner|agenda|hábito|habito|año/i, habitos: /hábito|habito/i, general: /hábito|habito|planner|2027|financ/i };
 
 /** Producto que más le sirve: el que estaba viendo (cupón desde una ficha) → el de su tema → el más vendido. Nunca uno que ya compró. */
 function recomendar(s) {
@@ -27,6 +27,10 @@ function recomendar(s) {
 }
 
 const CONSEJOS = {
+  jefa: { asunto: '💡 Jefa: 3 errores que te hacen perder plata sin darte cuenta', titulo: '3 errores que se comen tu ganancia',
+    puntos: ['<b>No cobrar tu tiempo:</b> si una torta te lleva 3 horas, esas horas valen. Si no las cuentas, estás trabajando gratis.',
+      '<b>Olvidar los "pequeños" gastos:</b> el gas, la cajita, la bolsa, el pasaje. Sumados, a veces son toda tu ganancia.',
+      '<b>Fiar sin anotar:</b> lo que no se anota, no se cobra. Anota quién te debe y cuánto el mismo día.'] },
   ahorro: { asunto: '💡 3 trucos para no abandonar tu reto de ahorro en marzo', titulo: '3 trucos para que tu ahorro sí llegue a diciembre',
     puntos: ['<b>Ahorra primero, gasta después:</b> aparta el monto de la semana el mismo día que cobras (quincena o fin de mes), no lo que sobre.',
       '<b>Si una semana te cuesta, no la saltes:</b> pon aunque sea la mitad. La racha importa más que el monto.',

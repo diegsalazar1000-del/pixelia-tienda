@@ -27,9 +27,15 @@ Pagas una sola vez: $4.99 de por vida. Sin suscripción.
     { q: '¿Sirve para mi negocio?', a: 'Si vendes algo que tú haces o revendes desde casa (postres, comida, uñas, pestañas, costura, tiendita, manualidades…), sí.' },
     { q: '¿Hay que pagar mensualidad?', a: 'No. Pagas una vez y es tuya para siempre.' },
     { q: '¿Y si cambio de teléfono?', a: 'En ⚙️ guardas una copia de seguridad y la restauras en el teléfono nuevo con el mismo enlace.' }]),
-  price_cents: 499, compare_cents: 0, cover_url: config.baseUrl + '/img/app-jefa-512.png', external_url: '/app/jefa/', file_name: '',
+  gallery: JSON.stringify([
+    { url: '/img/galeria/jefa-precio.jpg', cap: '💰 Tu precio justo, con tu tiempo incluido' },
+    { url: '/img/galeria/jefa-estado.jpg', cap: '🎨 Estados para WhatsApp con tu foto' },
+    { url: '/img/galeria/jefa-lista.jpg', cap: '📋 Tu lista de precios lista para mandar' },
+    { url: '/img/galeria/jefa-cobro.jpg', cap: '💸 Cobra sin pena (hasta en modo dramático 😂)' }]),
+  video_url: '/video/lajefa-reel.mp4',
+  price_cents: 499, compare_cents: 0, cover_url: config.baseUrl + '/img/portada-la-jefa.jpg', external_url: '/app/jefa/', file_name: '',
   license_type: 'Propio', license_note: 'Para uso personal de quien la compra. No se permite compartir el enlace.',
-  regalo_url: '/app/jefa/demo', regalo_title: 'la demo de La Jefa (3 usos gratis)',
+  regalo_url: '/jefa#demo', regalo_title: 'la demo de La Jefa (3 usos gratis)',
   active: process.argv.includes('--publicar') ? 1 : (old?.active ?? 0) });
 console.log(`✔ ${p.emoji} ${p.title} · $${(p.price_cents / 100).toFixed(2)} · ${p.active ? 'PUBLICADA' : 'oculta (actívala con --publicar)'}`);
 console.log(`Pruébala (abre antes la tienda con ?soy=dueno en ese teléfono): ${config.baseUrl}/app/jefa/`);

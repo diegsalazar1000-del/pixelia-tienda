@@ -46,7 +46,7 @@ export async function cuenta() {
   return api('GET', env('META_AD_ACCOUNT'), { fields: 'name,currency,account_status,min_daily_budget' });
 }
 
-async function subirVideo(act, url, nombre) {
+export async function subirVideo(act, url, nombre) {
   const v = await api('POST', `${act}/advideos`, { file_url: url, name: nombre });
   for (let i = 0; i < 40; i++) {
     await sleep(6000);

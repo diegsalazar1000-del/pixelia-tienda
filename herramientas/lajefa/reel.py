@@ -15,6 +15,8 @@ W, H, FPS = 1080, 1920, 24
 F, linea, pastilla, partir, ease, back = S.F, S.linea, S.pastilla, S.partir, S.ease, S.back
 ROSA, VINO, ORO, ROJO, BLANCO = (232, 51, 122), (122, 24, 70), (245, 184, 61), (220, 38, 38), (255, 255, 255)
 
+# cierre: orgánico = "Comenta DEMO" (comentarios.js responde con el link); --anuncio = el botón del anuncio lleva a /jefa
+FIN_CTA = "👇 Pruébala gratis aquí" if "--anuncio" in sys.argv else "💬 Comenta DEMO · link en el perfil"
 # (tipo, fuente, duración, subtítulo de lo que dice, texto grande)
 ESC = [("clip", "c1", 2.6, "¿Qué? ¿Estoy perdiendo plata?", "Pierdes $1,50 en cada torta 😱"),
        ("clip", "c2", 2.1, "¡Con razón no me alcanza!", "Y pones el precio “a ojo” 🙈"),
@@ -119,7 +121,7 @@ def esc_fin(t):
     linea(img, 860, "La Jefa", F(150, "Black"), BLANCO, alpha=ease((t - .1) * 5), stroke=6, sc=VINO)
     linea(img, 990, "La app de tu negocio desde casa", F(52, "Bold"), (255, 230, 240), alpha=ease((t - .3) * 4))
     pastilla(img, 1160, "Pruébala gratis · $4.99 de por vida", F(52, "Black"), ORO + (255,), fg=VINO, s=back((t - .45) * 4))
-    linea(img, 1340, "📲 Link en el perfil", F(60, "Black"), BLANCO, alpha=ease((t - .7) * 4))
+    linea(img, 1340, FIN_CTA, F(56, "Black"), BLANCO, alpha=ease((t - .7) * 4))
     return img
 
 def main(out):
@@ -173,4 +175,6 @@ def main(out):
         shutil.rmtree(tmp, ignore_errors=True)
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "storage" / "anuncios" / "la-jefa" / "reel-lajefa.mp4"))
+    a = [x for x in sys.argv[1:] if not x.startswith("--")]
+    out = a[0] if a else str(ROOT / "storage" / "anuncios" / "la-jefa" / ("reel-lajefa-anuncio.mp4" if "--anuncio" in sys.argv else "reel-lajefa.mp4"))
+    pathlib.Path(out).parent.mkdir(parents=True, exist_ok=True); main(out)

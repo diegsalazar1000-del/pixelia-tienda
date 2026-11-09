@@ -162,6 +162,8 @@ on('GET', '/p/:slug', (req, res, { slug }) => {
 });
 // 🎁 Regalos gratis a cambio del correo (lead magnet)
 const REGALOS = {
+  jefa: { title: 'la demo de La Jefa (3 usos gratis)', file: '/app/jefa/demo', app: true,
+    next: { slug: 'la-jefa', text: '¿Te gustó? Llévatela completa, sin límites y para siempre:' } },
   ahorro: { title: 'Reto de Ahorro 52 Semanas 2027', file: '/regalos/Reto-de-Ahorro-52-Semanas-Pixelia.zip' },
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
   reto: { title: 'Reto 30 Días (Google Sheets / Excel)', file: '/regalos/Reto-30-Dias-Pixelia.xlsx',
@@ -223,6 +225,11 @@ on('GET', '/app/:app/sw.js', (req, res, { app }) => {   // funciona sin internet
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));}return r;}).catch(()=>caches.match(e.request,{ignoreSearch:true})));});`);
 });
 
+on('GET', '/jefa', (req, res) => {   // landing de La Jefa (link del perfil y anuncios): demo gratis a cambio del correo
+  const p = Products.bySlug('la-jefa');
+  if (p && visitaReal(req, p.id)) Products.view(p.id);
+  res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('jefa.html'));
+});
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
   const p = Products.bySlug('regalo-reto-30-dias');
   if (p && visitaReal(req, p.id)) Products.view(p.id);
@@ -238,13 +245,13 @@ on('POST', '/api/regalo', async (req, res) => {
   const ids = [...new Set((Array.isArray(b.regalos) ? b.regalos : []).filter((x) => REGALOS[x]))];
   if (!ids.length) return fail(res, 400, 'Elige al menos un regalo');
   const s = Subscribers.add(email, 'regalo:' + ids.join('+'));
-  const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file }));
+  const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file, app: !!REGALOS[id].app }));
   const code = s.used_order ? null : s.code, off = Math.round(COUPON_OFF * 100);
   if (config.email.resendKey) {
     sendEmail(email, `🎁 Tu regalo de ${config.storeName}`, links.map((l) => `${l.title}: ${l.url}`).join('\n') + (code ? `\n\nTu cupón de ${off}%: ${code}` : ''),
       `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px">
        <h2 style="margin:0 0 12px">🎁 ¡Aquí está tu regalo!</h2>
-       ${links.map((l) => `<p><a style="display:inline-block;background:#ff4fa3;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${l.url}">⬇️ Descargar ${esc(l.title)}</a></p>`).join('')}
+       ${links.map((l) => `<p><a style="display:inline-block;background:#ff4fa3;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${l.url}">${l.app ? '👑 Abrir ' : '⬇️ Descargar '}${esc(l.title)}</a></p>`).join('')}
        ${code ? `<p style="margin-top:18px">Y para tu primera compra, <b>${off}% de descuento</b> con el cupón:</p><p style="font-size:26px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:8px 16px;border-radius:12px">${code}</p>` : ''}
        ${ids.map((id) => REGALOS[id].next).filter(Boolean).map((n) => { const np = Products.bySlug(n.slug); return np && np.active ? `<p style="margin-top:18px">${esc(n.text)}</p><p><a style="color:#b9a6ff;font-weight:700" href="${config.baseUrl}/p/${np.slug}${code ? '?cupon=' + code : ''}">👉 ${esc(np.title)}${code ? ` con tu ${off}%` : ''}</a></p>` : ''; }).join('')}
        <p style="color:#aab">Mira todos los productos en <a style="color:#b9a6ff" href="${config.baseUrl}">${esc(config.baseUrl.replace(/^https?:\/\//, ''))}</a></p></div>`)
