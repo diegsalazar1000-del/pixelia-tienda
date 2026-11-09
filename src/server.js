@@ -212,7 +212,7 @@ try { db.exec('CREATE TABLE IF NOT EXISTS app_eventos (day TEXT, app TEXT, event
 const appEvento = (app, evento) => { try { db.prepare("INSERT INTO app_eventos (day, app, evento, n) VALUES (date('now'), ?, ?, 1) ON CONFLICT(day, app, evento) DO UPDATE SET n = n + 1").run(app, evento); } catch {} };
 on('POST', '/api/app-evento', async (req, res) => {
   const b = await body(req, 500).catch(() => ({})); const app = String(b.app || ''), e = String(b.e || '');
-  if (APPS[app] && /^(uso[1-9]|muro|correo|compra)$/.test(e) && !esDueno(req)) appEvento(app, e);
+  if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar

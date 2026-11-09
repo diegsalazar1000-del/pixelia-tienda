@@ -581,6 +581,9 @@ if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#insta
 if (window.APP_DEMO) {
   const D = window.APP_DEMO, ACC = ['#calc', '#copmsg', '#coprec', '#walista', '#eshare', '#esave'];
   const quedan = () => Math.max(0, D.usos - (leer('demo-usados', 0) || 0));
+  const evd = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }).catch(() => {}), keepalive: true }); } catch (x) {} };
+  const vistas = new Set();
+  document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => { const t = b.dataset.v; if (!vistas.has(t)) { vistas.add(t); evd('tab_' + t); } }));
   const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
   const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Demo gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'} · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida</a>` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
   document.body.prepend(barra); pintarBarra();
@@ -595,20 +598,27 @@ if (window.APP_DEMO) {
       const email = m.querySelector('#oc-mail').value.trim();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Revisa tu correo 📩'); if (!m.querySelector('#oc-chk').checked) return toast('Marca la casilla 😉');
       try { const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, regalos: ['jefa'], consent: true }) });
-        const j = await r.json(); if (!r.ok) throw new Error(j.error); guardar('demo-correo', email); try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'correo' }) }); } catch (x) {} if (j.code) guardar('demo-cupon', j.code);
+        const j = await r.json(); if (!r.ok) throw new Error(j.error); guardar('demo-correo', email); try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'correo' }).catch(() => {}) }); } catch (x) {} if (j.code) guardar('demo-cupon', j.code);
         try { fbq('track', 'Lead', { content_name: 'demo-la-jefa' }); } catch (e) {}
         m.remove(); toast('¡Listo! Revisa tu correo 💌'); } catch (e) { toast(e.message || 'No se pudo, prueba otra vez'); }
     };
   };
-  const muro = () => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'muro' }), keepalive: true }); } catch (x) {} const m = document.createElement('div'); m.style.cssText = 'position:fixed;inset:0;z-index:99;background:rgba(43,22,48,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+  const muro = () => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'muro' }).catch(() => {}), keepalive: true }); } catch (x) {} const m = document.createElement('div'); m.style.cssText = 'position:fixed;inset:0;z-index:99;background:rgba(43,22,48,.75);display:flex;align-items:center;justify-content:center;padding:20px';
     m.innerHTML = `<div class="card" style="max-width:380px;text-align:center"><div style="font-size:54px">👑</div><h2>¿Te gustó, jefa?</h2><p style="margin:8px 0 4px">Ya usaste tus ${D.usos} usos gratis.</p><p class="mini">Llévatela completa: precios, clientas, estados y cobros, sin límites. Lo que hiciste aquí se queda guardado en este teléfono.</p>
       <a class="btn" style="display:block;text-decoration:none" href="${D.comprar}${leer('demo-cupon', '') ? '&cupon=' + encodeURIComponent(leer('demo-cupon', '')) : ''}">Quiero La Jefa · $4.99 de por vida${leer('demo-cupon', '') ? ' (−15%)' : ''}</a><button class="btn sec" id="muro-x">Ahora no</button></div>`;
-    document.body.appendChild(m); m.querySelector('#muro-x').onclick = () => m.remove(); };
+    document.body.appendChild(m);
+    m.querySelector('#muro-x').onclick = () => {   // ¿por qué no? (1 toque, anónimo) → sabemos qué mejorar
+      if (leer('demo-motivo', '')) return m.remove();
+      m.querySelector('.card').innerHTML = `<h2>¿Qué te frenó? 🙏</h2><p class="mini" style="margin-bottom:10px">Un toque y nos ayudas a mejorarla:</p>` +
+        [['caro', '💸 Está cara para mí'], ['pago', '💳 No sé cómo pagar'], ['nosirve', '🤷 No es para mi negocio'], ['dificil', '😵 Me costó usarla'], ['luego', '⏳ La compro después']]
+          .map(([k, t]) => `<button class="btn sec" data-mot="${k}" style="margin-top:8px">${t}</button>`).join('');
+      m.querySelectorAll('[data-mot]').forEach((b) => b.onclick = () => { evd('no_' + b.dataset.mot); guardar('demo-motivo', b.dataset.mot); m.remove(); toast('¡Gracias, jefa! 💕'); });
+    }; };
   document.addEventListener('click', (e) => {
     const el = e.target.closest(ACC.join(',')); if (!el) return;
     if (!quedan()) { e.preventDefault(); e.stopImmediatePropagation(); muro(); return; }
     guardar('demo-usados', (leer('demo-usados', 0) || 0) + 1); pintarBarra();
-    const ev = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }); } catch (x) {} };
+    const ev = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }).catch(() => {}), keepalive: true }); } catch (x) {} };
     ev('uso' + leer('demo-usados', 0));
     if (leer('demo-usados', 0) === 1 && !leer('demo-correo', false)) setTimeout(ofrecerCorreo, 2200);
     if (!quedan()) setTimeout(muro, 1600);

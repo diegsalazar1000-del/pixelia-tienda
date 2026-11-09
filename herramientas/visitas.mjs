@@ -17,6 +17,11 @@ try {   // 👑 uso de las demos: abrieron → 1er uso → 3 usos (vieron la ofe
     console.log(`\n👑 DEMO ${app.toUpperCase()} (hoy / 7 días)`);
     console.log(`  abrieron ${g('abrio', 'hoy')} / ${g('abrio')} · usaron 1 vez ${g('uso1', 'hoy')} / ${g('uso1')} · llegaron a 3 usos ${g('uso3', 'hoy')} / ${g('uso3')} · dejaron correo ${g('correo', 'hoy')} / ${g('correo')}`);
     if (g('abrio')) console.log(`  → de cada 10 que abren, ${Math.round(g('uso1') / g('abrio') * 10)} la usan`);
+    const tabs = ev.filter((e) => e.app === app && e.evento.startsWith('tab_')).sort((a, b) => b.sem - a.sem);
+    if (tabs.length) console.log('  pestañas que más abren (7 días): ' + tabs.map((e) => `${e.evento.slice(4)} ${e.sem}`).join(' · '));
+    const NOM = { caro: '💸 cara', pago: '💳 no sabe pagar', nosirve: '🤷 no es para su negocio', dificil: '😵 difícil', luego: '⏳ después' };
+    const mot = ev.filter((e) => e.app === app && e.evento.startsWith('no_')).sort((a, b) => b.sem - a.sem);
+    if (mot.length) console.log('  ¿por qué no compran? (7 días): ' + mot.map((e) => `${NOM[e.evento.slice(3)] || e.evento} ${e.sem}`).join(' · '));
   }
 } catch {}
 console.log('\n📩 CORREOS NUEVOS');
