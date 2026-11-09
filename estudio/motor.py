@@ -232,16 +232,16 @@ def device_frame(page, w, max_h=None, r=46, pad=26, color=None):
     ImageDraw.Draw(fr).rounded_rectangle([0, 0, fr.width - 1, fr.height - 1], radius=r, fill=color)
     fr.alpha_composite(rounded(p, int(r * .55)), (pad, pad)); return fr
 
-PAGOS = [p.strip() for p in __import__("os").environ.get("PAGOS_ANUNCIO", "PayPal,Visa,Mastercard,Binance").split(",") if p.strip()]
+PAGOS = [p.strip() for p in __import__("os").environ.get("PAGOS_ANUNCIO", "PayPal,Tarjeta,Binance").split(",") if p.strip()]
 
 def pay_strip(scale=1.0, dark=None):
-    """Franja 'Paga con: PayPal · Visa · Mastercard · Binance' con icono de tarjeta (sin logos de marcas)."""
+    """Franja 'Compra desde cualquier país: PayPal · Tarjeta · Binance' con icono de tarjeta (sin logos de marcas; pedido de Diego 9-nov)."""
     darkbg = S.get("name") in ("neon", "tiktok")
     fg = "#FFFFFF" if darkbg else INK
     bg = {"neon": (27, 18, 56, 240), "tiktok": (0, 0, 0, 190)}.get(S.get("name"), (255, 255, 255, 245))
     f1, f2 = F("Medium", 30 * scale), F("Bold", 30 * scale)
     pills = [text_box(p, f2, fg) for p in PAGOS]
-    lead = text_box("Paga con", f1, fg)
+    lead = text_box(__import__("os").environ.get("PAGOS_FRASE", "Compra desde cualquier país:"), f1, fg)
     ic_w, ic_h = int(54 * scale), int(36 * scale)
     gap = int(16 * scale); dot = int(10 * scale)
     w = ic_w + gap + lead.width + gap + sum(p.width for p in pills) + (len(pills) - 1) * (gap + dot) + int(40 * scale)

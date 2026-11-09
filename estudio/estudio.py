@@ -442,7 +442,7 @@ def copy_text(prod, B):
         lines += [f"=== Enfoque {k} (imágenes {k}-*) · nombre en Meta: [{prod['slug']}] {k} ===", "Texto principal:", c.get("texto", ""),
                   f"Titular: {c.get('titular', '')}", f"Descripción: {c.get('descripcion', '')}", ""]
     lines += ["Reel: usa el texto del enfoque A · nombre en Meta: [" + prod["slug"] + "] reel", "",
-              "Añade al final del texto principal: 💳 Paga con " + ", ".join(motor.PAGOS) + " · ⚡ Descarga inmediata"]
+              "Añade al final del texto principal: 🌎 Compra desde cualquier país · 💳 " + ", ".join(motor.PAGOS) + " · ⚡ Descarga inmediata"]
     return "\n".join(lines)
 
 def auto_scout(g, force=False):
