@@ -38,6 +38,7 @@ Funciona en Excel y Google Sheets (gratis), también en el celular. Pagas una ve
   video_url: '/video/habitos-demo.mp4',
   countdown: '2027-01-01', countdown_label: 'para el 2027. Empieza preparado.',
   sample_url: '', sample_title: '', // licencia PLR: NO se puede regalar ninguna parte (ni de muestra)
+  regalo_url: '/reto#descargar', regalo_title: 'el Reto 30 Días', // regalo PROPIO (no del PLR) para quien no se anima a comprar
   faq: JSON.stringify([
     { q: '¿Necesito tener Excel?', a: 'No. Funciona perfecto en Google Sheets, que es gratis, y también desde el celular. Si tienes Excel, también va.' },
     { q: '¿Y si ya empezó el año cuando lo compre?', a: 'Empiezas el día que quieras. Las rachas y los niveles cuentan desde tu primer ✓.' },

@@ -111,6 +111,8 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN countdown_label TEXT DEFAULT ''",
   "ALTER TABLE products ADD COLUMN sample_url TEXT DEFAULT ''",     // muestra gratis a cambio del correo
   "ALTER TABLE products ADD COLUMN sample_title TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN regalo_url TEXT DEFAULT ''",
+  "ALTER TABLE products ADD COLUMN regalo_title TEXT DEFAULT ''",
   "ALTER TABLE products ADD COLUMN faq TEXT DEFAULT ''",            // JSON [{"q":"..","a":".."}] (se suman a las generales)
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",
@@ -166,7 +168,7 @@ export const Products = {
     const fields = ['slug', 'title', 'short', 'description', 'category', 'price_cents', 'compare_cents', 'stars', 'emoji',
       'color', 'cover_url', 'file_name', 'external_url', 'license_type', 'license_note', 'i18n', 'featured', 'active',
       'launched_at', 'retired_at', 'candidate_id', 'bundle_ids',
-      'gancho', 'gallery', 'video_url', 'countdown', 'countdown_label', 'sample_url', 'sample_title', 'faq'];
+      'gancho', 'gallery', 'video_url', 'countdown', 'countdown_label', 'sample_url', 'sample_title', 'faq', 'regalo_url', 'regalo_title'];
     // Al activarse por primera vez queda registrada la fecha de lanzamiento.
     if (p.active === 1 && !(p.id && Products.byId(p.id)?.launched_at)) p.launched_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (p.active === 1) p.retired_at = null;

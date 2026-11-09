@@ -77,6 +77,9 @@ function offersHtml() {
       <p>Déjanos tu correo y te damos tu cupón al instante (también te avisamos de novedades).</p>
       <div class="row"><input id="subEmail" type="email" placeholder="tu@correo.com" autocomplete="email"><button class="btn btn-main" id="subBtn">Quiero mi 15%</button></div>
       <p class="err" id="subErr"></p></div>`;
+  if (P.regalo && !UPSELL) h += `<a class="offer" style="display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,#ff6b3d33,#14b8a633)" href="${escH(P.regalo.url)}">
+      <h4>🤔 ¿Todavía no te decides?</h4><p>Empieza <b>gratis</b> con <b>${escH(P.regalo.title)}</b>: te lo mandamos al correo y, si te gusta, aquí te espera el completo con tu 15%.</p>
+      <p><b><u>Quiero empezar gratis →</u></b></p></a>`;
   return h;
 }
 

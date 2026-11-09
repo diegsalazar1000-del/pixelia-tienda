@@ -45,7 +45,8 @@ function publicProduct(p, lang = 'es') {
     pack: p.bundle_ids ? Products.bundleItems(p).map((i) => ({ slug: i.slug, title: i.title, emoji: i.emoji, price: i.price_cents / 100 })) : null,
     gancho: tr.gancho || p.gancho || '', gallery: jsonList(p.gallery), video: p.video_url || '', faq: jsonList(tr.faq || p.faq),
     countdown: p.countdown ? { date: p.countdown, label: tr.countdown_label || p.countdown_label || '' } : null,
-    sample: p.sample_url ? { title: tr.sample_title || p.sample_title || 'Muestra gratis' } : null };
+    sample: p.sample_url ? { title: tr.sample_title || p.sample_title || 'Muestra gratis' } : null,
+    regalo: p.regalo_url ? { url: p.regalo_url, title: p.regalo_title || 'un regalo gratis' } : null };  // "¿Todavía no te decides? Empieza gratis con…"
 }
 function jsonList(v) { if (Array.isArray(v)) return v; try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
 
