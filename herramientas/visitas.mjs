@@ -10,6 +10,15 @@ console.log('👀 VISITAS (hora del servidor, UTC)');
 for (const r of q(`SELECT p.title t, SUM(CASE WHEN v.day = date('now') THEN v.views ELSE 0 END) hoy, SUM(v.views) sem
   FROM product_views v JOIN products p ON p.id = v.product_id WHERE v.day >= date('now','-6 day') GROUP BY p.id ORDER BY sem DESC`))
   console.log(`  ${r.t.slice(0, 45)}: hoy ${r.hoy} · 7 días ${r.sem}`);
+try {   // 👑 uso de las demos: abrieron → 1er uso → 3 usos (vieron la oferta)
+  const ev = q(`SELECT app, evento, SUM(CASE WHEN day = date('now') THEN n ELSE 0 END) hoy, SUM(n) sem FROM app_eventos WHERE day >= date('now','-6 day') GROUP BY app, evento`);
+  for (const app of [...new Set(ev.map((e) => e.app))]) {
+    const g = (k, c = 'sem') => ev.find((e) => e.app === app && e.evento === k)?.[c] || 0;
+    console.log(`\n👑 DEMO ${app.toUpperCase()} (hoy / 7 días)`);
+    console.log(`  abrieron ${g('abrio', 'hoy')} / ${g('abrio')} · usaron 1 vez ${g('uso1', 'hoy')} / ${g('uso1')} · llegaron a 3 usos ${g('uso3', 'hoy')} / ${g('uso3')} · dejaron correo ${g('correo', 'hoy')} / ${g('correo')}`);
+    if (g('abrio')) console.log(`  → de cada 10 que abren, ${Math.round(g('uso1') / g('abrio') * 10)} la usan`);
+  }
+} catch {}
 console.log('\n📩 CORREOS NUEVOS');
 for (const r of q(`SELECT source s, SUM(created_at >= date('now')) hoy, COUNT(*) sem FROM subscribers WHERE created_at >= date('now','-6 day') GROUP BY source ORDER BY sem DESC`))
   console.log(`  ${r.s || '(cupón)'}: hoy ${r.hoy} · 7 días ${r.sem}`);

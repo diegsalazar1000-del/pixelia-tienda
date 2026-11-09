@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { config } from './config.js';
-import { Products, Orders, Subscribers, COUPON_OFF } from './db.js';
+import { db, Products, Orders, Subscribers, COUPON_OFF } from './db.js';
 import { sendEmail } from './delivery/email.js';
 import { deliver, verifyDownload, downloadLink, appLicense, verifyApp } from './delivery/index.js';
 import { whatsappEnabled } from './delivery/whatsapp.js';
@@ -207,8 +207,17 @@ on('GET', '/app/:app/', (req, res, { app }, url) => {
   res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' });
   res.end(html.replaceAll('{{LIC}}', encodeURIComponent(k)));
 });
+// 📈 Uso de las demos (lo que más le importa a Diego: que la USEN): abrió / uso / muro / correo por día, sin datos personales
+try { db.exec('CREATE TABLE IF NOT EXISTS app_eventos (day TEXT, app TEXT, evento TEXT, n INTEGER DEFAULT 0, PRIMARY KEY (day, app, evento))'); } catch {}
+const appEvento = (app, evento) => { try { db.prepare("INSERT INTO app_eventos (day, app, evento, n) VALUES (date('now'), ?, ?, 1) ON CONFLICT(day, app, evento) DO UPDATE SET n = n + 1").run(app, evento); } catch {} };
+on('POST', '/api/app-evento', async (req, res) => {
+  const b = await body(req, 500).catch(() => ({})); const app = String(b.app || ''), e = String(b.e || '');
+  if (APPS[app] && /^(uso[1-9]|muro|correo|compra)$/.test(e) && !esDueno(req)) appEvento(app, e);
+  json(res, 200, { ok: true });
+});
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
   const A = APPS[app]; if (!A) return fail(res, 404, 'No existe');
+  if (visitaReal(req, 'demo:' + app)) appEvento(app, 'abrio');
   let html = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'apps', A.dir, 'index.html'), 'utf8');
   html = html.replace(/<link rel="manifest"[^>]*>/, '').replace('<head>', `<head><script>window.APP_DEMO={usos:${Number(process.env.APP_DEMO_USOS || 3)},comprar:'/p/${A.slug}?ref=demo'}</script>${esDueno(req) ? '' : pixelSnippet()}`);
   res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(html);
