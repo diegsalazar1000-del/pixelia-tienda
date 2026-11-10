@@ -115,7 +115,8 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN regalo_title TEXT DEFAULT ''",
   "ALTER TABLE products ADD COLUMN faq TEXT DEFAULT ''",            // JSON [{"q":"..","a":".."}] (se suman a las generales)
   "ALTER TABLE products ADD COLUMN form TEXT DEFAULT ''",          // producto personalizado por pedido (ej. 'aventura'): pide datos al comprar
-  "ALTER TABLE orders ADD COLUMN datos TEXT DEFAULT ''",           // JSON con los datos de la personalización
+  "ALTER TABLE orders ADD COLUMN datos TEXT DEFAULT ''",
+  "ALTER TABLE orders ADD COLUMN bs TEXT DEFAULT ''",              // Pago Móvil: monto EXACTO en Bs (céntimos únicos para reconocer el pago solo)           // JSON con los datos de la personalización
   "ALTER TABLE orders ADD COLUMN archivo TEXT DEFAULT ''",         // archivo generado para ESTE pedido (relativo a storage/) o 'generando:<ms>'
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",

@@ -341,9 +341,30 @@ on('POST', '/api/orders', async (req, res) => {
   if (b.method === 'pagomovil') {
     const t = pagoMovilEnabled() ? await tasaBs() : 0; if (!t) return fail(res, 400, 'Pago Móvil no está activo');
     const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'pagomovil', amount_cents: pr.cents, currency: 'USD', lang: b.lang, prueba: esDueno(req), ...extra });
-    return json(res, 200, { id: o.id, key: orderKey(o.id), usd: (o.amount_cents / 100).toFixed(2), bs: enBs(o.amount_cents, t).toFixed(2), tasa: t, ...datosPagoMovil() });
+    // céntimos únicos entre los pedidos abiertos → el aviso del banco reconoce el pedido solo
+    const base = Math.round(enBs(o.amount_cents, t) * 100), usados = new Set(db.prepare(`SELECT bs FROM orders WHERE method='pagomovil' AND status IN ('pending','review') AND created_at > datetime('now','-2 days') AND bs != ''`).all().map((r) => Math.round(Number(r.bs) * 100)));
+    let c = base; while (usados.has(c)) c++;
+    const bs = (c / 100).toFixed(2); Orders.update(o.id, { bs });
+    return json(res, 200, { id: o.id, key: orderKey(o.id), usd: (o.amount_cents / 100).toFixed(2), bs, tasa: t, ...datosPagoMovil() });
   }
   return fail(res, 400, 'Método de pago no válido');
+});
+// 🤖 Aviso del banco reenviado desde el teléfono de Diego (MacroDroid o similar): confirma solo si el monto coincide con UN pedido
+on('POST', '/api/pagomovil/aviso', async (req, res, _, url) => {
+  const tok = process.env.PAGOMOVIL_AVISO_TOKEN || '';
+  if (!tok || url.searchParams.get('t') !== tok) return fail(res, 401, 'token incorrecto');
+  const ch = []; let n = 0; for await (const c of req) { n += c.length; if (n > 2e4) break; ch.push(c); }
+  const txt = decodeURIComponent(Buffer.concat(ch).toString().replace(/\+/g, ' ')).slice(0, 4000);
+  const m = txt.match(/Bs\.?\s*([\d.]+,\d{2})/i) || txt.match(/([\d.]+,\d{2})\s*Bs/i);
+  if (!m) return json(res, 200, { ok: false, motivo: 'sin monto' });
+  const monto = Number(m[1].replace(/\./g, '').replace(',', '.')).toFixed(2), tel = (txt.match(/0\d{10}/) || [''])[0];
+  const c = db.prepare(`SELECT id FROM orders WHERE method='pagomovil' AND status IN ('pending','review') AND bs = ? AND created_at > datetime('now','-2 days')`).all(monto);
+  if (c.length === 1) {
+    if (Orders.markPaid(c[0].id, `aviso banco · Bs ${monto}${tel ? ' · ' + tel : ''}`)) { await deliver(c[0].id); notifyAdmin(`🤖✅ Pago Móvil de Bs ${monto} reconocido solo: pedido <code>${c[0].id}</code> confirmado y entregado.`).catch(() => {}); }
+    return json(res, 200, { ok: true, pedido: c[0].id });
+  }
+  notifyAdmin(`🤖 Llegó un Pago Móvil de <b>Bs ${monto}</b>${tel ? ' desde ' + tel : ''} pero ${c.length ? 'coincide con varios pedidos' : 'no coincide con ningún pedido abierto'}. Revísalo con /pendientes.`).catch(() => {});
+  return json(res, 200, { ok: false, coincidencias: c.length });
 });
 on('POST', '/api/pagomovil/submit', async (req, res) => {
   const b = await body(req, 1e4); const o = Orders.get(b.id);
@@ -351,8 +372,7 @@ on('POST', '/api/pagomovil/submit', async (req, res) => {
   if (o.status !== 'pending') return json(res, 200, { status: o.status });
   const ref = String(b.ref || '').replace(/\D/g, '').slice(0, 20);
   if (ref.length < 4) return fail(res, 400, 'Escribe los últimos 4 dígitos (o más) de la referencia');
-  const t = await tasaBs();
-  Orders.update(o.id, { status: 'review', provider_ref: `${ref} · Bs ${enBs(o.amount_cents, t).toFixed(2)} · tel ${String(b.tel || '').replace(/[^\d+]/g, '').slice(0, 15) || '-'}` });
+  Orders.update(o.id, { status: 'review', provider_ref: `${ref} · Bs ${o.bs || '?'} · tel ${String(b.tel || '').replace(/[^\d+]/g, '').slice(0, 15) || '-'}` });
   await askBinance(Orders.withProduct(o.id));
   return json(res, 200, { status: 'review' });
 });

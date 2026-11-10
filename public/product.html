@@ -297,8 +297,8 @@ function pagoMovilSteps(o) {
   const fila = (k, v) => `<div class="copy"><span style="opacity:.75">${k}</span> <b>${escH(v)}</b><button data-c="${escH(v)}">${t('copy')}</button></div>`;
   $('#pay').innerHTML = `
     <div class="box"><ol class="binance">
-      <li>Abre tu banco → <b>Pago Móvil</b> y paga <b>exactamente</b>:${fila('Monto', 'Bs ' + o.bs)}
-        <div style="font-size:.82rem;color:var(--mut)">$${o.usd} a la tasa oficial BCV de hoy (Bs ${Number(o.tasa).toFixed(2)})</div></li>
+      <li>Abre tu banco → <b>Pago Móvil</b> y paga <b>exactamente</b>:${fila('Monto Bs', Number(o.bs).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+        <div style="font-size:.82rem;color:var(--mut)">$${o.usd} a la tasa oficial BCV de hoy (Bs ${Number(o.tasa).toFixed(2)}). Paga los céntimos exactos: así reconocemos tu pago al instante.</div></li>
       <li>A estos datos:${fila('Banco', o.banco)}${fila('Teléfono', o.tel)}${fila('Cédula / RIF', o.ci)}${o.nombre ? fila('A nombre de', o.nombre) : ''}</li>
       <li>Escribe la <b>referencia</b> del pago y el teléfono desde el que pagaste:</li>
     </ol>

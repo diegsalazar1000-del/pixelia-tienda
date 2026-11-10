@@ -37,6 +37,11 @@ case "$1" in
     ask PAGOMOVIL_CI "Escribe la cédula o RIF, ej: V-12345678, y pulsa Enter:" 0
     ask PAGOMOVIL_NOMBRE "Nombre del titular (opcional, Enter para saltar):" 0
     ask PAGOMOVIL_TASA "Tasa de respaldo Bs por dólar por si falla la del BCV (ej: 230), Enter para saltar:" 0;;
+  pagomovil-aviso)
+    T=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24); set_key PAGOMOVIL_AVISO_TOKEN "$T"
+    URL=$(grep '^BASE_URL=' .env | cut -d= -f2-); [ -z "$URL" ] && URL=https://pixeliadigital.app
+    echo; echo "✔ Listo. Copia esta dirección en MacroDroid (acción: Petición HTTP, método POST, cuerpo = texto de la notificación):"; echo
+    echo "   $URL/api/pagomovil/aviso?t=$T"; echo; echo "   (Es secreta: no la compartas.)";;
   correo)
     ask RESEND_API_KEY "Pega la API key de Resend (no se verá) y pulsa Enter:" 1
     ask EMAIL_FROM "Escribe el remitente, ej: Pixelia <hola@tudominio.com> y pulsa Enter:" 0;;
