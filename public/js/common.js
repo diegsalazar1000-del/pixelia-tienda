@@ -96,4 +96,11 @@ fetch('/api/config').then((r) => r.json()).then((c) => {
     const a = document.createElement('a'); a.href = `https://t.me/${c.bot}?start=soporte`; a.target = '_blank'; a.rel = 'noopener';
     a.textContent = '💬 Soporte por Telegram'; a.style.marginLeft = '14px'; (f.lastElementChild || f).appendChild(a);
   });
+  // botón flotante visible (Diego 10-nov): ayuda con pagos y descargas
+  if (!document.getElementById('soporteFlotante')) {
+    const b = document.createElement('a'); b.id = 'soporteFlotante'; b.href = `https://t.me/${c.bot}?start=soporte`; b.target = '_blank'; b.rel = 'noopener';
+    b.innerHTML = '💬 <span>Soporte</span>'; b.setAttribute('aria-label', 'Soporte por Telegram');
+    b.style.cssText = 'position:fixed;right:14px;bottom:' + (document.querySelector('.buybar, .sticky-buy, #barra') ? '86px' : '18px') + ';z-index:60;display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;background:#229ED9;color:#fff;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+    document.body.appendChild(b);
+  }
 }).catch(() => {});
