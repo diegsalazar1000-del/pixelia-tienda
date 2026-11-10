@@ -464,6 +464,12 @@ def main():
     print("🎬 Estudio de anuncios esperando trabajos…", flush=True)
     while True:
         try:
+            try:   # 📚 libros personalizados pagados (Mi Gran Aventura): van primero, el cliente está esperando
+                L = api("POST", "/api/studio/libro-next", {})
+                if L:
+                    sys.path.insert(0, str(PIXELIA / "herramientas" / "aventura")); import fabrica
+                    fabrica.fabricar(L, PIXELIA, api); continue
+            except Exception as e: print("libros:", e, flush=True)
             J = api("POST", "/api/studio/next", {})
             if J: print("Trabajo", J["job"], J["product"]["slug"], flush=True); run_job(J); continue
             for g in musica.pending_requests(): auto_scout(g, force=True)

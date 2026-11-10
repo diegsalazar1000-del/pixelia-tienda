@@ -61,7 +61,7 @@ async function showProduct(chatId, p) {
   if (!p || !p.active) return send(chatId, 'Ese producto ya no está disponible.');
   const text = `${p.emoji} <b>${esc(p.title)}</b>\n\n${esc(p.short)}\n\n${esc(p.description).slice(0, 700)}\n\n💫 Precio: <b>${p.stars} ⭐</b>`;
   return send(chatId, text, {
-    inline_keyboard: [[{ text: `Comprar por ${p.stars} ⭐`, callback_data: `buy:${p.id}` }],
+    inline_keyboard: [p.form ? [{ text: '🛒 Personalízalo en la web', url: `${config.baseUrl}/p/${p.slug}` }] : [{ text: `Comprar por ${p.stars} ⭐`, callback_data: `buy:${p.id}` }],
       [{ text: '⬅️ Volver', callback_data: `cat:${p.category}`.slice(0, 64) }]],
   });
 }
@@ -196,7 +196,7 @@ async function onCallback(q) {
   if (action === 'mine') return myOrders(chatId);
   if (action === 'buy') {
     const p = Products.byId(Number(value));
-    if (!p?.active || !p.stars) return send(chatId, 'Producto no disponible.');
+    if (!p?.active || !p.stars || p.form) return send(chatId, 'Producto no disponible.');
     const { params } = starsInvoice(p, chatId);
     return tg('sendInvoice', { chat_id: chatId, ...params });
   }

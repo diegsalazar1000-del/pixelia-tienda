@@ -1,0 +1,934 @@
+{
+"trazo1": [
+{
+"box": [
+239,
+142,
+1036,
+224
+],
+"t": "REPASA LAS LÍNEAS PUNTEADAS",
+"contorno": false
+}
+],
+"trazo2": [
+{
+"box": [
+239,
+142,
+1036,
+224
+],
+"t": "REPASA LAS LÍNEAS PUNTEADAS",
+"contorno": false
+}
+],
+"perro_trazo": [
+{
+"box": [
+175,
+154,
+1100,
+217
+],
+"t": "REPASA Y COLOREA LA FIGURA",
+"contorno": false
+}
+],
+"lab_casa": [
+{
+"box": [
+220,
+144,
+1055,
+224
+],
+"t": "LLEVA AL PERRITO A CASA",
+"contorno": false
+}
+],
+"lab_sol": [
+{
+"box": [
+202,
+146,
+1073,
+223
+],
+"t": "AYUDA AL SOL A SALIR DE LAS NUBES",
+"contorno": false
+}
+],
+"lab_cometa": [
+{
+"box": [
+392,
+141,
+883,
+227
+],
+"t": "¡RESCATA LA COMETA!",
+"contorno": false
+}
+],
+"lab_explorador": [
+{
+"box": [
+367,
+149,
+908,
+220
+],
+"t": "AYUDA A {NU} A CRUZAR",
+"contorno": false
+}
+],
+"lab_jardin": [
+{
+"box": [
+174,
+150,
+1101,
+216
+],
+"t": "CRUZA EL JARDÍN DE FLORES",
+"contorno": false
+}
+],
+"tijera": [],
+"circulo": [
+{
+"box": [
+211,
+136,
+554,
+284
+],
+"t": "Círculo",
+"contorno": true
+},
+{
+"box": [
+761,
+146,
+1024,
+287
+],
+"t": "Círculo",
+"contorno": true
+}
+],
+"perro_puntos": [
+{
+"box": [
+269,
+127,
+496,
+276
+],
+"t": "Perro",
+"contorno": true
+},
+{
+"box": [
+801,
+138,
+984,
+278
+],
+"t": "Perro",
+"contorno": true
+}
+],
+"sombras1": [
+{
+"box": [
+207,
+148,
+1068,
+204
+],
+"t": "UNE CADA DIBUJO CON SU SOMBRA",
+"contorno": false
+}
+],
+"sombras2": [
+{
+"box": [
+207,
+148,
+1068,
+204
+],
+"t": "UNE CADA DIBUJO CON SU SOMBRA",
+"contorno": false
+}
+],
+"entre": [
+{
+"box": [
+137,
+132,
+1137,
+183
+],
+"t": "¿QUÉ NÚMERO VA EN EL MEDIO?",
+"contorno": false
+}
+],
+"secuencia": [
+{
+"box": [
+138,
+131,
+1137,
+177
+],
+"t": "COMPLETA LOS NÚMEROS QUE FALTAN",
+"contorno": false
+}
+],
+"cantidad": [
+{
+"box": [
+147,
+132,
+1112,
+191
+],
+"t": "UNE CADA GRUPO CON SU NÚMERO",
+"contorno": false
+}
+],
+"cuenta100": [
+{
+"box": [
+159,
+125,
+1116,
+251
+],
+"t": "CUENTA DEL 1 AL 100",
+"contorno": false
+},
+{
+"box": [
+260,
+269,
+1015,
+343
+],
+"t": "Escribe los números que faltan",
+"contorno": false
+}
+],
+"suma_colorea": [
+{
+"box": [
+239,
+121,
+1036,
+247
+],
+"t": "SUMA Y COLOREA",
+"contorno": true
+},
+{
+"box": [
+250,
+695,
+1025,
+802
+],
+"t": "COLOREA 2 + 2 ESTRELLAS",
+"contorno": true
+},
+{
+"box": [
+206,
+1266,
+1069,
+1373
+],
+"t": "COLOREA 4 + 6 CÍRCULOS",
+"contorno": true
+}
+],
+"decenas": [
+{
+"box": [
+302,
+114,
+973,
+295
+],
+"t": "BARRAS DE DIEZ",
+"contorno": true
+},
+{
+"box": [
+161,
+303,
+1114,
+355
+],
+"t": "Cuenta las barras y colorea la respuesta correcta.",
+"contorno": false
+}
+],
+"hora": [
+{
+"box": [
+268,
+114,
+1007,
+240
+],
+"t": "LA HORA EN PALABRAS",
+"contorno": true
+},
+{
+"box": [
+349,
+260,
+926,
+325
+],
+"t": "Escribe la hora con palabras.",
+"contorno": false
+},
+{
+"box": [
+584,
+419,
+1097,
+518
+],
+"t": "LA UNA",
+"contorno": true
+}
+],
+"sudoku": [
+{
+"box": [
+354,
+145,
+921,
+220
+],
+"t": "COMPLETA EL SUDOKU: DEL 1 AL 4, SIN REPETIR",
+"contorno": false
+}
+],
+"puntos1": [
+{
+"box": [
+186,
+150,
+1089,
+200
+],
+"t": "UNE LOS PUNTOS Y COLOREA",
+"contorno": false
+}
+],
+"puntos2": [
+{
+"box": [
+186,
+150,
+1089,
+200
+],
+"t": "UNE LOS PUNTOS Y COLOREA",
+"contorno": false
+}
+],
+"puntos3": [
+{
+"box": [
+363,
+138,
+912,
+208
+],
+"t": "UNE LOS PUNTOS",
+"contorno": false
+},
+{
+"box": [
+255,
+960,
+510,
+1031
+],
+"t": "COLORÉALO",
+"contorno": false
+},
+{
+"box": [
+772,
+960,
+1013,
+1031
+],
+"t": "DIBÚJALO",
+"contorno": false
+}
+],
+"diferencias1": [],
+"diferencias2": [],
+"diferencias3": [],
+"figuras": [
+{
+"box": [
+259,
+142,
+552,
+245
+],
+"t": "Cuadrado",
+"contorno": true
+},
+{
+"box": [
+723,
+142,
+1016,
+245
+],
+"t": "Cuadrado",
+"contorno": true
+},
+{
+"box": [
+147,
+286,
+249,
+319
+],
+"t": "Repasa:",
+"contorno": false
+},
+{
+"box": [
+147,
+556,
+247,
+589
+],
+"t": "Colorea:",
+"contorno": false
+},
+{
+"box": [
+147,
+970,
+247,
+1003
+],
+"t": "Dibújalo:",
+"contorno": false
+}
+],
+"granja": [
+{
+"box": [
+175,
+154,
+499,
+246
+],
+"t": "GALLINA",
+"contorno": true
+},
+{
+"box": [
+634,
+156,
+1057,
+196
+],
+"t": "Las gallinas ponen huevos",
+"contorno": false
+},
+{
+"box": [
+654,
+202,
+1037,
+243
+],
+"t": "y duermen en el gallinero.",
+"contorno": false
+},
+{
+"box": [
+142,
+308,
+259,
+341
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+235,
+842,
+439,
+934
+],
+"t": "PONI",
+"contorno": true
+},
+{
+"box": [
+654,
+308,
+773,
+341
+],
+"t": "COLOREA",
+"contorno": false
+},
+{
+"box": [
+647,
+844,
+1035,
+884
+],
+"t": "Los ponis son caballitos",
+"contorno": false
+},
+{
+"box": [
+608,
+891,
+1082,
+931
+],
+"t": "muy cariñosos con los niños.",
+"contorno": false
+},
+{
+"box": [
+142,
+993,
+259,
+1026
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+654,
+993,
+773,
+1026
+],
+"t": "COLOREA",
+"contorno": false
+}
+],
+"mar1": [
+{
+"box": [
+174,
+154,
+500,
+246
+],
+"t": "DELFÍN",
+"contorno": true
+},
+{
+"box": [
+586,
+165,
+1097,
+197
+],
+"t": "Los delfines son juguetones y",
+"contorno": false
+},
+{
+"box": [
+682,
+202,
+1009,
+235
+],
+"t": "hablan con silbidos.",
+"contorno": false
+},
+{
+"box": [
+142,
+308,
+259,
+341
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+157,
+852,
+517,
+926
+],
+"t": "PEZ ESPADA",
+"contorno": true
+},
+{
+"box": [
+654,
+308,
+773,
+341
+],
+"t": "COLOREA",
+"contorno": false
+},
+{
+"box": [
+608,
+844,
+1082,
+884
+],
+"t": "El pez espada tiene una",
+"contorno": false
+},
+{
+"box": [
+647,
+891,
+1043,
+931
+],
+"t": "nariz larga como una espada.",
+"contorno": false
+},
+{
+"box": [
+142,
+993,
+259,
+1026
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+654,
+993,
+773,
+1026
+],
+"t": "COLOREA",
+"contorno": false
+}
+],
+"mar2": [
+{
+"box": [
+210,
+154,
+464,
+246
+],
+"t": "BALLENA",
+"contorno": true
+},
+{
+"box": [
+657,
+156,
+1025,
+196
+],
+"t": "Las ballenas son los animales",
+"contorno": false
+},
+{
+"box": [
+673,
+202,
+1018,
+243
+],
+"t": "más grandes del mar.",
+"contorno": false
+},
+{
+"box": [
+142,
+308,
+259,
+341
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+151,
+842,
+523,
+934
+],
+"t": "MEDUSA",
+"contorno": true
+},
+{
+"box": [
+654,
+308,
+773,
+341
+],
+"t": "COLOREA",
+"contorno": false
+},
+{
+"box": [
+568,
+844,
+1123,
+884
+],
+"t": "Las medusas son blanditas y",
+"contorno": false
+},
+{
+"box": [
+614,
+891,
+1076,
+931
+],
+"t": "pican para protegerse.",
+"contorno": false
+},
+{
+"box": [
+142,
+993,
+259,
+1026
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+654,
+993,
+773,
+1026
+],
+"t": "COLOREA",
+"contorno": false
+}
+],
+"selva": [
+{
+"box": [
+149,
+154,
+525,
+246
+],
+"t": "ELEFANTE",
+"contorno": true
+},
+{
+"box": [
+585,
+156,
+1106,
+196
+],
+"t": "Los elefantes usan su trompa",
+"contorno": false
+},
+{
+"box": [
+589,
+202,
+1101,
+243
+],
+"t": "para comer, beber y jugar.",
+"contorno": false
+},
+{
+"box": [
+142,
+308,
+259,
+341
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+168,
+842,
+506,
+934
+],
+"t": "LEOPARDO",
+"contorno": true
+},
+{
+"box": [
+654,
+308,
+773,
+341
+],
+"t": "COLOREA",
+"contorno": false
+},
+{
+"box": [
+613,
+844,
+1069,
+884
+],
+"t": "Los leopardos trepan árboles",
+"contorno": false
+},
+{
+"box": [
+650,
+891,
+1041,
+931
+],
+"t": "y tienen manchas.",
+"contorno": false
+},
+{
+"box": [
+142,
+993,
+259,
+1026
+],
+"t": "REPASA",
+"contorno": false
+},
+{
+"box": [
+654,
+993,
+773,
+1026
+],
+"t": "COLOREA",
+"contorno": false
+}
+],
+"espacio": [
+{
+"box": [
+436,
+128,
+843,
+285
+],
+"t": "EL ESPACIO",
+"contorno": true
+},
+{
+"box": [
+194,
+1300,
+1081,
+1358
+],
+"t": "El espacio es enorme y está más allá",
+"contorno": false
+},
+{
+"box": [
+233,
+1368,
+1042,
+1425
+],
+"t": "de la Tierra, lleno de estrellas y planetas.",
+"contorno": false
+}
+],
+"planeta": [
+{
+"box": [
+401,
+128,
+877,
+285
+],
+"t": "PLANETA",
+"contorno": true
+},
+{
+"box": [
+239,
+1300,
+1036,
+1358
+],
+"t": "Un planeta es una bola gigante",
+"contorno": false
+},
+{
+"box": [
+488,
+1368,
+787,
+1425
+],
+"t": "que gira alrededor de una estrella.",
+"contorno": false
+}
+],
+"letra_A": [],
+"letra_B": [],
+"letra_C": [],
+"letra_D": [],
+"letra_E": [],
+"letra_F": [],
+"letra_G": [],
+"letra_H": [],
+"letra_I": [],
+"letra_J": [],
+"letra_K": [],
+"letra_L": [],
+"letra_LL": [],
+"letra_M": [],
+"letra_N": [],
+"letra_Ñ": [],
+"letra_O": [],
+"letra_P": [],
+"letra_Q": [],
+"letra_R": [],
+"letra_S": [],
+"letra_T": [],
+"letra_U": [],
+"letra_V": [],
+"letra_W": [],
+"letra_X": [],
+"letra_Y": [],
+"letra_Z": []
+}

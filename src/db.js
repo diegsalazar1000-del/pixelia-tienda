@@ -114,6 +114,9 @@ for (const sql of [
   "ALTER TABLE products ADD COLUMN regalo_url TEXT DEFAULT ''",
   "ALTER TABLE products ADD COLUMN regalo_title TEXT DEFAULT ''",
   "ALTER TABLE products ADD COLUMN faq TEXT DEFAULT ''",            // JSON [{"q":"..","a":".."}] (se suman a las generales)
+  "ALTER TABLE products ADD COLUMN form TEXT DEFAULT ''",          // producto personalizado por pedido (ej. 'aventura'): pide datos al comprar
+  "ALTER TABLE orders ADD COLUMN datos TEXT DEFAULT ''",           // JSON con los datos de la personalización
+  "ALTER TABLE orders ADD COLUMN archivo TEXT DEFAULT ''",         // archivo generado para ESTE pedido (relativo a storage/) o 'generando:<ms>'
   "ALTER TABLE orders ADD COLUMN coupon TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN upsell_of TEXT DEFAULT ''",
   "ALTER TABLE orders ADD COLUMN bump_id INTEGER",
@@ -171,7 +174,7 @@ export const Products = {
     const fields = ['slug', 'title', 'short', 'description', 'category', 'price_cents', 'compare_cents', 'stars', 'emoji',
       'color', 'cover_url', 'file_name', 'external_url', 'license_type', 'license_note', 'i18n', 'featured', 'active',
       'launched_at', 'retired_at', 'candidate_id', 'bundle_ids',
-      'gancho', 'gallery', 'video_url', 'countdown', 'countdown_label', 'sample_url', 'sample_title', 'faq', 'regalo_url', 'regalo_title'];
+      'gancho', 'gallery', 'video_url', 'countdown', 'countdown_label', 'sample_url', 'sample_title', 'faq', 'regalo_url', 'regalo_title', 'form'];
     // Al activarse por primera vez queda registrada la fecha de lanzamiento.
     if (p.active === 1 && !(p.id && Products.byId(p.id)?.launched_at)) p.launched_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (p.active === 1) p.retired_at = null;
@@ -279,14 +282,14 @@ export const Candidates = {
 export const Orders = {
   create(o) {
     const id = newOrderId(); if (!o.prueba) actividad('pago');
-    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id, prueba)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
-      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null, o.prueba ? 1 : 0);
+    db.prepare(`INSERT INTO orders (id, product_id, email, whatsapp, telegram_chat_id, lang, method, amount_cents, currency, status, provider_ref, coupon, upsell_of, bump_id, prueba, datos)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, o.product_id, o.email || '', o.whatsapp || '', String(o.telegram_chat_id || ''),
+      o.lang || 'es', o.method, o.amount_cents, o.currency, o.status || 'pending', o.provider_ref || '', o.coupon || '', o.upsell_of || '', o.bump_id || null, o.prueba ? 1 : 0, o.datos || '');
     return Orders.get(id);
   },
   get: (id) => db.prepare('SELECT * FROM orders WHERE id = ?').get(String(id || '').toUpperCase()),
   withProduct: (id) => db.prepare(`SELECT o.*, CASE WHEN o.bump_id THEN p.title || ' + ' || (SELECT title FROM products WHERE id = o.bump_id) ELSE p.title END AS title,
-    p.slug, p.file_name, p.external_url, p.emoji, CASE WHEN o.bump_id THEN p.id || ',' || o.bump_id ELSE p.bundle_ids END AS bundle_ids
+    p.slug, p.file_name, p.external_url, p.emoji, p.form, CASE WHEN o.bump_id THEN p.id || ',' || o.bump_id ELSE p.bundle_ids END AS bundle_ids
     FROM orders o JOIN products p ON p.id = o.product_id WHERE o.id = ?`).get(String(id || '').toUpperCase()),
   update(id, data) {
     const sets = Object.keys(data).map((k) => `${k} = :${k}`).join(', ');

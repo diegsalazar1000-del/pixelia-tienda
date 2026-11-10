@@ -34,6 +34,11 @@ export function verifyApp(k) {
 export async function deliver(orderId) {
   const o = Orders.withProduct(orderId);
   if (!o || o.status !== 'paid') return [];
+  if (o.form && (!o.archivo || o.archivo === 'error' || o.archivo.startsWith('generando'))) {   // personalizado: primero se fabrica (el estudio avisa al terminar)
+    if (o.archivo === 'error') Orders.update(o.id, { archivo: '' });   // /entregar lo vuelve a poner en la fila
+    if (!o.archivo || o.archivo === 'error') notifyAdmin(`📚 Pedido <code>${o.id}</code> pagado: el estudio está creando el libro personalizado…`).catch(() => {});
+    return ['en-fabrica'];
+  }
   const app = !o.bundle_ids && String(o.external_url || '').startsWith('/app/');   // app web: enlace PERMANENTE con su licencia
   const link = app ? `${config.baseUrl}${o.external_url}?k=${appLicense(o.id)}` : downloadLink(o.id);
   const via = [];

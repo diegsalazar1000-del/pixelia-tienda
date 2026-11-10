@@ -47,7 +47,20 @@ function publicProduct(p, lang = 'es') {
     gancho: tr.gancho || p.gancho || '', gallery: jsonList(p.gallery), video: p.video_url || '', faq: jsonList(tr.faq || p.faq),
     countdown: p.countdown ? { date: p.countdown, label: tr.countdown_label || p.countdown_label || '' } : null,
     sample: p.sample_url ? { title: tr.sample_title || p.sample_title || 'Muestra gratis' } : null,
+    form: p.form || '',
     regalo: p.regalo_url ? { url: p.regalo_url, title: p.regalo_title || 'un regalo gratis' } : null };  // "¿Todavía no te decides? Empieza gratis con…"
+}
+// 📚 Datos que pide un producto personalizado (Mi Gran Aventura): se limpian y se guardan en el pedido
+function datosPersonalizados(form, d = {}) {
+  const txt = (v, n) => String(v || '').replace(/[<>{}\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
+  if (form === 'aventura') {
+    const nombre = txt(d.nombre, 20), edad = Math.round(Number(d.edad));
+    if (!nombre) return { error: 'Escribe el nombre del niño o niña 😊' };
+    if (!(edad >= 2 && edad <= 8)) return { error: 'Elige una edad entre 2 y 8 años' };
+    const tipos = ['perrito', 'gatito', 'dinosaurio', 'unicornio', 'dragon', 'robot'];
+    return { nombre, edad, genero: d.genero === 'nino' ? 'nino' : 'nina', comp_tipo: tipos.includes(d.comp_tipo) ? d.comp_tipo : 'perrito', comp_nombre: txt(d.comp_nombre, 16), especial: txt(d.especial, 30) };
+  }
+  return {};
 }
 function jsonList(v) { if (Array.isArray(v)) return v; try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
 
@@ -309,6 +322,7 @@ on('POST', '/api/orders', async (req, res) => {
   if (!email && !whatsapp) return fail(res, 400, 'Indica tu correo o WhatsApp para enviarte el producto');
   let pr; try { pr = priceFor(p, b); } catch (e) { return fail(res, 400, e.message); }
   const extra = { coupon: pr.coupon || '', upsell_of: pr.upsell_of || '' };
+  if (p.form) { const dt = datosPersonalizados(p.form, b.datos); if (dt.error) return fail(res, 400, dt.error); extra.datos = JSON.stringify(dt); }
   if (b.bump && !pr.upsell_of) { const bi = bumpInfo(p); if (bi && bi.slug === b.bump) { pr.cents += Math.round(bi.bumpPrice * 100); extra.bump_id = Products.bySlug(bi.slug).id; } }
   if (b.method === 'paypal') {
     if (!paypalEnabled()) return fail(res, 400, 'PayPal no está activo');
@@ -450,6 +464,12 @@ on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }, url) => {
   Orders.update(o.id, { downloads: o.downloads + 1 });
   if (item.external_url?.startsWith('/app/')) { res.writeHead(302, { location: `${item.external_url}?k=${appLicense(o.id)}` }); return res.end(); }  // app web: su enlace con licencia
   if (item.external_url) { res.writeHead(302, { location: item.external_url }); return res.end(); }
+  if (item.form) {   // personalizado: su propio archivo
+    const f = o.archivo && !o.archivo.startsWith('generando') ? path.join(STORAGE, o.archivo) : '';
+    if (!f || !fs.existsSync(f)) return msg('Tu libro se está creando ahora mismo. Te llega al correo en unos minutos ✨');
+    const dn = (JSON.parse(o.datos || '{}').nombre || 'libro').normalize('NFKD').replace(/[^\w ]/g, '').trim().replace(/ /g, '-');
+    return serveFile(res, f, { 'content-disposition': `attachment; filename="La-gran-aventura-de-${dn}.pdf"` });
+  }
   const file = path.join(config.paths.files, path.basename(item.file_name || ''));
   if (!item.file_name || !fs.existsSync(file)) return msg('El archivo no está disponible todavía. Te lo enviaremos pronto.');
   serveFile(res, file, { 'content-disposition': `attachment; filename="${encodeURIComponent(path.basename(file))}"` });
@@ -559,6 +579,48 @@ on('POST', '/api/n8n/products/:id/retire', (req, res, { id }) => {
   Products.remove(p.id);
   if (p.candidate_id) Candidates.update(p.candidate_id, { status: 'retired' });
   json(res, 200, { ok: true, retired: p.slug });
+});
+
+// ===== 📚 Libros personalizados: el estudio los fabrica (Python) y la tienda los entrega =====
+const STORAGE = path.dirname(config.paths.files);
+const vozFirma = (id) => crypto.createHmac('sha256', config.secret).update('voz.' + id).digest('base64url').slice(0, 12);
+on('POST', '/api/studio/libro-next', (req, res) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const viejo = Date.now() - 15 * 60e3;
+  const o = db.prepare(`SELECT o.* FROM orders o JOIN products p ON p.id = o.product_id WHERE p.form != '' AND o.status = 'paid'
+    AND (o.archivo = '' OR o.archivo IS NULL OR (o.archivo LIKE 'generando:%' AND CAST(substr(o.archivo, 11) AS INTEGER) < ?)) ORDER BY o.paid_at LIMIT 1`).get(viejo);
+  if (!o) { res.writeHead(204); return res.end(); }
+  Orders.update(o.id, { archivo: 'generando:' + Date.now() });
+  json(res, 200, { id: o.id, form: Products.byId(o.product_id).form, datos: { ...JSON.parse(o.datos || '{}'), qr_base: `${config.baseUrl}/v/${o.id}.${vozFirma(o.id)}` } });
+});
+on('POST', '/api/studio/libro-done', async (req, res) => {
+  if (!n8nOk(req)) return fail(res, 401, 'x-api-key incorrecta');
+  const b = await body(req, 1e4); const o = Orders.get(b.id); if (!o) return fail(res, 404, 'Pedido no encontrado');
+  if (b.error) { Orders.update(o.id, { archivo: 'error' }); notifyAdmin(`⚠️ No se pudo crear el libro del pedido <code>${o.id}</code>: ${esc(String(b.error).slice(0, 300))}\nCuando lo arregle, reintenta con /entregar ${o.id}`).catch(() => {}); return json(res, 200, { ok: false }); }
+  Orders.update(o.id, { archivo: String(b.archivo || '').replace(/\.\./g, '') }); json(res, 200, { ok: true });
+  deliver(o.id).catch((e) => console.error('[libro]', e.message));
+});
+// 🔊 El QR de cada misión: página con la voz que dice su nombre
+on('GET', '/v/:tok/:n', (req, res, { tok, n }) => {
+  const [id, sig] = String(tok).split('.'); const o = id && Orders.get(id);
+  if (!o || sig !== vozFirma(o.id) || !/^\d{1,2}$/.test(n)) { res.writeHead(404); return res.end('No encontrado'); }
+  let v = {}; try { v = JSON.parse(fs.readFileSync(path.join(STORAGE, 'libros', o.id, 'voces.json'), 'utf8')); } catch {}
+  const i = Number(n) - 1, frase = (v.voces || [])[i] || '¡Muy bien!', titulo = (v.titulos || [])[i] || '¡Misión cumplida!';
+  const audio = fs.existsSync(path.join(STORAGE, 'libros', o.id, `m${n}.mp3`)) ? `/v/${tok}/${n}/audio` : '';
+  res.writeHead(200, { 'content-type': MIME['.html'] });
+  res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title>
+<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:linear-gradient(160deg,#7c5cff,#ff4fa3);color:#fff;text-align:center;padding:24px;box-sizing:border-box;overflow:hidden}
+.e{font-size:110px;animation:b 1s infinite alternate}@keyframes b{to{transform:translateY(-14px) rotate(6deg)}}h1{font-size:30px;margin:10px 0}p{font-size:22px;max-width:520px;line-height:1.35}
+button{margin-top:22px;font:inherit;font-size:22px;font-weight:800;border:0;border-radius:999px;padding:16px 30px;background:#ffb703;color:#231a3d}.c{position:fixed;top:-20px;font-size:26px;animation:f 3s linear infinite}@keyframes f{to{transform:translateY(110vh) rotate(360deg)}}</style></head>
+<body><div class="e">${n === '13' ? '🏆' : '⭐'}</div><h1>${esc(titulo)}</h1><p>${esc(frase)}</p>${audio ? `<button id="b">🔊 Escuchar el mensaje</button><audio id="a" src="${audio}" preload="auto"></audio>` : ''}
+<script>for(let i=0;i<24;i++){const s=document.createElement('div');s.className='c';s.textContent=['⭐','🎉','✨','💖','🎈'][i%5];s.style.left=Math.random()*100+'vw';s.style.animationDelay=Math.random()*3+'s';document.body.appendChild(s)}
+const a=document.getElementById('a'),b=document.getElementById('b');if(a){a.play().then(()=>b.textContent='🔁 Escuchar otra vez').catch(()=>{});b.onclick=()=>{a.currentTime=0;a.play();b.textContent='🔁 Escuchar otra vez'}}</script></body></html>`);
+});
+on('GET', '/v/:tok/:n/audio', (req, res, { tok, n }) => {
+  const [id, sig] = String(tok).split('.'); const o = id && Orders.get(id);
+  if (!o || sig !== vozFirma(o.id) || !/^\d{1,2}$/.test(n)) { res.writeHead(404); return res.end(); }
+  const f = path.join(STORAGE, 'libros', o.id, `m${n}.mp3`); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+  serveFile(res, f, { 'cache-control': 'public, max-age=86400' });
 });
 
 // ===== Estudio de anuncios (el contenedor "pixelia-estudio" pide trabajos aquí) =====

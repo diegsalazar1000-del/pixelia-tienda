@@ -188,9 +188,9 @@ function checkoutWeb() {
   if (CFG.paypal) methods.push(['paypal', 'PayPal', 'Tarjeta o saldo']);
   if (CFG.binance) methods.push(['binance', 'Binance', 'USDT · Pay']);
   if (CFG.pagomovil && esVenezuela()) methods.push(['pagomovil', 'Pago Móvil', 'Bolívares · tasa BCV']);
-  if (CFG.bot && P.stars) methods.push(['stars', '⭐ Stars', 'en Telegram']);
+  if (CFG.bot && P.stars && !P.form) methods.push(['stars', '⭐ Stars', 'en Telegram']);
   if (!methods.length) { $('#checkout').innerHTML = '<p class="hint">Los pagos aún no están configurados.</p>'; return; }
-  $('#checkout').innerHTML = `
+  $('#checkout').innerHTML = (P.form === 'aventura' ? formAventura() : '') + `
     <h3>${t('sendTo')}</h3>
     <div class="field"><label>${t('email')}</label><input id="email" type="email" placeholder="tu@correo.com" autocomplete="email"></div>
     ${CFG.whatsapp ? `<div class="field"><label>${t('whatsapp')}</label><input id="wa" type="tel" placeholder="+58 412 1234567" autocomplete="tel"></div>` : ''}
@@ -216,6 +216,25 @@ function checkoutWeb() {
 
 function esVenezuela() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Caracas'; } catch { return false; } }
 
+// 📚 Mi Gran Aventura: los datos del niño para armar su libro (todo opcional menos nombre y edad)
+const COMPS = [['perrito', '🐶 Perrito'], ['gatito', '🐱 Gatito'], ['dinosaurio', '🦖 Dinosaurio'], ['unicornio', '🦄 Unicornio'], ['dragon', '🐉 Dragón'], ['robot', '🤖 Robot']];
+function formAventura() {
+  return `<h3>📚 ¿Para quién es la aventura?</h3>
+    <div class="field"><label>Nombre del niño o niña *</label><input id="avNom" maxlength="20" placeholder="Ej: Sofía"></div>
+    <div class="field"><label>Edad *</label><select id="avEdad">${[2, 3, 4, 5, 6, 7, 8].map((e) => `<option value="${e}" ${e === 5 ? 'selected' : ''}>${e} años</option>`).join('')}</select></div>
+    <div class="field"><label>Es…</label><select id="avGen"><option value="nina">Niña (heroína)</option><option value="nino">Niño (héroe)</option></select></div>
+    <div class="field"><label>Su compañero de aventura</label><select id="avComp">${COMPS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    <div class="field"><label>Nombre del compañero <small>(su mascota real o uno inventado)</small></label><input id="avCompN" maxlength="16" placeholder="Ej: Coco"></div>
+    <div class="field"><label>Alguien que quiere mucho <small>(opcional)</small></label><input id="avEsp" maxlength="30" placeholder="Ej: la abuela Rosa, el tío Juan"></div>
+    <p class="hint" style="margin-top:-4px">✨ Con esto armamos su libro: misiones de su edad, su nombre en cada página y un QR que lo felicita con su nombre.</p>`;
+}
+function datosAventura() {
+  if (P.form !== 'aventura') return undefined;
+  const d = { nombre: $('#avNom').value.trim(), edad: Number($('#avEdad').value), genero: $('#avGen').value, comp_tipo: $('#avComp').value, comp_nombre: $('#avCompN').value.trim(), especial: $('#avEsp').value.trim() };
+  if (!d.nombre) { $('#avNom').focus(); throw new Error('Escribe el nombre del niño o niña para su libro 😊'); }
+  return d;
+}
+
 function contact() {
   const email = $('#email').value.trim(), whatsapp = $('#wa')?.value.trim() || '';
   if (!email && !whatsapp) throw new Error('Escribe tu correo para enviarte el producto.');
@@ -225,7 +244,7 @@ function contact() {
 
 async function createOrder(method) {
   $('#err').textContent = '';
-  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact(),
+  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact(), datos: datosAventura(),
     coupon: COUPON || undefined, upsell: UPSELL ? { id: QS.get('up'), key: QS.get('k') } : undefined, bump: BUMP && P.bump ? P.bump.slug : undefined } });
   fbq('track', 'InitiateCheckout', { content_ids: BUMP && P.bump ? [P.slug, P.bump.slug] : [P.slug], value: BUMP && P.bump ? PRICE + P.bump.bumpPrice : PRICE, currency: 'USD' });
   return ORDER;
@@ -256,7 +275,7 @@ function pick(m) {
 function loadPaypal() {
   const render = () => paypal.Buttons({
     style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'pay' },
-    onClick: (_, actions) => { try { contact(); return actions.resolve(); } catch (e) { $('#err').textContent = e.message; return actions.reject(); } },
+    onClick: (_, actions) => { try { contact(); datosAventura(); return actions.resolve(); } catch (e) { $('#err').textContent = e.message; return actions.reject(); } },
     createOrder: async () => (await createOrder('paypal')).paypalId,
     onApprove: async () => {
       $('#pay').innerHTML = '<div class="spinner"></div>';
