@@ -599,3 +599,4 @@ if (binanceAutoVerify()) setInterval(async () => {
 }, 60_000);
 
 if (process.env.NO_BOT !== '1') { startBot(); startRadarBot(); startExplorador(); startReviews(); startSecuencia(); }
+if (process.env.NO_BOT !== '1') import('../herramientas/semana/publicar.mjs').then((m) => m.startSemana()).catch((e) => console.error('[semana]', e.message));

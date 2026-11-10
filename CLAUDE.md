@@ -182,3 +182,7 @@
 - Versión para hombres (NOMBRE POR DEFINIR, no 'El Jefe'): mecánica, celulares, delivery, barbería… mismo motor de La Jefa + PLAN DE AHORRO (cuánto me queda por venta, cuánto gasto, cuánto guardo). Para más adelante; Diego cree que convierte menos (los hombres llevan todo más manual), pero vale la pena.
 - Encargos de Temporada: hallacas/tortas navideñas, Día de la Madre, graduaciones; encargo + abono + fecha de entrega + recordatorio. Es la idea de temporada de esta tanda.
 - Descartada: presupuestos en PDF para oficios (hay muchos generadores gratis).
+
+## Contenido 10-22 nov (Diego)
+- 🎬 ESTILO DE VIDEO (Diego 10-nov): no todos iguales; le gustan clips CORTICOS unidos con transiciones (efectico, sonido de fondo, alejamiento/acercamiento de la pantalla) → dinámico. Orden: primero el PROBLEMA, después se dice el producto.
+- 📅 herramientas/semana/: imagenes.py (copia de /home/claude/ig/semana.py) → public/img/semana/ (13 historias 1080x1920, una por día, rotan La Jefa, Hábitos, Panel, Lotería, regalos; "Toca el enlace de aquí abajo" = sitio para el sticker de enlace) + 5 posts del feed 1080x1350 (mar 10, jue 12, lun 16, mié 18, vie 20). Diego: historias = VENTA con enlace directo; feed = CONTENIDO DE VALOR (hábitos, superación, emprendimiento con humor) para compartir/guardar, venta solo suave. plan.json (textos; "aprobado" false hasta que Diego revise; "historias_auto"). publicar.mjs: el servidor publica a las 6 pm el feed (IG+FB) y a las 9 am la historia si historias_auto; ids en data/semana-publicados.json. La API NO pone sticker de enlace.

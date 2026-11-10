@@ -1,0 +1,42 @@
+{
+ "_nota": "Plan 10-22 nov. Historias 9:00 am, feed 6:00 pm (hora de Caracas). 'aprobado' lo pone Diego tras revisar; el servidor publica solo lo aprobado y anota el id.",
+ "aprobado": false,
+ "historias_auto": false,
+ "historias": {
+  "2026-11-10": "historia-2026-11-10-jefa.jpg",
+  "2026-11-11": "historia-2026-11-11-habitos.jpg",
+  "2026-11-12": "historia-2026-11-12-ahorro.jpg",
+  "2026-11-13": "historia-2026-11-13-panel.jpg",
+  "2026-11-14": "historia-2026-11-14-loteria.jpg",
+  "2026-11-15": "historia-2026-11-15-navidad.jpg",
+  "2026-11-16": "historia-2026-11-16-jefa.jpg",
+  "2026-11-17": "historia-2026-11-17-habitos.jpg",
+  "2026-11-18": "historia-2026-11-18-reto30.jpg",
+  "2026-11-19": "historia-2026-11-19-panel.jpg",
+  "2026-11-20": "historia-2026-11-20-jefa.jpg",
+  "2026-11-21": "historia-2026-11-21-loteria.jpg",
+  "2026-11-22": "historia-2026-11-22-ahorro.jpg"
+ },
+ "feed": {
+  "2026-11-10": {
+   "img": "feed-2026-11-10.jpg",
+   "texto": "Amiga, apártame 2 tortas… ya te transfiero 🙃\n\nY ahí empieza la telenovela: 3 días, 2 audios y un “visto” 😂\n\nSi te ha pasado, etiqueta a tu compañera de sufrimiento 👇\n\n👑 Con La Jefa anotas quién te debe y le cobras por WhatsApp con un toque. Pruébala gratis: link en la bio.\n\n#emprendedoras #emprendimiento #ventasporwhatsapp #negociodesdecasa #emprendedoraslatinas"
+  },
+  "2026-11-12": {
+   "img": "feed-2026-11-12.jpg",
+   "texto": "3 errores que se comen tu ganancia (y casi todas cometemos el número 2 😅)\n\n1️⃣ No contar tu tiempo: tu hora también cuesta.\n2️⃣ Olvidar lo pequeño: empaque, gas, delivery, la bolsita…\n3️⃣ Copiar el precio de otra: sus gastos no son los tuyos.\n\n📌 Guárdalo para cuando vayas a poner tu próximo precio.\n👑 ¿Quieres saber tu precio justo en 1 minuto? Prueba La Jefa gratis: link en la bio.\n\n#emprendedoras #precios #negociodesdecasa #emprendimiento #tipsdenegocio"
+  },
+  "2026-11-16": {
+   "img": "feed-2026-11-16.jpg",
+   "texto": "No tienes que cambiar tu vida en un día 🌱\n\nSi mejoras solo un 1% cada día, al final del año eres unas 37 veces mejor (1,01 multiplicado 365 veces ≈ 37,8). Sí, la matemática también cree en ti 😌\n\nUn poquito hoy, otro poquito mañana. Eso es todo.\n\n📌 Guárdalo para los días en que sientas que no avanzas.\n👉 Síguenos para más cositas así, sin sermones.\n\n#habitos #motivacion #crecimientopersonal #metas2027 #disciplina"
+  },
+  "2026-11-18": {
+   "img": "feed-2026-11-18.jpg",
+   "texto": "¿Qué tipo de emprendedora eres? 👀\n\n🅰️ La del cuaderno lleno de tachones\n🅱️ La que lo lleva todo “en la memoria” (y la memoria falla 😂)\n©️ La que ya no pierde ni un cobro\n\nDinos tu letra en los comentarios 👇 Sin juzgar… bueno, un poquito 😅\n\n👑 Si eres A o B, La Jefa te convierte en C. Pruébala gratis: link en la bio.\n\n#emprendedoras #emprendimiento #negociodesdecasa #emprendedoraslatinas"
+  },
+  "2026-11-20": {
+   "img": "feed-2026-11-20.jpg",
+   "texto": "5 señales de que vas avanzando (aunque no lo notes) ✨\n\n✅ Ya no te rindes al primer “no”\n✅ Te levantas aunque no tengas ganas\n✅ Cuidas tu plata un poquito más\n✅ Celebras lo pequeño\n✅ Compites solo contigo\n\n¿Cuántas tienes? Dinos el número en los comentarios 👇\n💌 Compártelo con esa persona que necesita leer esto hoy.\n\n#superacion #crecimientopersonal #motivacion #habitos #amorpropio"
+  }
+ }
+}
