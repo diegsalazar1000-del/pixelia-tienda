@@ -12,7 +12,7 @@ for (const r of q(`SELECT p.title t, SUM(CASE WHEN v.day = date('now') THEN v.vi
   console.log(`  ${r.t.slice(0, 45)}: hoy ${r.hoy} · 7 días ${r.sem}`);
 try {   // 👑 uso de las demos: abrieron → 1er uso → 3 usos (vieron la oferta)
   const ev = q(`SELECT app, evento, SUM(CASE WHEN day = date('now') THEN n ELSE 0 END) hoy, SUM(n) sem FROM app_eventos WHERE day >= date('now','-6 day') GROUP BY app, evento`);
-  for (const app of [...new Set(ev.map((e) => e.app))]) {
+  for (const app of [...new Set(ev.map((e) => e.app))].filter((a) => !a.startsWith('w:'))) {
     const g = (k, c = 'sem') => ev.find((e) => e.app === app && e.evento === k)?.[c] || 0;
     console.log(`\n👑 DEMO ${app.toUpperCase()} (hoy / 7 días)`);
     console.log(`  abrieron ${g('abrio', 'hoy')} / ${g('abrio')} · usaron 1 vez ${g('uso1', 'hoy')} / ${g('uso1')} · llegaron a 3 usos ${g('uso3', 'hoy')} / ${g('uso3')} · dejaron correo ${g('correo', 'hoy')} / ${g('correo')}`);
@@ -24,6 +24,19 @@ try {   // 👑 uso de las demos: abrieron → 1er uso → 3 usos (vieron la ofe
     const NOM = { caro: '💸 cara', pago: '💳 no sabe pagar', nosirve: '🤷 no es para su negocio', dificil: '😵 difícil', luego: '⏳ después' };
     const mot = ev.filter((e) => e.app === app && e.evento.startsWith('no_')).sort((a, b) => b.sem - a.sem);
     if (mot.length) console.log('  ¿por qué no compran? (7 días): ' + mot.map((e) => `${NOM[e.evento.slice(3)] || e.evento} ${e.sem}`).join(' · '));
+  }
+} catch {}
+try {   // 🔎 qué hacen al llegar (public/js/medir.js): cargó → 5 s → 15 s → 45 s → bajó a la mitad → tocó un botón
+  const w = q(`SELECT app, evento, SUM(n) n FROM app_eventos WHERE app LIKE 'w:%' AND day >= date('now','-6 day') GROUP BY app, evento`);
+  const ks = [...new Set(w.map((e) => e.app))];
+  if (ks.length) {
+    console.log('\n🔎 ¿QUÉ HACEN AL LLEGAR? (7 días, personas)');
+    const g = (a, e) => w.find((x) => x.app === a && x.evento === e)?.n || 0;
+    for (const a of ks.sort((x, y) => g(y, 'vio') - g(x, 'vio'))) {
+      const v = g(a, 'vio'), pc = (n) => v ? ` (${Math.round(n / v * 100)}%)` : '';
+      console.log(`  ${a.slice(2)}: cargó ${v} · 5 s ${g(a, 's5')}${pc(g(a, 's5'))} · 15 s ${g(a, 's15')}${pc(g(a, 's15'))} · 45 s ${g(a, 's45')}${pc(g(a, 's45'))} · bajó a la mitad ${g(a, 'mitad')}${pc(g(a, 'mitad'))} · tocó algo ${g(a, 'boton')}${pc(g(a, 'boton'))}`);
+    }
+    console.log('  (si "cargó" es mucho menor que las visitas, se van antes de que abra la página)');
   }
 } catch {}
 console.log('\n📩 CORREOS NUEVOS');
@@ -62,6 +75,17 @@ try {
       for (const r of pais.sort((a, b) => b.spend - a.spend)) {
         const [nom, v] = res(r);
         console.log(`     ${BAND(r.country)} ${r.country}: $${Number(r.spend).toFixed(2)} · ${v ? `${v} ${nom} · $${(r.spend / v).toFixed(3)} c/u` : 'sin resultados'} · CTR ${Number(r.ctr || 0).toFixed(1)}%`);
+      }
+    }
+    // 📍 por ubicación (7 días): si los clics vienen de un lugar donde se toca sin querer, se ve aquí (clics muchos, visitas pocas)
+    const ubi = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', date_preset: 'last_7d', breakdowns: 'publisher_platform,platform_position', limit: 50 }).then((r) => r.data || []).catch(() => []);
+    if (ubi.length) {
+      const NOMU = { feed: 'Feed', instagram_reels: 'Reels', facebook_reels: 'Reels', instagram_stories: 'Historias', facebook_stories: 'Historias', instagram_explore: 'Explorar', instagram_explore_grid_home: 'Explorar', instagram_profile_feed: 'Perfil', video_feeds: 'Videos', marketplace: 'Marketplace', search: 'Búsqueda', facebook_reels_overlay: 'Reels (banner)' };
+      const n = (r, t) => Number((r.actions || []).find((a) => a.action_type === t)?.value || 0);
+      console.log('   📍 Por ubicación (7 días): clics → llegaron a la página');
+      for (const r of ubi.filter((x) => Number(x.spend) > 0.05).sort((a, b) => b.spend - a.spend)) {
+        const cl = n(r, 'link_click'), lp = n(r, 'landing_page_view');
+        console.log(`     ${r.publisher_platform === 'instagram' ? 'IG' : 'FB'} ${NOMU[r.platform_position] || r.platform_position}: $${Number(r.spend).toFixed(2)} · CTR ${Number(r.ctr || 0).toFixed(1)}% · ${cl} clics → ${lp} llegaron${cl ? ` (${Math.round(lp / cl * 100)}%)` : ''}`);
       }
     }
   }

@@ -229,6 +229,11 @@ on('POST', '/api/app-evento', async (req, res) => {
   if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10}|of_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
   json(res, 200, { ok: true });
 });
+on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
+  const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  json(res, 200, { ok: true });
+});
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
   const A = APPS[app]; if (!A) return fail(res, 404, 'No existe');
   if (visitaReal(req, 'demo:' + app)) appEvento(app, 'abrio');
