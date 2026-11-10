@@ -179,6 +179,6 @@
 
 ## Ideas próximo producto (10-nov, sin construir — esperar datos de demo La Jefa)
 - Clienta Fiel: tarjeta de sellos por WhatsApp (link + tarjeta impresa con QR). Competencia: Stamp Me/Loopy ~$25/mes, en inglés o con app. Precio $3.99 o complemento de La Jefa.
-- El Jefe: versión para hombres (barbero, mecánico, técnico, delivery) con el mismo motor de La Jefa. Solo si La Jefa convierte.
+- Versión para hombres (NOMBRE POR DEFINIR, no 'El Jefe'): mecánica, celulares, delivery, barbería… mismo motor de La Jefa + PLAN DE AHORRO (cuánto me queda por venta, cuánto gasto, cuánto guardo). Para más adelante; Diego cree que convierte menos (los hombres llevan todo más manual), pero vale la pena.
 - Encargos de Temporada: hallacas/tortas navideñas, Día de la Madre, graduaciones; encargo + abono + fecha de entrega + recordatorio. Es la idea de temporada de esta tanda.
 - Descartada: presupuestos en PDF para oficios (hay muchos generadores gratis).
