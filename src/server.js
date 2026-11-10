@@ -10,6 +10,7 @@ import { deliver, verifyDownload, downloadLink, appLicense, verifyApp } from './
 import { whatsappEnabled } from './delivery/whatsapp.js';
 import { paypalEnabled, createPaypalOrder, capturePaypalOrder } from './payments/paypal.js';
 import { binanceEnabled, binanceAutoVerify, uniqueAmount, findBinancePayment } from './payments/binance.js';
+import { pagoMovilEnabled, datosPagoMovil, tasaBs, enBs } from './payments/pagomovil.js';
 import { tg, tgEnabled, verifyInitData, notifyAdmin, esc } from './telegram/api.js';
 import { startBot, starsInvoice, askBinance } from './telegram/bot.js';
 import { Candidates, AdJobs } from './db.js';
@@ -285,10 +286,11 @@ on('GET', '/cover/:file', (req, res, { file }) => {
 });
 
 // ===== API pública =====
-on('GET', '/api/config', (req, res) => json(res, 200, {
+on('GET', '/api/config', async (req, res) => json(res, 200, {
   store: config.storeName, lang: config.defaultLang,
   paypal: paypalEnabled() ? { clientId: config.paypal.clientId } : null,
   binance: binanceEnabled() ? { payId: config.binance.payId, auto: binanceAutoVerify() } : null,
+  pagomovil: pagoMovilEnabled() && await tasaBs() ? { tasa: await tasaBs() } : null,   // el front lo muestra solo con zona horaria de Venezuela
   bot: config.telegram.username || null, whatsapp: whatsappEnabled(), email: !!config.email.resendKey,
 }));
 on('GET', '/api/products', (req, res, _, url) => json(res, 200, {
@@ -322,7 +324,23 @@ on('POST', '/api/orders', async (req, res) => {
     const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'binance', amount_cents: uniqueAmount(pr.cents), currency: 'USDT', lang: b.lang, prueba: esDueno(req), ...extra });
     return json(res, 200, { id: o.id, key: orderKey(o.id), amount: (o.amount_cents / 100).toFixed(2), payId: config.binance.payId });
   }
+  if (b.method === 'pagomovil') {
+    const t = pagoMovilEnabled() ? await tasaBs() : 0; if (!t) return fail(res, 400, 'Pago Móvil no está activo');
+    const o = Orders.create({ product_id: p.id, email, whatsapp, method: 'pagomovil', amount_cents: pr.cents, currency: 'USD', lang: b.lang, prueba: esDueno(req), ...extra });
+    return json(res, 200, { id: o.id, key: orderKey(o.id), usd: (o.amount_cents / 100).toFixed(2), bs: enBs(o.amount_cents, t).toFixed(2), tasa: t, ...datosPagoMovil() });
+  }
   return fail(res, 400, 'Método de pago no válido');
+});
+on('POST', '/api/pagomovil/submit', async (req, res) => {
+  const b = await body(req, 1e4); const o = Orders.get(b.id);
+  if (!o || !keyOk(o.id, b.key) || o.method !== 'pagomovil') return fail(res, 404, 'Pedido no encontrado');
+  if (o.status !== 'pending') return json(res, 200, { status: o.status });
+  const ref = String(b.ref || '').replace(/\D/g, '').slice(0, 20);
+  if (ref.length < 4) return fail(res, 400, 'Escribe los últimos 4 dígitos (o más) de la referencia');
+  const t = await tasaBs();
+  Orders.update(o.id, { status: 'review', provider_ref: `${ref} · Bs ${enBs(o.amount_cents, t).toFixed(2)} · tel ${String(b.tel || '').replace(/[^\d+]/g, '').slice(0, 15) || '-'}` });
+  await askBinance(Orders.withProduct(o.id));
+  return json(res, 200, { status: 'review' });
 });
 
 // Cupón: comprobar antes de pagar

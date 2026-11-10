@@ -30,6 +30,13 @@ case "$1" in
     ask BINANCE_PAY_ID "Escribe tu Binance Pay ID (el número) y pulsa Enter:" 0
     ask BINANCE_API_KEY "Pega la API Key de Binance (solo lectura) y pulsa Enter (o Enter vacío para saltar):" 1
     ask BINANCE_API_SECRET "Pega la Secret Key de Binance (no se verá) y pulsa Enter (o Enter vacío para saltar):" 1;;
+  pagomovil)
+    echo "Pago Móvil (solo lo ven los clientes de Venezuela; cobras en Bs a la tasa BCV del día)."
+    ask PAGOMOVIL_BANCO "Escribe el banco con su código, ej: Banesco (0134), y pulsa Enter:" 0
+    ask PAGOMOVIL_TEL "Escribe el teléfono del Pago Móvil, ej: 0414-1234567, y pulsa Enter:" 0
+    ask PAGOMOVIL_CI "Escribe la cédula o RIF, ej: V-12345678, y pulsa Enter:" 0
+    ask PAGOMOVIL_NOMBRE "Nombre del titular (opcional, Enter para saltar):" 0
+    ask PAGOMOVIL_TASA "Tasa de respaldo Bs por dólar por si falla la del BCV (ej: 230), Enter para saltar:" 0;;
   correo)
     ask RESEND_API_KEY "Pega la API key de Resend (no se verá) y pulsa Enter:" 1
     ask EMAIL_FROM "Escribe el remitente, ej: Pixelia <hola@tudominio.com> y pulsa Enter:" 0;;

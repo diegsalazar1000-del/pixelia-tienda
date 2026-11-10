@@ -170,6 +170,10 @@ async function onMessage(m) {
 }
 
 export async function askBinance(o) {
+  if (o.method === 'pagomovil') return notifyAdmin(
+    `💚 <b>Pago Móvil por revisar</b>\nPedido <code>${o.id}</code> · ${esc(o.title || '')}\nUSD ${(o.amount_cents / 100).toFixed(2)} · Ref / monto / teléfono: <code>${esc(o.provider_ref)}</code>\nContacto: ${esc(o.email || o.whatsapp || '-')}\nRevisa tu banco y confirma:`,
+    { reply_markup: { inline_keyboard: [[{ text: '✅ Confirmar', callback_data: `bok:${o.id}` }, { text: '❌ Rechazar', callback_data: `bno:${o.id}` }]] } },
+  );
   return notifyAdmin(
     `🟡 <b>Pago Binance por revisar</b>\nPedido <code>${o.id}</code> · ${esc(o.title || '')}\nImporte esperado: <b>${(o.amount_cents / 100).toFixed(2)} USDT</b>\nID de orden Binance del cliente: <code>${esc(o.provider_ref)}</code>\nContacto: ${esc(o.email || o.whatsapp || o.telegram_chat_id || '-')}`,
     { reply_markup: { inline_keyboard: [[{ text: '✅ Confirmar', callback_data: `bok:${o.id}` }, { text: '❌ Rechazar', callback_data: `bno:${o.id}` }]] } },

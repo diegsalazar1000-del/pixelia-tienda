@@ -205,7 +205,7 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 
 <script>
 const $ = (s) => document.querySelector(s);
-// 💱 moneda según el país (se elige en ⚙️; la primera vez se adivina por la zona horaria del teléfono)
+// 💱 moneda según el país (se elige en ⚙️; la primera vez se adivina por la zona horaria del teléfono) (Venezuela: dólar por defecto, Diego 10-nov; el bolívar se elige a mano)
 const MONEDAS = {
   USD: ['🇺🇸', 'Dólar (USD)', '$', 'en-US', 2, .5, 1], VES: ['🇻🇪', 'Bolívar (Bs)', 'Bs ', 'es-VE', 2, 5, 300], COP: ['🇨🇴', 'Peso colombiano (COP)', '$', 'es-CO', 0, 500, 4000],
   MXN: ['🇲🇽', 'Peso mexicano (MXN)', '$', 'es-MX', 2, 5, 18], PEN: ['🇵🇪', 'Sol (S/)', 'S/ ', 'es-PE', 2, .5, 3.7], CLP: ['🇨🇱', 'Peso chileno (CLP)', '$', 'es-CL', 0, 100, 950],
@@ -213,7 +213,7 @@ const MONEDAS = {
   DOP: ['🇩🇴', 'Peso dominicano (RD$)', 'RD$', 'es-DO', 0, 10, 60], BOB: ['🇧🇴', 'Boliviano (Bs)', 'Bs ', 'es-BO', 2, 1, 6.9], CRC: ['🇨🇷', 'Colón (₡)', '₡', 'es-CR', 0, 100, 510],
   HNL: ['🇭🇳', 'Lempira (L)', 'L ', 'es-HN', 2, 5, 26], NIO: ['🇳🇮', 'Córdoba (C$)', 'C$', 'es-NI', 2, 5, 37], PYG: ['🇵🇾', 'Guaraní (₲)', '₲', 'es-PY', 0, 1000, 7500],
   UYU: ['🇺🇾', 'Peso uruguayo ($U)', '$U ', 'es-UY', 0, 10, 40] };
-const ZONA = { Caracas: 'VES', Bogota: 'COP', Mexico_City: 'MXN', Monterrey: 'MXN', Cancun: 'MXN', Tijuana: 'MXN', Lima: 'PEN', Santiago: 'CLP', Buenos_Aires: 'ARS', Madrid: 'EUR',
+const ZONA = { Bogota: 'COP', Mexico_City: 'MXN', Monterrey: 'MXN', Cancun: 'MXN', Tijuana: 'MXN', Lima: 'PEN', Santiago: 'CLP', Buenos_Aires: 'ARS', Madrid: 'EUR',
   Guatemala: 'GTQ', Santo_Domingo: 'DOP', La_Paz: 'BOB', Costa_Rica: 'CRC', Tegucigalpa: 'HNL', Managua: 'NIO', Asuncion: 'PYG', Montevideo: 'UYU' };
 let MON = (() => { let m; try { m = JSON.parse(localStorage.getItem('jefa-moneda')); } catch (e) {} if (m && MONEDAS[m]) return m;
   let z = ''; try { z = Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop(); } catch (e) {} return ZONA[z] || 'USD'; })();

@@ -187,6 +187,7 @@ function checkoutWeb() {
   const methods = [];
   if (CFG.paypal) methods.push(['paypal', 'PayPal', 'Tarjeta o saldo']);
   if (CFG.binance) methods.push(['binance', 'Binance', 'USDT · Pay']);
+  if (CFG.pagomovil && esVenezuela()) methods.push(['pagomovil', 'Pago Móvil', 'Bolívares · tasa BCV']);
   if (CFG.bot && P.stars) methods.push(['stars', '⭐ Stars', 'en Telegram']);
   if (!methods.length) { $('#checkout').innerHTML = '<p class="hint">Los pagos aún no están configurados.</p>'; return; }
   $('#checkout').innerHTML = `
@@ -212,6 +213,8 @@ function checkoutWeb() {
     const bp = $('.big-price'); if (bp) bp.innerHTML = priceBox() + (BUMP ? ` <small style="color:var(--mut)">+ ${money(P.bump.bumpPrice)} = <b>${money(Math.round((PRICE + P.bump.bumpPrice) * 100) / 100)}</b></small>` : ''); };
   pick(methods[0][0]);
 }
+
+function esVenezuela() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Caracas'; } catch { return false; } }
 
 function contact() {
   const email = $('#email').value.trim(), whatsapp = $('#wa')?.value.trim() || '';
@@ -239,6 +242,13 @@ function pick(m) {
       catch (e) { $('#err').textContent = e.message; $('#bnBtn').disabled = false; }
     };
   }
+  if (m === 'pagomovil') {
+    pay.innerHTML = `<button class="btn btn-main btn-block" id="pmBtn">${t('continue')} con Pago Móvil</button>`;
+    $('#pmBtn').onclick = async () => {
+      try { $('#pmBtn').disabled = true; const o = await createOrder('pagomovil'); pagoMovilSteps(o); }
+      catch (e) { $('#err').textContent = e.message; $('#pmBtn').disabled = false; }
+    };
+  }
   if (m === 'stars') pay.innerHTML = `<a class="btn btn-main btn-block" href="https://t.me/${CFG.bot}?start=p_${encodeURIComponent(P.slug)}" target="_blank">Abrir en Telegram · ${P.stars} ⭐</a>
     <p class="hint">Pagas con Telegram Stars dentro del bot y recibes el archivo en el chat.</p>`;
 }
@@ -261,6 +271,28 @@ function loadPaypal() {
   s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(CFG.paypal.clientId)}&currency=USD&intent=capture`;
   s.onload = render; s.onerror = () => { $('#err').textContent = 'No se pudo cargar PayPal.'; };
   document.head.appendChild(s);
+}
+
+function pagoMovilSteps(o) {
+  $('.methods').style.display = 'none';
+  const fila = (k, v) => `<div class="copy"><span style="opacity:.75">${k}</span> <b>${escH(v)}</b><button data-c="${escH(v)}">${t('copy')}</button></div>`;
+  $('#pay').innerHTML = `
+    <div class="box"><ol class="binance">
+      <li>Abre tu banco → <b>Pago Móvil</b> y paga <b>exactamente</b>:${fila('Monto', 'Bs ' + o.bs)}
+        <div style="font-size:.82rem;color:var(--mut)">$${o.usd} a la tasa oficial BCV de hoy (Bs ${Number(o.tasa).toFixed(2)})</div></li>
+      <li>A estos datos:${fila('Banco', o.banco)}${fila('Teléfono', o.tel)}${fila('Cédula / RIF', o.ci)}${o.nombre ? fila('A nombre de', o.nombre) : ''}</li>
+      <li>Escribe la <b>referencia</b> del pago y el teléfono desde el que pagaste:</li>
+    </ol>
+    <div class="field" style="margin-top:10px"><input id="ref" placeholder="Número de referencia" inputmode="numeric"></div>
+    <div class="field"><input id="pmTel" placeholder="Tu teléfono (ej: 0414 1234567)" inputmode="tel"></div>
+    <button class="btn btn-main btn-block" id="sendRef">Ya pagué</button>
+    <p class="hint">Pedido <b>${o.id}</b>. Lo confirmamos en cuanto veamos el pago (normalmente en minutos) y te llega al correo.</p></div>`;
+  $$('.copy button').forEach((b) => (b.onclick = () => copyText(b.dataset.c)));
+  $('#sendRef').onclick = async () => {
+    $('#sendRef').disabled = true; $('#err').textContent = '';
+    try { await api('/api/pagomovil/submit', { method: 'POST', body: { id: o.id, key: o.key, ref: $('#ref').value, tel: $('#pmTel').value } }); location.href = `/pedido/${o.id}?k=${o.key}`; }
+    catch (e) { $('#err').textContent = e.message; $('#sendRef').disabled = false; }
+  };
 }
 
 function binanceSteps(o) {
