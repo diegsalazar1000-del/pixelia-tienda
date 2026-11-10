@@ -132,6 +132,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS subscribers (
 );`);
 
 export const COUPON_OFF = 0.15;  // 15 % en productos sueltos, una sola vez
+// La Jefa: 20 % si el correo se dejó hace menos de 48 h (oferta de la demo, tiempo limitado de verdad)
+export const JEFA_OFF = 0.20, JEFA_HORAS = 48;
+export const offPara = (slug, s) => (slug === 'la-jefa' && s && Date.now() - Date.parse(String(s.created_at).replace(' ', 'T') + 'Z') < JEFA_HORAS * 3600e3) ? JEFA_OFF : COUPON_OFF;
 
 export const Subscribers = {
   /** Devuelve el cupón del correo (lo crea si es nuevo). */

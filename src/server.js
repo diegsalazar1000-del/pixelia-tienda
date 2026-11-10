@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { config } from './config.js';
-import { db, Products, Orders, Subscribers, COUPON_OFF } from './db.js';
+import { db, Products, Orders, Subscribers, COUPON_OFF, offPara } from './db.js';
 import { sendEmail } from './delivery/email.js';
 import { deliver, verifyDownload, downloadLink, appLicense, verifyApp } from './delivery/index.js';
 import { whatsappEnabled } from './delivery/whatsapp.js';
@@ -88,7 +88,7 @@ function priceFor(p, b) {
   if (b.coupon) {
     if (p.bundle_ids) throw new Error('El cupón es para productos sueltos (el pack ya tiene su descuento).');
     const s = Subscribers.valid(b.coupon); if (!s) throw new Error('Cupón no válido o ya usado.');
-    return { cents: Math.max(100, Math.round(p.price_cents * (1 - COUPON_OFF))), coupon: s.code };
+    const off = offPara(p.slug, s); return { cents: Math.max(100, Math.round(p.price_cents * (1 - off))), coupon: s.code, off };
   }
   return { cents: p.price_cents };
 }
@@ -256,13 +256,13 @@ on('POST', '/api/regalo', async (req, res) => {
   if (!ids.length) return fail(res, 400, 'Elige al menos un regalo');
   const s = Subscribers.add(email, 'regalo:' + ids.join('+'));
   const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file, app: !!REGALOS[id].app }));
-  const code = s.used_order ? null : s.code, off = Math.round(COUPON_OFF * 100);
+  const code = s.used_order ? null : s.code, off = Math.round((ids.includes('jefa') ? offPara('la-jefa', s) : COUPON_OFF) * 100);
   if (config.email.resendKey) {
     sendEmail(email, `🎁 Tu regalo de ${config.storeName}`, links.map((l) => `${l.title}: ${l.url}`).join('\n') + (code ? `\n\nTu cupón de ${off}%: ${code}` : ''),
       `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f0f1a;color:#eee;border-radius:16px">
        <h2 style="margin:0 0 12px">🎁 ¡Aquí está tu regalo!</h2>
        ${links.map((l) => `<p><a style="display:inline-block;background:#ff4fa3;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700" href="${l.url}">${l.app ? '👑 Abrir ' : '⬇️ Descargar '}${esc(l.title)}</a></p>`).join('')}
-       ${code ? `<p style="margin-top:18px">Y para tu primera compra, <b>${off}% de descuento</b> con el cupón:</p><p style="font-size:26px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:8px 16px;border-radius:12px">${code}</p>` : ''}
+       ${code ? `<p style="margin-top:18px">Y para tu primera compra, <b>${off}% de descuento</b> con el cupón${off === 20 ? ' (solo por 48 horas)' : ''}:</p><p style="font-size:26px;font-weight:800;letter-spacing:2px;background:#7c5cff;display:inline-block;padding:8px 16px;border-radius:12px">${code}</p>` : ''}
        ${ids.map((id) => REGALOS[id].next).filter(Boolean).map((n) => { const np = Products.bySlug(n.slug); return np && np.active ? `<p style="margin-top:18px">${esc(n.text)}</p><p><a style="color:#b9a6ff;font-weight:700" href="${config.baseUrl}/p/${np.slug}${code ? '?cupon=' + code : ''}">👉 ${esc(np.title)}${code ? ` con tu ${off}%` : ''}</a></p>` : ''; }).join('')}
        <p style="color:#aab">Mira todos los productos en <a style="color:#b9a6ff" href="${config.baseUrl}">${esc(config.baseUrl.replace(/^https?:\/\//, ''))}</a></p></div>`)
       .catch((e) => console.error('[regalo]', e.message));
@@ -329,7 +329,7 @@ on('POST', '/api/orders', async (req, res) => {
 on('POST', '/api/coupon', async (req, res) => {
   const b = await body(req, 1e4); const p = Products.bySlug(String(b.slug || ''));
   if (!p?.active) return fail(res, 404, 'Producto no disponible');
-  try { const pr = priceFor(p, { coupon: b.code }); json(res, 200, { code: pr.coupon, price: pr.cents / 100, off: Math.round(COUPON_OFF * 100) }); }
+  try { const pr = priceFor(p, { coupon: b.code }); json(res, 200, { code: pr.coupon, price: pr.cents / 100, off: Math.round((pr.off || COUPON_OFF) * 100) }); }
   catch (e) { fail(res, 400, e.message); }
 });
 // Correo a cambio de cupón (también suma a la lista para futuras ofertas)
