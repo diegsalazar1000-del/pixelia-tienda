@@ -48,9 +48,6 @@ nav button.on{color:var(--rosa);font-weight:800;background:#FDEFF4}
 .lista h3{font-size:24px;font-weight:800}
 .lista .it{display:flex;justify-content:space-between;background:rgba(255,255,255,.14);border-radius:12px;padding:10px 14px;margin-top:8px;font-weight:600}
 .lista .pie{margin-top:14px;font-size:13px;opacity:.9}
-.pasos{display:flex;gap:8px;margin-bottom:10px}.pasos span{flex:1;text-align:center;font-size:13px;font-weight:700;padding:8px;border-radius:999px;background:#F7E4EC;color:#9b7f90}.pasos span.on{background:var(--rosa);color:#fff}
-.item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #F0DDE6}.item img{width:46px;height:46px;border-radius:12px;object-fit:cover;background:#F7E4EC}
-.item .nm{flex:1;font-weight:600}.item .pr{font-weight:800;color:var(--vino)}
 .ofi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ofi button{border:2px solid #F0DDE6;background:#fff;border-radius:16px;padding:14px 8px;font:inherit;font-weight:600;font-size:15px;color:var(--tinta)}
 .ofi button span{display:block;font-size:30px;margin-bottom:4px}
@@ -72,36 +69,15 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 <header><h1>👑 La Jefa</h1><p>Tu negocio desde casa: precios, clientas y cobros.</p><button class="cfg" id="cfgb" aria-label="Ajustes">⚙️</button><button id="monb" style="position:absolute;right:64px;top:22px;background:rgba(255,255,255,.2);border:none;color:#fff;font:inherit;font-size:13px;font-weight:600;padding:8px 12px;border-radius:999px"></button></header>
 <div class="wrap">
 
-<!-- 0. INICIO: el camino simple (Diego 10-nov): oficio → lo que vendes + precio → promociónalo -->
-<section class="vista on" id="v-inicio">
+<!-- 1. DETECTOR -->
+<section class="vista on" id="v-precio">
+  <div class="aviso" id="instalar" style="display:none"></div>
   <div class="card" id="oficio" style="display:none">
     <h2>👋 ¡Hola, jefa! ¿A qué te dedicas?</h2>
-    <p class="mini" style="margin-bottom:10px">Elige y armamos tu lista de precios para promocionarla por WhatsApp en un minuto.</p>
+    <p class="mini" style="margin-bottom:10px">Elige y en un segundo te muestro cuánto se gana (o se pierde) de verdad en cada venta.</p>
     <div class="ofi" id="ofis"></div>
     <div id="ofotro" style="display:none"><label>¿Qué haces o vendes?</label><input id="ofotxt" placeholder="Ej: tortas frías, velas, peinados…"><button class="btn" id="ofotok">Seguir 👉</button></div>
   </div>
-  <div id="camino" style="display:none">
-    <div class="pasos"><span class="on" id="p1">① Lo que vendes</span><span id="p2">② Promociónalo</span></div>
-    <div class="card">
-      <h2>🛍️ ¿Qué vendes?</h2>
-      <input id="n-nom" placeholder="Ej: lo que vendes o tu servicio">
-      <div class="row" style="margin-top:8px"><input id="n-pre" type="number" step="any" inputmode="decimal" placeholder="Precio"><button class="btn" id="n-add" style="margin:0;width:auto;padding:12px 16px">➕ Guardar</button></div>
-      <div id="n-list" style="margin-top:10px"></div>
-      <button class="ej" id="n-calc">🔍 ¿No sabes cuánto cobrar? Calcula tu precio justo</button>
-    </div>
-    <div class="card" id="prom" style="display:none">
-      <h2>📣 ¡Ahora promociónalo!</h2>
-      <label>Nombre de tu negocio</label><input id="n-neg" placeholder="Ej: Dulces de Mari">
-      <button class="btn wa" id="wa-lista">💬 Mandar mi lista por WhatsApp</button>
-      <button class="btn" id="go-estado">🎨 Hacer mi estado de WhatsApp</button>
-      <p class="mini" style="margin-top:8px;text-align:center">O toca 💬 en un producto para mandar solo ese.</p>
-    </div>
-  </div>
-</section>
-
-<!-- 1. DETECTOR -->
-<section class="vista" id="v-precio">
-  <div class="aviso" id="instalar" style="display:none"></div>
   <div id="res"></div>
   <div class="card" id="misprod" style="display:none"><h2>📦 Mis productos</h2><div class="chips" id="chipsprod"></div></div>
   <div class="card" id="fcard">
@@ -217,8 +193,8 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
 </div>
 
 <nav>
-  <button class="on" data-v="inicio"><span>🏠</span>Inicio</button>
-  <button data-v="precio"><span>💰</span>Precio justo</button>
+  <button class="on" data-v="precio"><span>💰</span>Precios</button>
+  <button data-v="lista"><span>📋</span>Mi lista</button>
   <button data-v="clientas"><span>💬</span>Clientas</button>
   <button data-v="estados"><span>🎨</span>Estados</button>
   <button data-v="deben"><span>💸</span>Me deben</button>
@@ -264,18 +240,17 @@ function ir(v, push = true) {
   document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v));
   document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v));
   if (v === 'lista') pintarLista();
-  if (v === 'inicio' && $('#camino').style.display !== 'none') pintarCamino();
   if (v === 'estados') prepEstados();
   window.scrollTo(0, 0);
   if (push && (history.state || {}).v !== v) history.pushState({ v }, '', '#' + v);
 }
 document.querySelectorAll('nav button').forEach((b) => b.onclick = () => ir(b.dataset.v));
-history.replaceState({ v: 'inicio', raiz: true }, '', location.pathname + location.search);
+history.replaceState({ v: 'precio', raiz: true }, '', location.pathname + location.search);
 window.addEventListener('popstate', (e) => {
-  const st = e.state || { v: 'inicio', raiz: true };
+  const st = e.state || { v: 'precio', raiz: true };
   document.querySelectorAll('.muro-capa').forEach((m) => m.remove());
-  ir(st.v || 'inicio', false); if (st.v === 'inicio' && !st.raiz) abrirCamino(false);
-  if (st.raiz) { try { productos.length ? abrirCamino(false) : mostrarOficio(); } catch (x) {} }   // atrás desde el formulario → volver a "¿A qué te dedicas?"
+  ir(st.v || 'precio', false);
+  if (st.raiz && !productos.length && $('#oficio')) { try { mostrarOficio(); } catch (x) {} }   // atrás desde el formulario → volver a "¿A qué te dedicas?"
 });
 
 // 1. detector
@@ -317,7 +292,7 @@ const OFICIOS = {   // montos base en USD (se pasan a su moneda con ajustar); to
   manual: ['🧵', 'Costura y manualidades', 'Lazos para el cabello (6)', 6, 'hago', [['Cintas y materiales', 3], ['Pegamento y adornos', .6], ['Empaque', .5]], 1.5] };
 const MSG_OF = { postres: 'postres', unas: 'unas', comida: 'comida', tienda: 'tienda', belleza: 'unas', manual: 'costura', otro: 'otro' };
 function mostrarOficio() {
-  $('#oficio').style.display = 'block'; $('#camino').style.display = 'none';
+  $('#oficio').style.display = 'block'; $('#fcard').style.display = 'none'; $('#res').innerHTML = '';
   $('#ofis').innerHTML = Object.entries(OFICIOS).map(([k, o]) => `<button data-of="${k}"><span>${o[0]}</span>${o[1]}</button>`).join('') + '<button data-of="otro" style="grid-column:1/-1"><span>✨</span>Otro (escríbelo tú)</button>';
   $('#ofis').querySelectorAll('[data-of]').forEach((b) => b.onclick = () => elegirOficio(b.dataset.of));
 }
@@ -328,44 +303,18 @@ function elegirOficio(k) {
   const [, , nom, , md, cs, horas] = OFICIOS[k];
   ponerModo(md, false); $('#prod').value = ''; $('#prod').placeholder = 'Ej: ' + nom; $('#cobro').value = ''; $('#horas').value = horas; $('#vhora').value = ajustar(2);
   pistaGasto = 'Ej: ' + cs[0][0].toLowerCase(); costos = [['', '']]; pintarCostos();
-  $('#n-nom').placeholder = 'Ej: ' + nom; abrirCamino(true);
+  $('#oficio').style.display = 'none'; $('#fcard').style.display = 'block'; $('#res').innerHTML = '';
+  history.pushState({ v: 'precio', paso: 'form' }, '', '#precio');
+  window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 350);
 }
 $('#ofotok').onclick = () => { const t = $('#ofotxt').value.trim(); if (!t) return toast('Escribe qué haces 😉');
   guardar('oficio', 'otro'); of = 'otro'; try { pintarMsg(); } catch (e) {}
   ponerModo('hago', false); $('#prod').value = t; $('#cobro').value = ''; $('#horas').value = 1; $('#vhora').value = ajustar(2);
-  pistaGasto = 'Ej: materiales'; costos = [['', '']]; pintarCostos();
-  $('#n-nom').value = t; abrirCamino(true); setTimeout(() => $('#n-pre').focus(), 300); };
-function abrirCamino(push) {
-  $('#oficio').style.display = 'none'; $('#camino').style.display = 'block'; pintarCamino();
-  if (push) history.pushState({ v: 'inicio', paso: 'camino' }, '', '#inicio');
-  window.scrollTo({ top: 0, behavior: 'smooth' }); if (!$('#n-nom').value) setTimeout(() => $('#n-nom').focus(), 350);
-}
-const enviarWA = (txt) => { const u = 'https://wa.me/?text=' + encodeURIComponent(txt); const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); };
-const negocio = () => $('#n-neg').value.trim() || leer('neg', '') || '';
-function pintarCamino() {
-  $('#n-neg').value = leer('neg', '');
-  $('#n-list').innerHTML = productos.map((p, i) => `<div class="item"><label style="margin:0"><img data-th2="${i}"><input type="file" accept="image/*" data-ef2="${i}" hidden></label>
-    <span class="nm">${p.n}</span><span class="pr">${precioTxt(p.p)}</span><button class="x wa1" data-wa="${i}" style="background:#E7FFDB">💬</button><button class="x" data-del2="${i}">×</button></div>`).join('')
-    + (productos.length ? '<p class="mini" style="margin-top:6px">📷 Toca el cuadrito para ponerle foto. ➕ Agrega otro arriba.</p>' : '');
-  $('#n-list').querySelectorAll('[data-th2]').forEach(async (el) => { const im = await fotoImg(productos[el.dataset.th2].n); if (im) el.src = im.src; else el.outerHTML = '<span style="display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:#F7E4EC;font-size:20px">📷</span>'; });
-  $('#n-list').querySelectorAll('[data-ef2]').forEach((el) => el.onchange = async () => { const f = el.files[0]; if (!f) return; await fotoSet(productos[el.dataset.ef2].n, await achicar(f)); pintarCamino(); toast('Foto guardada 📷'); });
-  $('#n-list').querySelectorAll('[data-del2]').forEach((el) => el.onclick = () => { productos.splice(el.dataset.del2, 1); guardar('productos', productos); pintarCamino(); pintarMisProd(); });
-  $('#n-list').querySelectorAll('[data-wa]').forEach((el) => el.onclick = () => { const p = productos[el.dataset.wa];
-    enviarWA(`✨ *${p.n}* ✨\n💲 ${precioTxt(p.p)}\n\n¿Te lo aparto? Escríbeme 💕${negocio() ? '\n— ' + negocio() : ''}`); });
-  $('#prom').style.display = productos.length ? 'block' : 'none';
-  $('#p1').classList.toggle('on', !productos.length); $('#p2').classList.toggle('on', !!productos.length);
-}
-$('#n-add').onclick = () => { const n = $('#n-nom').value.trim(), v = Number($('#n-pre').value);
-  if (!n) { toast('Escribe qué vendes 😉'); return $('#n-nom').focus(); } if (!v) { toast('Ponle el precio 💲'); return $('#n-pre').focus(); }
-  productos = productos.filter((p) => p.n !== n); productos.push({ n, p: v, cobro: v }); guardar('productos', productos);
-  $('#n-nom').value = ''; $('#n-pre').value = ''; pintarCamino(); pintarMisProd(); toast(`${n} guardado ✅`); $('#n-nom').focus(); };
-$('#n-neg').oninput = () => { guardar('neg', $('#n-neg').value); const t = document.querySelector('#neg'); if (t) t.value = $('#n-neg').value; };
-$('#n-calc').onclick = () => { if ($('#n-nom').value) $('#prod').value = $('#n-nom').value; ir('precio'); setTimeout(() => ($('#prod').value ? $('#cobro') : $('#prod')).focus(), 300); };
-$('#wa-lista').onclick = () => { if (!productos.length) return toast('Primero agrega lo que vendes 😉');
-  enviarWA(`✨ *${negocio() || 'Mi lista de precios'}* ✨\n\n` + productos.map((i) => `• ${i.n}: *${precioTxt(i.p)}*`).join('\n') + `\n\n📲 Haz tu pedido por aquí 💕`); };
-$('#go-estado').onclick = () => { eplant = 'estrella'; ir('estados'); };
-if (!productos.length && OFICIOS[leer('oficio', '')]) { const o = OFICIOS[leer('oficio', '')]; $('#prod').placeholder = 'Ej: ' + o[2]; pistaGasto = 'Ej: ' + o[5][0][0].toLowerCase(); ponerModo(o[4], false); setTimeout(pintarCostos, 0); }
-if (!productos.length && !leer('oficio', '')) setTimeout(mostrarOficio, 0); else setTimeout(() => abrirCamino(false), 0);
+  pistaGasto = 'Ej: materiales'; costos = [['', '']]; pintarCostos(); history.pushState({ v: 'precio', paso: 'form' }, '', '#precio');
+  $('#oficio').style.display = 'none'; $('#fcard').style.display = 'block'; $('#res').innerHTML = '';
+  toast('Pon cuánto te cuesta y toca "Dime la verdad" 👇'); setTimeout(() => $('#cobro').focus(), 300); };
+if (!productos.length && !leer('oficio', '')) setTimeout(mostrarOficio, 0);
+else if (!productos.length && OFICIOS[leer('oficio', '')]) { const o = OFICIOS[leer('oficio', '')]; $('#prod').placeholder = 'Ej: ' + o[2]; pistaGasto = 'Ej: ' + o[5][0][0].toLowerCase(); ponerModo(o[4], false); setTimeout(pintarCostos, 0); }
 $('#calc').onclick = () => calcular(false);
 function calcular(ejemplo) {
   const cobro = Number($('#cobro').value) || 0, tiempo = (Number($('#horas').value) || 0) * (Number($('#vhora').value) || 0);
@@ -689,7 +638,7 @@ const standalone = matchMedia('(display-mode: standalone)').matches || navigator
 if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '📲 <b>Tenla como app:</b> ' + $('#instr').innerHTML; guardar('vio-instalar', true); }
 // 🎁 DEMO: 3 usos gratis (calcular, copiar mensaje/lista/recordatorio, compartir o guardar estado); lo que haga se queda si la compra
 if (window.APP_DEMO) {
-  const D = window.APP_DEMO, ACC = ['#calc', '#copmsg', '#coprec', '#walista', '#eshare', '#esave', '#wa-lista', '.wa1'];
+  const D = window.APP_DEMO, ACC = ['#calc', '#copmsg', '#coprec', '#walista', '#eshare', '#esave'];
   const quedan = () => Math.max(0, D.usos - (leer('demo-usados', 0) || 0));
   const evd = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} };
   const vistas = new Set();
@@ -697,10 +646,9 @@ if (window.APP_DEMO) {
   const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
   const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Pruébala gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'}` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
   document.body.prepend(barra); pintarBarra();
-  // 🎁 oferta de correo: cuando ya lleva un rato (90 s) o guardó su 2º producto; una sola vez
+  // 🎁 oferta de correo cuando ya lleva un rato: 90 s en la app o al 2º uso; una sola vez
   let ofrecido = false; const ofertar = () => { if (ofrecido || leer('demo-correo', false)) return; ofrecido = true; ofrecerCorreo(); };
   setTimeout(ofertar, 90000);
-  document.addEventListener('click', (e) => { if (e.target.closest('#n-add')) setTimeout(() => { if (productos.length >= 2) ofertar(); }, 1500); }, true);
   const ofrecerCorreo = () => {   // opcional: guardar el enlace en su correo (+15%); nunca obliga
     const m = document.createElement('div'); m.style.cssText = 'position:fixed;left:12px;right:12px;bottom:86px;z-index:60;max-width:460px;margin:auto';
     m.innerHTML = `<div class="card" style="margin:0;box-shadow:0 10px 40px rgba(0,0,0,.35)"><button class="ej" style="float:right;margin:0;text-decoration:none;font-size:20px" id="oc-x">×</button>
@@ -734,6 +682,7 @@ if (window.APP_DEMO) {
     guardar('demo-usados', (leer('demo-usados', 0) || 0) + 1); pintarBarra();
     const ev = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} };
     ev('uso' + leer('demo-usados', 0));
+    if (leer('demo-usados', 0) === 2) setTimeout(ofertar, 2200);
     if (!quedan()) setTimeout(muro, 1600);
   }, true);
 }
