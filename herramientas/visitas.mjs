@@ -19,6 +19,8 @@ try {   // 👑 uso de las demos: abrieron → 1er uso → 3 usos (vieron la ofe
     if (g('abrio')) console.log(`  → de cada 10 que abren, ${Math.round(g('uso1') / g('abrio') * 10)} la usan`);
     const tabs = ev.filter((e) => e.app === app && e.evento.startsWith('tab_')).sort((a, b) => b.sem - a.sem);
     if (tabs.length) console.log('  pestañas que más abren (7 días): ' + tabs.map((e) => `${e.evento.slice(4)} ${e.sem}`).join(' · '));
+    const ofs = ev.filter((e) => e.app === app && e.evento.startsWith('of_')).sort((a, b) => b.sem - a.sem);
+    if (ofs.length) console.log('  ¿a qué se dedican? (7 días): ' + ofs.map((e) => `${e.evento.slice(3)} ${e.sem}`).join(' · '));
     const NOM = { caro: '💸 cara', pago: '💳 no sabe pagar', nosirve: '🤷 no es para su negocio', dificil: '😵 difícil', luego: '⏳ después' };
     const mot = ev.filter((e) => e.app === app && e.evento.startsWith('no_')).sort((a, b) => b.sem - a.sem);
     if (mot.length) console.log('  ¿por qué no compran? (7 días): ' + mot.map((e) => `${NOM[e.evento.slice(3)] || e.evento} ${e.sem}`).join(' · '));

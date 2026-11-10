@@ -140,7 +140,7 @@ const vistos = new Map();   // "día|producto|ip" → 1 (se limpia cada día)
 function visitaReal(req, productId) {
   const ua = req.headers['user-agent'] || '';
   if (!/Mozilla\//.test(ua) || ROBOT.test(ua) || !req.headers['accept-language'] || esDueno(req) || /[?&]soy=dueno/.test(req.url)) return false;
-  if (req.headers['purpose'] === 'prefetch' || req.headers['sec-purpose']?.includes('prefetch')) return false;
+  if (/prefetch|preview/i.test(`${req.headers['purpose'] || ''} ${req.headers['sec-purpose'] || ''} ${req.headers['x-purpose'] || ''} ${req.headers['x-moz'] || ''}`)) return false;   // precargas (Meta/Chrome) no son visitas
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   const dia = new Date().toISOString().slice(0, 10), k = `${dia}|${productId}|${ip}`;
   if (vistos.has(k)) return false;
@@ -212,7 +212,7 @@ try { db.exec('CREATE TABLE IF NOT EXISTS app_eventos (day TEXT, app TEXT, event
 const appEvento = (app, evento) => { try { db.prepare("INSERT INTO app_eventos (day, app, evento, n) VALUES (date('now'), ?, ?, 1) ON CONFLICT(day, app, evento) DO UPDATE SET n = n + 1").run(app, evento); } catch {} };
 on('POST', '/api/app-evento', async (req, res) => {
   const b = await body(req, 500).catch(() => ({})); const app = String(b.app || ''), e = String(b.e || '');
-  if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
+  if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10}|of_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -234,10 +234,11 @@ on('GET', '/app/:app/sw.js', (req, res, { app }) => {   // funciona sin internet
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));}return r;}).catch(()=>caches.match(e.request,{ignoreSearch:true})));});`);
 });
 
-on('GET', '/jefa', (req, res) => {   // landing de La Jefa (link del perfil y anuncios): demo gratis a cambio del correo
+on('GET', '/jefa', (req, res, _p, url) => {   // link del perfil y de los anuncios → DIRECTO a la demo (Diego 10-nov: que la USEN); la landing larga queda en /jefa?info
   const p = Products.bySlug('la-jefa');
   if (p && visitaReal(req, p.id)) Products.view(p.id);
-  res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('jefa.html'));
+  if (url.searchParams.has('info')) { res.writeHead(200, { 'content-type': MIME['.html'] }); return res.end(renderPage('jefa.html')); }
+  res.writeHead(302, { location: '/app/jefa/demo' + (url.search || '') }); res.end();
 });
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
   const p = Products.bySlug('regalo-reto-30-dias');
