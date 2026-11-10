@@ -1,21 +1,21 @@
 {
- "_nota": "Plan 10-22 nov. Historias 9:00 am, feed 6:00 pm (hora de Caracas). 'aprobado' lo pone Diego tras revisar; el servidor publica solo lo aprobado y anota el id.",
- "aprobado": false,
- "historias_auto": false,
+ "_nota": "Plan 10-22 nov APROBADO por Diego (10-nov 11:23): publica todo solo. Historias 9:00 am (sin sticker: la API no lo permite), feed 6:00 pm (hora de Caracas).",
+ "aprobado": true,
+ "historias_auto": true,
  "historias": {
   "2026-11-10": "historia-2026-11-10-jefa.jpg",
   "2026-11-11": "historia-2026-11-11-habitos.jpg",
-  "2026-11-12": "historia-2026-11-12-ahorro.jpg",
+  "2026-11-12": "historia-2026-11-12-jefa.jpg",
   "2026-11-13": "historia-2026-11-13-panel.jpg",
   "2026-11-14": "historia-2026-11-14-loteria.jpg",
-  "2026-11-15": "historia-2026-11-15-navidad.jpg",
+  "2026-11-15": "historia-2026-11-15-habitos.jpg",
   "2026-11-16": "historia-2026-11-16-jefa.jpg",
   "2026-11-17": "historia-2026-11-17-habitos.jpg",
-  "2026-11-18": "historia-2026-11-18-reto30.jpg",
+  "2026-11-18": "historia-2026-11-18-loteria.jpg",
   "2026-11-19": "historia-2026-11-19-panel.jpg",
   "2026-11-20": "historia-2026-11-20-jefa.jpg",
   "2026-11-21": "historia-2026-11-21-loteria.jpg",
-  "2026-11-22": "historia-2026-11-22-ahorro.jpg"
+  "2026-11-22": "historia-2026-11-22-jefa.jpg"
  },
  "feed": {
   "2026-11-10": {

@@ -51,17 +51,17 @@ P = {
 HIST = [
  ("2026-11-10", "jefa", "¿Vendes y vendes… y nunca te alcanza?", "Descubre en 1 minuto si estás perdiendo plata en cada venta."),
  ("2026-11-11", "habitos", "2027 no se va a cambiar solo.", "Tus hábitos de todo el año en una sola hoja, con tu progreso al día."),
- ("2026-11-12", "ahorro", "¿Y si en diciembre de 2027 tuvieras 1.378 guardados?", "Reto de ahorro de 52 semanas, en tu moneda. Gratis."),
+ ("2026-11-12", "jefa", "Te preguntan “¿cuánto es?” y tú: “déjame ver…”", "Ten tu lista de precios lista para mandar por WhatsApp."),
  ("2026-11-13", "panel", "La quincena llega el viernes… y se va el sábado.", "Mira a dónde se va tu plata con tu Panel Financiero mensual."),
  ("2026-11-14", "loteria", "El baby shower del que toda la familia va a hablar.", "Lotería imprimible con 60 tablas únicas. Imprimes y a jugar."),
- ("2026-11-15", "navidad", "Diciembre llega rápido… y la plata se va más rápido.", "Planificador navideño gratis: regalos, cena y gastos en orden."),
+ ("2026-11-15", "habitos", "Lunes: “empiezo”. Martes: “mañana sigo”.", "Marca cada día y mira tu racha crecer en 2027."),
  ("2026-11-16", "jefa", "“El viernes te pago, mija.” El viernes:", "Anota quién te debe y cóbrale por WhatsApp con un toque."),
  ("2026-11-17", "habitos", "Enero: “este año sí”. Marzo: “¿qué metas?”", "Mira tu año completo y no sueltes tus metas en 2027."),
- ("2026-11-18", "reto30", "30 días. Un hábito. Cero excusas.", "Reto de 30 días gratis: lo marcas cada día y ves tu avance."),
+ ("2026-11-18", "loteria", "Juegos de baby shower que sí hacen reír.", "Imprime las 60 tablas y que gane la más rápida."),
  ("2026-11-19", "panel", "“¿En qué se me fue la plata?” Te lo dice tu Excel.", "Ingresos, gastos y ahorro del mes, con gráficos solos."),
  ("2026-11-20", "jefa", "¿Cuánto cobrar por lo que haces?", "La Jefa te dice tu precio justo y te arma tu lista para WhatsApp."),
  ("2026-11-21", "loteria", "¿Te tocó organizar el baby shower?", "Ríete con la familia: 60 tablas distintas, lista para imprimir."),
- ("2026-11-22", "ahorro", "Ahorra sin sufrir: una semana a la vez.", "52 semanas, un poquito cada vez. Descárgalo gratis."),
+ ("2026-11-22", "jefa", "Tu negocio también merece verse bonito.", "Haz estados de WhatsApp con la foto de tu producto en segundos."),
 ]
 DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 def historia(n, fecha, k, hook, sub):
