@@ -31,6 +31,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rosa)}
 .btn{display:block;width:100%;border:none;border-radius:14px;padding:14px;font:inherit;font-weight:800;font-size:16px;background:var(--rosa);color:#fff;margin-top:12px}
 .btn.sec{background:#F7E4EC;color:var(--vino)}
 .btn.wa{background:#25D366}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .08s,background .15s,color .15s}
+button:active{transform:scale(.95);filter:brightness(.92)}
 .veredicto{border-radius:20px;padding:20px;text-align:center;color:#fff;margin-bottom:14px;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
 .veredicto.pierde{background:linear-gradient(135deg,#B91C1C,#EF4444)}
 .veredicto.gana{background:linear-gradient(135deg,#15803D,#22C55E)}
@@ -273,12 +275,18 @@ function ponerModo(m, reset) {
   if (reset) { costos = JSON.parse(JSON.stringify(COSTOS_MODO[m])); $('#horas').value = m === 'revendo' ? 0.25 : 1; pintarCostos(); $('#res').innerHTML = ''; }
 }
 document.querySelectorAll('[data-modo]').forEach((b) => b.onclick = () => b.dataset.modo !== modo && ponerModo(b.dataset.modo, true));
-function cargar(p) { ponerModo(p.modo || 'hago', false); $('#prod').value = p.n; $('#cobro').value = p.cobro ?? p.p; costos = JSON.parse(JSON.stringify(p.costos || [['', 0]])); $('#horas').value = p.horas ?? 1; $('#vhora').value = p.vhora ?? 2; pintarCostos(); $('#res').innerHTML = ''; }
+let abierto = null;   // producto abierto en el formulario (nombre) o 'nuevo'
+function cargar(p) { abierto = p.n || 'nuevo'; marcarProd(); ponerModo(p.modo || 'hago', false); $('#prod').value = p.n; $('#cobro').value = p.cobro ?? p.p; costos = JSON.parse(JSON.stringify(p.costos || [['', 0]])); $('#horas').value = p.horas ?? 1; $('#vhora').value = p.vhora ?? 2; pintarCostos(); $('#res').innerHTML = ''; }
 function pintarMisProd() {
   $('#misprod').style.display = productos.length ? 'block' : 'none';
   $('#chipsprod').innerHTML = productos.map((p, i) => `<button class="chip" data-i="${i}">${p.n} · ${money(p.p)}</button>`).join('') + '<button class="chip" data-i="nuevo">➕ Nuevo</button>';
-  $('#chipsprod').querySelectorAll('button').forEach((b) => b.onclick = () => b.dataset.i === 'nuevo' ? cargar({ n: '', cobro: '', costos: [['', 0]], horas: 1, vhora: 2 }) : cargar(productos[b.dataset.i]));
+  $('#chipsprod').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (b.dataset.i === 'nuevo') { cargar({ n: '', cobro: '', costos: [['', 0]], horas: 1, vhora: 2 }); toast('Nuevo producto ✍️ Llena los datos'); }
+    else { cargar(productos[b.dataset.i]); toast(`Abriste ${productos[b.dataset.i].n} ✏️`); }
+    $('#fcard').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('#prod').focus(), 400); });
+  marcarProd();
 }
+function marcarProd() { document.querySelectorAll('#chipsprod button').forEach((b) => b.classList.toggle('on', b.dataset.i === 'nuevo' ? abierto === 'nuevo' : productos[b.dataset.i]?.n === abierto)); }
 $('#addc').onclick = () => { costos.push(['', 0]); pintarCostos(); };
 let productos = leer('productos', []);
 pintarMisProd();
@@ -346,12 +354,13 @@ function calcular(ejemplo) {
   const verPv = () => { const v = Number($('#pv').value) || 0, g = v - total;
     $('#pvres').style.color = g < 0 ? 'var(--rojo)' : 'var(--verde)';
     $('#pvres').textContent = v ? (g < 0 ? `Con ${money(v)} pierdes ${money(-g)} por venta 😬` : `Con ${money(v)} ganas ${money(g)} por venta (${Math.round(g / v * 100)}%) 💪`) : ''; };
-  $('#pv').oninput = verPv; verPv();
-  $('#res').querySelectorAll('[data-pv]').forEach((b) => b.onclick = () => { $('#pv').value = b.dataset.pv; verPv(); });
+  const marcarPv = () => $('#res').querySelectorAll('[data-pv]').forEach((b) => b.classList.toggle('on', Number(b.dataset.pv) === Number($('#pv').value)));
+  $('#pv').oninput = () => { verPv(); marcarPv(); }; verPv(); marcarPv();
+  $('#res').querySelectorAll('[data-pv]').forEach((b) => b.onclick = () => { $('#pv').value = b.dataset.pv; verPv(); marcarPv(); });
   $('#usar').onclick = () => {
     const v = Number($('#pv').value) || justo;
     productos = productos.filter((p) => p.n !== nombre); productos.push({ n: nombre, p: v, cobro: v, modo, costos: JSON.parse(JSON.stringify(costos)), horas: $('#horas').value, vhora: $('#vhora').value });
-    guardar('productos', productos); pintarMisProd(); $('#instalar').style.display = 'none'; toast(`${nombre} guardado a ${money(v)} 📋`); $('#otro').style.display = 'block';
+    guardar('productos', productos); abierto = nombre; pintarMisProd(); $('#instalar').style.display = 'none'; toast(`${nombre} guardado a ${money(v)} 📋`); $('#otro').style.display = 'block';
   };
   $('#otro').onclick = () => { cargar({ n: '', cobro: '', modo, costos: JSON.parse(JSON.stringify(COSTOS_MODO[modo])), horas: modo === 'revendo' ? 0.25 : 1, vhora: $('#vhora').value || 2 }); window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 400); };
   if (ejemplo) {
