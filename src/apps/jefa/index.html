@@ -82,8 +82,8 @@ textarea.msg{width:100%;border:2px dashed #b7e4a5;font:inherit;resize:vertical;m
   <div class="card" id="misprod" style="display:none"><h2>📦 Mis productos</h2><div class="chips" id="chipsprod"></div></div>
   <div class="card" id="fcard">
     <h2>💰 ¿Cuánto ganas de verdad?</h2>
-    <label>¿Qué vendes?</label><input id="prod" value="Torta de chocolate">
-    <label>¿A cuánto lo cobras? (<span class="sym"></span>)</label><input id="cobro" type="number" step="any" value="15">
+    <label>¿Qué vendes?</label><input id="prod" placeholder="Ej: lo que vendes o el servicio que haces">
+    <label>¿A cuánto lo cobras? (<span class="sym"></span>)</label><input id="cobro" type="number" step="any" inputmode="decimal" placeholder="¿Cuánto cobras?">
     <label>¿Cómo lo consigues?</label>
     <div class="chips"><button class="chip on" data-modo="hago">🧁 Lo hago yo</button><button class="chip" data-modo="revendo">🛍️ Lo compro y revendo</button></div>
     <label id="lcostos">Lo que te cuesta hacerlo</label>
@@ -236,20 +236,30 @@ const fotosCache = {};
 const fotoImg = async (k) => (k in fotosCache) ? fotosCache[k] : (fotosCache[k] = await blobImg(await fotoGet(k)));
 
 // navegación
-document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
-  document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
-  if (b.dataset.v === 'lista') pintarLista();
-  if (b.dataset.v === 'estados') prepEstados();
+function ir(v, push = true) {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v));
+  document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v));
+  if (v === 'lista') pintarLista();
+  if (v === 'estados') prepEstados();
   window.scrollTo(0, 0);
+  if (push && (history.state || {}).v !== v) history.pushState({ v }, '', '#' + v);
+}
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => ir(b.dataset.v));
+history.replaceState({ v: 'precio', raiz: true }, '', location.pathname + location.search);
+window.addEventListener('popstate', (e) => {
+  const st = e.state || { v: 'precio', raiz: true };
+  document.querySelectorAll('.muro-capa').forEach((m) => m.remove());
+  ir(st.v || 'precio', false);
+  if (st.raiz && !productos.length && $('#oficio')) { try { mostrarOficio(); } catch (x) {} }   // atrás desde el formulario → volver a "¿A qué te dedicas?"
 });
 
 // 1. detector
-const COSTOS_EJ = [['Harina', 1.2], ['Huevos', 1.5], ['Chocolate', 4], ['Azúcar', .8], ['Mantequilla', 2.5], ['Gas y luz', 1], ['Caja y empaque', 1.5]];
+const COSTOS_EJ = [['', '']];   // sin ejemplos inventados: ella pone sus gastos (Diego 10-nov)
+let pistaGasto = 'Ej: materiales';
 const ajustar = (v) => { const f = FX(), x = v * f; return f >= 100 ? Math.round(x / 50) * 50 : f > 5 ? Math.round(x) : Math.round(x * 10) / 10; };
 let costos = COSTOS_EJ.map(([n, v]) => [n, ajustar(v)]);
 function pintarCostos() {
-  $('#costos').innerHTML = costos.map((c, i) => `<div class="row" style="margin-top:6px"><input value="${c[0]}" data-i="${i}" data-k="0"><input class="m" type="number" step="any" value="${c[1]}" data-i="${i}" data-k="1"><button class="x" data-del="${i}">×</button></div>`).join('');
+  $('#costos').innerHTML = costos.map((c, i) => `<div class="row" style="margin-top:6px"><input value="${c[0]}" placeholder="${i === 0 ? pistaGasto : 'Otro gasto'}" data-i="${i}" data-k="0"><input class="m" type="number" step="any" inputmode="decimal" placeholder="${MONEDAS[MON][2].trim()}" value="${c[1]}" data-i="${i}" data-k="1"><button class="x" data-del="${i}">×</button></div>`).join('');
   $('#costos').querySelectorAll('input').forEach((el) => el.oninput = () => { costos[el.dataset.i][el.dataset.k] = el.dataset.k === '1' ? Number(el.value) : el.value; });
   $('#costos').querySelectorAll('[data-del]').forEach((el) => el.onclick = () => { costos.splice(el.dataset.del, 1); pintarCostos(); });
 }
@@ -290,19 +300,21 @@ function elegirOficio(k) {
   try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'of_' + k }), keepalive: true }).catch(() => {}); } catch (e) {}
   if (k === 'otro') { $('#ofotro').style.display = 'block'; $('#ofotxt').focus(); return; }
   guardar('oficio', k); if (typeof of !== 'undefined') { of = MSG_OF[k]; try { pintarMsg(); } catch (e) {} }
-  const [, , nom, cobro, md, cs, horas] = OFICIOS[k];
-  ponerModo(md, false); $('#prod').value = nom; $('#cobro').value = ajustar(cobro); $('#horas').value = horas; $('#vhora').value = ajustar(2);
-  costos = cs.map(([n, v]) => [n, ajustar(v)]); pintarCostos();
-  $('#oficio').style.display = 'none'; $('#fcard').style.display = 'block';
-  calcular(true); window.scrollTo({ top: 0, behavior: 'smooth' });
+  const [, , nom, , md, cs, horas] = OFICIOS[k];
+  ponerModo(md, false); $('#prod').value = ''; $('#prod').placeholder = 'Ej: ' + nom; $('#cobro').value = ''; $('#horas').value = horas; $('#vhora').value = ajustar(2);
+  pistaGasto = 'Ej: ' + cs[0][0].toLowerCase(); costos = [['', '']]; pintarCostos();
+  $('#oficio').style.display = 'none'; $('#fcard').style.display = 'block'; $('#res').innerHTML = '';
+  history.pushState({ v: 'precio', paso: 'form' }, '', '#precio');
+  window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(() => $('#prod').focus(), 350);
 }
 $('#ofotok').onclick = () => { const t = $('#ofotxt').value.trim(); if (!t) return toast('Escribe qué haces 😉');
   guardar('oficio', 'otro'); of = 'otro'; try { pintarMsg(); } catch (e) {}
   ponerModo('hago', false); $('#prod').value = t; $('#cobro').value = ''; $('#horas').value = 1; $('#vhora').value = ajustar(2);
-  costos = [['Materiales', 0], ['Empaque', 0], ['Transporte o envío', 0]]; pintarCostos();
+  pistaGasto = 'Ej: materiales'; costos = [['', '']]; pintarCostos(); history.pushState({ v: 'precio', paso: 'form' }, '', '#precio');
   $('#oficio').style.display = 'none'; $('#fcard').style.display = 'block'; $('#res').innerHTML = '';
   toast('Pon cuánto te cuesta y toca "Dime la verdad" 👇'); setTimeout(() => $('#cobro').focus(), 300); };
 if (!productos.length && !leer('oficio', '')) setTimeout(mostrarOficio, 0);
+else if (!productos.length && OFICIOS[leer('oficio', '')]) { const o = OFICIOS[leer('oficio', '')]; $('#prod').placeholder = 'Ej: ' + o[2]; pistaGasto = 'Ej: ' + o[5][0][0].toLowerCase(); ponerModo(o[4], false); setTimeout(pintarCostos, 0); }
 $('#calc').onclick = () => calcular(false);
 function calcular(ejemplo) {
   const cobro = Number($('#cobro').value) || 0, tiempo = (Number($('#horas').value) || 0) * (Number($('#vhora').value) || 0);
@@ -349,7 +361,8 @@ function calcular(ejemplo) {
 }
 
 // 2. lista
-const EJ_BASE = [{ n: 'Torta de chocolate', p: 22.5 }, { n: 'Quesillo', p: 8 }, { n: 'Galletas (docena)', p: 5 }];
+const EJ_BASE = [{ n: 'Tu producto o servicio', p: 0 }];   // solo de muestra mientras no tenga nada
+const precioTxt = (v) => (Number(v) ? money(v) : '—');
 let EJ = EJ_BASE.map((x) => ({ ...x, p: redondeo(x.p * FX()) }));
 function pintarLista() {
   const items = productos.length ? productos : EJ;
@@ -360,7 +373,7 @@ function pintarLista() {
   $('#editlista').querySelectorAll('[data-ef]').forEach((el) => el.onchange = async () => { const f = el.files[0]; if (!f) return; await fotoSet(productos[el.dataset.ef].n, await achicar(f)); pintarLista(); toast('Foto guardada 📷'); });
   $('#editlista').querySelectorAll('[data-ed]').forEach((el) => el.onclick = () => { productos.splice(el.dataset.ed, 1); guardar('productos', productos); pintarMisProd(); pintarLista(); });
   $('#tarjeta').innerHTML = `<h3>${$('#neg').value || 'Mi negocio'}</h3><p class="mini" style="color:#ffd9e6">Lista de precios</p>` +
-    items.map((i) => `<div class="it"><span>${i.n}</span><span>${money(i.p)}</span></div>`).join('') +
+    items.map((i) => `<div class="it"><span>${i.n}</span><span>${precioTxt(i.p)}</span></div>`).join('') +
     `<div class="pie">Pedidos por WhatsApp ${$('#tel').value || ''} 💬</div>`;
 }
 $('#neg').value = leer('neg', ''); $('#tel').value = leer('tel', '');
@@ -478,7 +491,7 @@ function prepEstados() {
   $('#eplant').querySelectorAll('button').forEach((b) => b.onclick = () => { eplant = b.dataset.k; prepEstados(); });
   $('#ecol').querySelectorAll('button').forEach((b) => b.onclick = () => { ecol = b.dataset.k; prepEstados(); });
   const items = productos.length ? productos : EJ;
-  const sel = $('#eprod').value; $('#eprod').innerHTML = items.map((p, i) => `<option value="${i}">${p.n} · ${money(p.p)}</option>`).join(''); if (sel) $('#eprod').value = sel;
+  const sel = $('#eprod').value; $('#eprod').innerHTML = items.map((p, i) => `<option value="${i}">${p.n} · ${precioTxt(p.p)}</option>`).join(''); if (sel) $('#eprod').value = sel;
   $('#eprodw').style.display = eplant === 'estrella' ? 'block' : 'none';
   pintarCampos();
   $('#eforma').innerHTML = Object.entries(FORMAS).map(([k, v]) => `<button class="chip ${k === eforma ? 'on' : ''}" data-k="${k}">${v}</button>`).join('');
@@ -550,13 +563,13 @@ async function dibujar() {
       const yEnd = wrap(pr.n, W / 2, 530, 920, 104, '800 96px Poppins'), fy = Math.max(yEnd + 330, 1000);
       fotoForma(foto, W / 2, fy, 620, eforma, ac);
       sombra(true); cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2 + 270, fy + 250, 145, 0, 7); cx.fill(); sombra(false);
-      cx.fillStyle = c1; cx.font = '800 80px Poppins'; cx.textAlign = 'center'; cx.fillText(money(pr.p), W / 2 + 270, fy + 278);
+      cx.fillStyle = c1; cx.font = '800 80px Poppins'; cx.textAlign = 'center'; cx.fillText(precioTxt(pr.p), W / 2 + 270, fy + 278);
       if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, fy + 480, 880, 56, '600 44px Poppins'); }
     } else {
       cx.fillStyle = '#fff'; const yEnd = wrap(pr.n, W / 2, deFondo ? 520 : 760, 900, 130, '800 118px Poppins');
       const cy = deFondo ? H - 620 : Math.max(yEnd + 230, 1200);
       cx.fillStyle = ac; cx.beginPath(); cx.arc(W / 2, cy, 190, 0, 7); cx.fill();
-      cx.fillStyle = c1; cx.font = '800 112px Poppins'; cx.fillText(money(pr.p), W / 2, cy + 38);
+      cx.fillStyle = c1; cx.font = '800 112px Poppins'; cx.fillText(precioTxt(pr.p), W / 2, cy + 38);
       if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, cy + 290, 880, 60, '600 46px Poppins'); }
     }
     pie(V.boton);
@@ -565,7 +578,7 @@ async function dibujar() {
     const L = items.slice(0, 9), h = Math.min(130, 900 / L.length); let y = 520;
     for (const [i, it] of L.entries()) { pill(110, y, W - 220, h - 22, 28, 'rgba(255,255,255,.16)'); cx.fillStyle = '#fff'; cx.font = `600 ${Math.round(h * .36)}px Poppins`; cx.textAlign = 'left';
       let tx = 150; if (thumbs[i]) { const r = (h - 40) / 2; cx.save(); cx.beginPath(); cx.arc(150 + r, y + (h - 22) / 2, r, 0, 7); cx.clip(); cubrir(thumbs[i], 150, y + (h - 22) / 2 - r, r * 2, r * 2); cx.restore(); tx = 150 + r * 2 + 22; }
-      cx.fillText(it.n.length > 22 ? it.n.slice(0, 21) + '…' : it.n, tx, y + h * .52); cx.textAlign = 'right'; cx.fillStyle = ac; cx.font = `800 ${Math.round(h * .4)}px Poppins`; cx.fillText(money(it.p), W - 150, y + h * .54); y += h; }
+      cx.fillText(it.n.length > 22 ? it.n.slice(0, 21) + '…' : it.n, tx, y + h * .52); cx.textAlign = 'right'; cx.fillStyle = ac; cx.font = `800 ${Math.round(h * .4)}px Poppins`; cx.fillText(precioTxt(it.p), W - 150, y + h * .54); y += h; }
     cx.textAlign = 'center'; if (extra) { cx.fillStyle = '#fff'; wrap(extra, W / 2, y + 70, 880, 58, '600 44px Poppins'); }
     pie(V.boton);
   } else if (eplant === 'agenda') {
@@ -598,12 +611,12 @@ function pintarMoneda() {
 }
 function ejemploMoneda() {   // si todavía no tiene productos, el ejemplo se pasa a su moneda
   EJ = EJ_BASE.map((x) => ({ ...x, p: redondeo(x.p * FX()) }));
-  if (!productos.length) { costos = COSTOS_EJ.map(([n, v]) => [n, ajustar(v)]); $('#cobro').value = ajustar(15); $('#vhora').value = ajustar(2); pintarCostos(); $('#res').innerHTML = ''; }
+  if (!productos.length) { $('#vhora').value = ajustar(2); pintarCostos(); }
 }
 $('#moneda').onchange = () => { MON = $('#moneda').value; guardar('moneda', MON); ejemploMoneda(); pintarMoneda(); pintarMisProd(); pintarLista(); pintarDeudas(); pintarClientas(); toast('Moneda: ' + MONEDAS[MON][1] + ' ✅'); };
 $('#monb').onclick = () => vista('ajustes');
 ejemploMoneda(); pintarMoneda();
-const vista = (v) => { document.querySelectorAll('.vista').forEach((x) => x.classList.toggle('on', x.id === 'v-' + v)); document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x.dataset.v === v)); window.scrollTo(0, 0); };
+const vista = (v) => ir(v);
 $('#cfgb').onclick = () => vista('ajustes'); $('#volver').onclick = () => vista('precio');
 $('#bak').onclick = async () => {
   const fotos = {}; for (const p of productos) { const b = await fotoGet(p.n); if (b) fotos[p.n] = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }); }
