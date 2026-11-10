@@ -466,7 +466,14 @@ on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }, url) => {
   if (item.external_url) { res.writeHead(302, { location: item.external_url }); return res.end(); }
   if (item.form) {   // personalizado: su propio archivo
     const f = o.archivo && !o.archivo.startsWith('generando') ? path.join(STORAGE, o.archivo) : '';
-    if (!f || !fs.existsSync(f)) return msg('Tu libro se está creando ahora mismo. Te llega al correo en unos minutos ✨');
+    if (!f || !fs.existsSync(f)) {   // aún se fabrica: página amable que se recarga sola y descarga cuando esté listo
+      if (o.downloads > 0) Orders.update(o.id, { downloads: o.downloads - 1 });
+      res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-store' });
+      return res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="12"><title>Creando tu libro…</title>
+<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:linear-gradient(160deg,#7c5cff,#ff4fa3);color:#fff;text-align:center;padding:24px;box-sizing:border-box}
+.e{font-size:90px;animation:g 2s linear infinite}@keyframes g{50%{transform:scale(1.15) rotate(8deg)}}h1{font-size:28px}p{font-size:19px;max-width:440px;line-height:1.4;opacity:.95}</style></head>
+<body><div class="e">📚</div><h1>¡Estamos creando su libro!</h1><p>Estamos poniendo su nombre en cada página y grabando su voz de premio. Tarda unos minutos: esta página se actualiza sola y también te llega al correo. ✨</p></body></html>`);
+    }
     const dn = (JSON.parse(o.datos || '{}').nombre || 'libro').normalize('NFKD').replace(/[^\w ]/g, '').trim().replace(/ /g, '-');
     return serveFile(res, f, { 'content-disposition': `attachment; filename="La-gran-aventura-de-${dn}.pdf"` });
   }
