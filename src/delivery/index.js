@@ -76,15 +76,15 @@ export async function deliver(orderId) {
 
 // Cómo poner la app en la pantalla de inicio (sirve para TODAS las apps que vendamos)
 const INSTALAR_TXT = `📲 Cómo dejarla en tu pantalla de inicio (como una app):
-• Android (Chrome): abre el enlace, toca los 3 puntitos ⋮ de arriba a la derecha → "Agregar a pantalla de inicio" o "Instalar app" → Agregar.
+• Android (Chrome): abre el enlace, toca los 3 puntitos ⋮ de arriba a la derecha → "Instalar y crear acceso directo" (en algunos celulares dice "Agregar a pantalla de inicio") → Agregar.
 • iPhone (Safari): abre el enlace en Safari, toca el botón Compartir (el cuadrito con la flecha ⬆️ abajo) → "Agregar a inicio" → Agregar.
 Si se te abrió dentro de Gmail, Facebook o Instagram, primero toca "Abrir en Chrome" o "Abrir en Safari".`;
 const INSTALAR_HTML = `<div style="background:#1a1a2e;border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px;line-height:1.5">
   <b>📲 Déjala en tu pantalla de inicio (como una app)</b>
   <p style="margin:10px 0 4px"><b>🤖 Android (Chrome)</b></p>
-  <ol style="margin:0;padding-left:20px"><li>Toca el botón <b>Abrir mi app</b>.</li><li>Toca los <b>3 puntitos ⋮</b> de arriba a la derecha.</li><li>Elige <b>"Agregar a pantalla de inicio"</b> o <b>"Instalar app"</b> → Agregar.</li></ol>
+  <ol style="margin:0;padding-left:20px"><li>Toca el botón <b>Abrir mi app</b>.</li><li>Toca los <b>3 puntitos ⋮</b> de arriba a la derecha.</li><li>Elige <b>"Instalar y crear acceso directo"</b> (o <b>"Agregar a pantalla de inicio"</b>) → Agregar.</li></ol>
   <p style="margin:10px 0 4px"><b>🍎 iPhone (Safari)</b></p>
-  <ol style="margin:0;padding-left:20px"><li>Abre el enlace en <b>Safari</b>.</li><li>Toca <b>Compartir</b> (el cuadrito con la flecha ⬆️, abajo).</li><li>Elige <b>"Agregar a inicio"</b> → Agregar.</li></ol>
+  <ol style="margin:0;padding-left:20px"><li>Abre el enlace en Chrome (no dentro del correo ni de Instagram) en <b>Safari</b>.</li><li>Toca <b>Compartir</b> (el cuadrito con la flecha ⬆️, abajo).</li><li>Elige <b>"Agregar a inicio"</b> → Agregar.</li></ol>
   <p style="margin:10px 0 0;color:#aab;font-size:13px">💡 Si se abrió dentro de Gmail, Facebook o Instagram, primero toca "Abrir en Chrome" o "Abrir en Safari". Listo: te queda el ícono 👑 y se abre sola, sin volver a buscar el correo.</p>
 </div>`;
 

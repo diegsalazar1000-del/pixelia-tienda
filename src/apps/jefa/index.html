@@ -643,7 +643,7 @@ $('#res-file').onchange = async (e) => {
 };
 const ios = /iphone|ipad/i.test(navigator.userAgent);
 $('#instr').innerHTML = ios ? 'En Safari toca <b>Compartir</b> (el cuadrito con flecha ⬆️) → <b>"Agregar a inicio"</b>. Te queda con su corona 👑 como cualquier app.'
-  : 'En Chrome toca los <b>tres puntitos ⋮</b> → <b>"Agregar a pantalla de inicio"</b> o <b>"Instalar app"</b>. Te queda con su corona 👑 como cualquier app.';
+  : 'En Chrome toca los <b>tres puntitos ⋮</b> → <b>"Instalar y crear acceso directo"</b> (o <b>"Agregar a pantalla de inicio"</b>). Te queda con su corona 👑 como cualquier app.';
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '📲 <b>Tenla como app:</b> ' + $('#instr').innerHTML; guardar('vio-instalar', true); }
 // 🎁 DEMO: 3 usos gratis (calcular, copiar mensaje/lista/recordatorio, compartir o guardar estado); lo que haga se queda si la compra
