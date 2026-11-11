@@ -12,6 +12,7 @@ import { adsListos, crearCampana, activar, pausar, borrar, resultados, intereses
 import { registrar, resumen, resumenTexto, recetasVariantes } from './aprendizaje.js';
 import { startCalendario, leccion, onCalendario, estadoCalendario, marcarPublicado } from './calendario.js';
 import { Subscribers, Orders } from '../db.js';
+import { vistaPanel, limpiarCache } from './panel.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
 const parseC = (c) => c && { ...c, metrics: JSON.parse(c.metrics || '{}'), ai: JSON.parse(c.ai || '{}') };
@@ -583,7 +584,11 @@ export async function onMessage(m) {
   if (m.video || (m.document && /^video\//i.test(m.document.mime_type || ''))) return saveClip(m).catch((e) => send(`⚠️ No pude guardar el video: ${esc(e.message)}`));
   if (m.audio || (m.document && /audio|mpeg|ogg|wav|mp4a/i.test(m.document.mime_type || ''))) return saveSong(m);
   if (text.startsWith('/lista') || text.startsWith('/comandos')) return send(LISTA);
-  if (text.startsWith('/visitas')) return herramienta('visitas.mjs', [], '📈 Revisando visitas, correos, pedidos y campañas… (≈30 s)');
+  if (/^\/visitas\s+(todo|completo)/.test(text)) return herramienta('visitas.mjs', [], '📈 Revisando visitas, correos, pedidos y campañas… (≈30 s)');   // el reporte largo de antes
+  if (text.startsWith('/visitas') || text.startsWith('/panel')) {   // 📊 panel con botones: un solo mensaje que se va actualizando
+    const v = await vistaPanel('inicio').catch((e) => ({ text: '⚠️ ' + esc(e.message), reply_markup: { inline_keyboard: [] } }));
+    return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, ...v });
+  }
   if (text.startsWith('/sinan')) return herramienta('sin-audience-network.mjs', [], '🧹 Quitando Audience Network de las campañas…');
   if (text.startsWith('/promocionar')) return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
     text: '🔥 <b>Campaña de seguidores</b> con los reels del Reto 30 Días que están publicados ahora: objetivo visitas al perfil de Instagram, LatAm 20-45 (productividad, desarrollo personal, motivación), solo Instagram, <b>$3/día sin fecha de fin</b>.\n\n⚠️ Si ya tienes una activa, esto crea OTRA. ¿La creo?',
@@ -690,6 +695,13 @@ export async function onMessage(m) {
 export async function onCallback(q) {
   const [action, id, opts] = String(q.data || '').split(':');
   const esAdmin = String(q.from?.id) === String(config.telegram.adminChatId);
+  if (action === 'pn' && esAdmin) {   // 📊 panel: cambia el MISMO mensaje (no manda uno nuevo)
+    if (opts === 'r') limpiarCache();
+    await rtg('answerCallbackQuery', { callback_query_id: q.id, text: opts === 'r' ? '🔄 Actualizado' : '' }).catch(() => {});
+    const v = await vistaPanel(id).catch((e) => ({ text: '⚠️ ' + esc(e.message), reply_markup: { inline_keyboard: [[{ text: '🏠 Resumen', callback_data: 'pn:inicio' }]] } }));
+    return rtg('editMessageText', { chat_id: q.message.chat.id, message_id: q.message.message_id, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, ...v })
+      .catch((e) => { if (!/not modified/i.test(e.message)) console.error('[panel]', e.message); });
+  }
   if (action === 'promo' && esAdmin) {
     await rtg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     return herramienta('reto30/promocionar.mjs', id === 'pausa' ? ['--pausada'] : [], '⏳ Creando la campaña de seguidores…');
@@ -900,7 +912,7 @@ export async function startRadarBot() {
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['calendario', 'Publicaciones automáticas'], ['leccion', 'Lección de la semana'], ['remarketing', 'Campaña a quienes ya te conocen'], ['similares', 'Públicos similares'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
-    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'], ['visitas', 'Cómo vamos: visitas, correos, pedidos y campañas'], ['promocionar', 'Campaña de seguidores (Reto 30 Días)'], ['sinan', 'Quitar Audience Network de campañas'], ['comentarios', 'Revisar comentarios ya'],
+    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'], ['visitas', '📊 Panel: cómo vamos (con botones)'], ['promocionar', 'Campaña de seguidores (Reto 30 Días)'], ['sinan', 'Quitar Audience Network de campañas'], ['comentarios', 'Revisar comentarios ya'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;
