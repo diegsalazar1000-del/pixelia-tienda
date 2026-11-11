@@ -654,7 +654,7 @@ if (window.APP_DEMO) {
   const vistas = new Set();
   document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => { const t = b.dataset.v; if (!vistas.has(t)) { vistas.add(t); evd('tab_' + t); } }));
   const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
-  const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Pruébala gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'}` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
+  const pintarBarra = () => barra.innerHTML = quedan() ? `🎁 Pruébala gratis: te quedan <b>${quedan()}</b> uso${quedan() === 1 ? '' : 's'} · <a href="${D.comprar}" onclick="try{fetch('/api/app-evento',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({app:'jefa',e:'compra'}),keepalive:true}).catch(()=>{})}catch(x){}" style="color:#7A1846;font-weight:800">¿Ya te convenció? Quédatela 👑</a>` : `🎁 Se acabó la demo · <a href="${D.comprar}" style="color:#7A1846">Llévatela por $4.99 de por vida 👑</a>`;
   document.body.prepend(barra); pintarBarra();
   // 🎁 oferta de correo cuando ya lleva un rato: 90 s en la app o al 2º uso; una sola vez
   let ofrecido = false; const ofertar = () => { if (ofrecido || leer('demo-correo', false)) return; ofrecido = true; ofrecerCorreo(); };
