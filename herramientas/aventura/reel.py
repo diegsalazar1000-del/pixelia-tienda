@@ -1,7 +1,8 @@
 """Reel de MI GRAN AVENTURA (~18 s) con el video de Gemini de Diego (clips/fuente.mp4, 4 tomas seguidas de 10 s):
 problema (tablet) → el libro con SU nombre → páginas reales → jugando → QR que lo felicita → celebración → cierre.
 Cortes rápidos con golpe de zoom (acercar/alejar), destello + whoosh, subtítulos abajo y carteles arriba pequeños (no tapan caras).
-  python3 reel.py [salida.mp4] [--organico]      (sin créditos: música de la biblioteca del estudio o sintetizada)"""
+  python3 reel.py [salida.mp4] [--organico]      (sin créditos: música de la biblioteca del estudio o sintetizada)
+  En el estudio con música de Eleven Music: docker exec pixelia-estudio python3 /pixelia/herramientas/aventura/reel.py --eleven [--musica-nueva] [--organico]"""
 import sys, math, shutil, subprocess, tempfile, pathlib, importlib.util, wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -15,12 +16,15 @@ F, linea, pastilla, ease, back = J.F, J.linea, J.pastilla, J.ease, J.back
 VIOLETA, ROSA, ORO, BLANCO, INK = (124, 92, 255), (255, 79, 163), (255, 183, 3), (255, 255, 255), (35, 26, 61)
 SRC = HERE / "clips" / "fuente.mp4"
 GAL = ROOT / "public" / "img" / "galeria"
+MUSICA = ("Playful, warm children's adventure instrumental for a family ad: ukulele, glockenspiel, soft claps and pizzicato strings. "
+          "Starts curious and a little sleepy for 3 seconds, then turns magical and joyful around second 5 (a child discovers her name on a book), "
+          "bouncy and playful in the middle, and ends celebratory and bright. 112 BPM, no vocals, no long intro. Length about {seg} seconds.")
 FIN_CTA = "💬 Comenta AVENTURA · link en el perfil" if "--organico" in sys.argv else "👇 Créalo en 1 minuto"
 
 # (tipo, inicio en el video, duración, subtítulo, cartel, zoom: +1 acerca / -1 aleja)
 ESC = [("clip", 2.9, 2.5, "¿Otra vez la tablet, mi amor?", "¿Pantallas todo el día? 😩", 1),
        ("clip", 10.7, 1.5, None, "Dale algo mejor… 🎁", -1),
-       ("clip", 13.6, 3.4, "¡Mamá, dice mi nombre!", "Un libro con SU nombre ✨", 1),
+       ("clip", 13.7, 4.0, "¡Mamá, dice mi nombre!", "Un libro con SU nombre ✨", 1),
        ("libro", None, 2.6, None, None, 0),
        ("clip", 23.9, 2.3, "¡Voy a rescatar al perrito!", "Aprende jugando ✏️", -1),
        ("qr", None, 1.7, None, None, 0),
@@ -110,7 +114,11 @@ def main(out):
             x = np.frombuffer(raw, np.int16).astype(np.float64) / 32768; x = x / (np.abs(x).max() + 1e-9) * 0.9
             f = int(0.03 * A.SR); x[:f] *= np.linspace(0, 1, f); x[-f:] *= np.linspace(1, 0, f)
             k = int(c * A.SR); voz[k:k + len(x)] += x[: m - k]
-        mus, _ = A.library_track("pop", T) if A.library("pop") else (None, None)
+        mus = None
+        if "--eleven" in sys.argv:   # música compuesta para ESTE reel con Eleven Music (en el estudio; se guarda y se reutiliza)
+            sys.path.insert(0, str(ROOT / "herramientas")); import reels_audio as R
+            mus = R.musica(T, "--musica-nueva" in sys.argv, archivo="aventura/infantil.mp3", prompt=MUSICA)
+        if mus is None: mus, _ = A.library_track("pop", T) if A.library("pop") else (None, None)
         if mus is None: mus = A.genre_track("pop", T)
         mus = np.asarray(mus, dtype=np.float64)[:m]; mus = np.pad(mus, (0, m - len(mus))); mus /= (np.abs(mus).max() + 1e-9)
         w = int(0.15 * A.SR); env = np.convolve((np.abs(voz) > 0.03).astype(float), np.ones(w) / w, "same")
