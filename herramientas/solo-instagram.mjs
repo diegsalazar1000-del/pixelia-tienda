@@ -8,7 +8,7 @@ const sets = (await api('GET', `${camp}/adsets`, { fields: 'id,name,targeting', 
 for (const s of sets) {
   const t = s.targeting || {};
   t.publisher_platforms = ['instagram'];
-  t.instagram_positions = ['stream', 'story', 'reels', 'explore', 'explore_home', 'profile_feed'];
+  t.instagram_positions = ['stream', 'story', 'reels', 'explore_home', 'profile_feed'];
   delete t.facebook_positions; delete t.messenger_positions; delete t.audience_network_positions;
   await api('POST', s.id, { targeting: t });
   console.log(`✔ ${s.name}: ahora solo Instagram`);
