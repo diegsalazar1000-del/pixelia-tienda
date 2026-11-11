@@ -53,7 +53,10 @@ try {
   const ACC = { landing_page_view: 'visitas a la página', link_click: 'clics al enlace', profile_visit: 'visitas al perfil', onsite_conversion_profile_visit: 'visitas al perfil',
     'offsite_conversion.fb_pixel_lead': 'correos (Lead)', 'offsite_conversion.fb_pixel_purchase': 'compras', video_view: 'reproducciones 3 s', post_engagement: 'interacciones', like: 'me gusta', follow: 'seguidores' };
   const acc = (r) => (r?.actions || []).filter((a) => ACC[a.action_type]).map((a) => `${ACC[a.action_type]} ${a.value}`).join(' · ');
-  const ins = (id, preset) => api('GET', `${id}/insights`, { fields: 'spend,impressions,reach,frequency,clicks,ctr,cpc,actions', date_preset: preset }).then((r) => r.data?.[0]).catch(() => null);
+  // "7 días" = 6 días anteriores + hoy (el preset last_7d de Meta NO incluye hoy)
+  const dia = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+  const R7 = { time_range: JSON.stringify({ since: dia(6), until: dia(0) }) };
+  const ins = (id, preset) => api('GET', `${id}/insights`, { fields: 'spend,impressions,reach,frequency,clicks,ctr,cpc,actions', ...(preset === 'last_7d' ? R7 : { date_preset: preset }) }).then((r) => r.data?.[0]).catch(() => null);
   console.log('\n📊 META');
   for (const c of cs) {
     const st = await api('GET', c.camp, { fields: 'name,effective_status' }).catch((e) => ({ error: e.message }));
@@ -70,7 +73,7 @@ try {
       console.log(`   • ${a.name.split('·').slice(-1)[0].trim()} [${a.effective_status}]: ${r ? `$${r.spend} · CTR ${Number(r.ctr || 0).toFixed(2)}% · ${acc(r) || 'sin acciones'}` : 'sin datos'}${rev}`);
     }
     // 🌎 por país (7 días): resultado principal y cuánto costó cada uno → para quedarnos con los países que rinden
-    const pais = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', date_preset: 'last_7d', breakdowns: 'country', limit: 50 }).then((r) => r.data || []).catch(() => []);
+    const pais = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', ...R7, breakdowns: 'country', limit: 50 }).then((r) => r.data || []).catch(() => []);
     if (pais.length) {
       const BAND = (cc) => String.fromCodePoint(...[...cc.toUpperCase()].map((ch) => 0x1F1A5 + ch.charCodeAt(0)));
       const res = (r) => { const a = r.actions || []; for (const t of ['offsite_conversion.fb_pixel_purchase', 'offsite_conversion.fb_pixel_lead', 'landing_page_view', 'onsite_conversion_profile_visit', 'profile_visit', 'link_click']) { const x = a.find((y) => y.action_type === t); if (x) return [ACC[t], Number(x.value)]; } return ['', 0]; };
@@ -81,7 +84,7 @@ try {
       }
     }
     // 📍 por ubicación (7 días): si los clics vienen de un lugar donde se toca sin querer, se ve aquí (clics muchos, visitas pocas)
-    const ubi = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', date_preset: 'last_7d', breakdowns: 'publisher_platform,platform_position', limit: 50 }).then((r) => r.data || []).catch(() => []);
+    const ubi = await api('GET', `${c.camp}/insights`, { fields: 'spend,ctr,actions', ...R7, breakdowns: 'publisher_platform,platform_position', limit: 50 }).then((r) => r.data || []).catch(() => []);
     if (ubi.length) {
       const NOMU = { feed: 'Feed', instagram_reels: 'Reels', facebook_reels: 'Reels', instagram_stories: 'Historias', facebook_stories: 'Historias', instagram_explore: 'Explorar', instagram_explore_grid_home: 'Explorar', instagram_profile_feed: 'Perfil', video_feeds: 'Videos', marketplace: 'Marketplace', search: 'Búsqueda', facebook_reels_overlay: 'Reels (banner)' };
       const n = (r, t) => Number((r.actions || []).find((a) => a.action_type === t)?.value || 0);
