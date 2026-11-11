@@ -77,9 +77,32 @@ function paso2(s) {
   return { asunto: `${p.emoji || '✨'} ${p.title.split(':')[0]}${cupon ? ' (con tu 15%)' : ''}`, html, texto: `${p.title}\n${p.short || ''}\n${precio}${cupon ? `\nCupón 15%: ${cupon}` : ''}\n${url}\n\nDarte de baja: ${bajaLink(s.email)}` };
 }
 
+// 📚 "Todavía espera su aventura": dejó el correo en /aventura y no pagó → 1 correo a la hora con SU nombre y su 15%
+async function aventuraAbandonos() {
+  let n = 0, L = [];
+  try { L = db.prepare(`SELECT * FROM aventura_leads WHERE sent = 0 AND created_at < datetime('now','-1 hour') AND created_at > datetime('now','-2 days') LIMIT 30`).all(); } catch { return 0; }
+  const p = Products.list().find((x) => x.slug === 'mi-gran-aventura'); if (!p) return 0;
+  for (const l of L) {
+    db.prepare('UPDATE aventura_leads SET sent = 1 WHERE email = ?').run(l.email);
+    const pago = db.prepare(`SELECT 1 FROM orders WHERE lower(email) = ? AND product_id = ? AND status = 'paid' LIMIT 1`).get(l.email, p.id);
+    const sb = db.prepare('SELECT * FROM subscribers WHERE email = ?').get(l.email) || {};
+    if (pago || sb.unsub) continue;
+    let d = {}; try { d = JSON.parse(l.datos || '{}'); } catch {}
+    const nom = String(d.nombre || 'tu peque').replace(/[<>&"]/g, ''), url = `${base()}/aventura?r=${makeToken({ k: 'av', e: l.email })}`;
+    const cup = sb.code && !sb.used_order ? `<p>Tu <b>15% de descuento</b> sigue guardado: <b>${sb.code}</b></p>` : '';
+    const html = `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#fff7fb;color:#1d1b3a;border-radius:16px">
+      <h2 style="margin:0 0 8px">📚 ${nom} todavía espera su aventura</h2>
+      <p>Dejaste listo el libro de <b>${nom}</b>: su nombre en la portada, 12 misiones de su edad y mensajes de voz que lo felicitan por su nombre.</p>${cup}
+      <p><a href="${url}" style="display:inline-block;padding:14px 22px;background:#ff4fa0;color:#fff;border-radius:12px;text-decoration:none;font-weight:700">Terminar el libro de ${nom} 🎁</a></p>
+      <p style="color:#777;font-size:12px">Llega a tu correo apenas pagas, listo para imprimir. <a style="color:#777" href="${bajaLink(l.email)}">No quiero más correos</a></p></div>`;
+    await sendEmail(l.email, `📚 ${nom} todavía espera su aventura`, `El libro de ${nom} está casi listo. Termínalo aquí: ${url}`, html).then(() => n++).catch((e) => console.error('[aventura]', e.message));
+  }
+  return n;
+}
+
 export async function enviarSecuencia() {
   if (!config.email.resendKey) return 0;
-  let n = 0;
+  let n = await aventuraAbandonos();
   const q1 = db.prepare(`SELECT * FROM subscribers WHERE COALESCE(seq_step,0)=0 AND COALESCE(unsub,0)=0 AND created_at < datetime('now','-2 days') AND created_at > datetime('now','-10 days') LIMIT 40`).all();
   for (const s of q1) {
     db.prepare('UPDATE subscribers SET seq_step = 1 WHERE email = ?').run(s.email);

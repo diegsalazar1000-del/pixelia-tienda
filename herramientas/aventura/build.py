@@ -3,7 +3,7 @@ Las páginas de actividades salen del PLR "Kids Book Creator Bundle" ya traducid
 en la sesión); aquí se arma la historia con el nombre, la edad, el compañero y la persona especial, y cada misión lleva un QR
 que abre /v/<pedido>/<n> con una voz que dice su nombre (las voces las graba el estudio con Piper, gratis).
   python3 build.py prueba.json /tmp/salida      (datos de ejemplo abajo si no se pasa JSON)"""
-import sys, json, math, random, pathlib, unicodedata
+import sys, json, math, random, pathlib, unicodedata, re
 from PIL import Image, ImageDraw, ImageFont
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -17,14 +17,31 @@ def F(s, w="Bold"): return ImageFont.truetype(str(FD / f"Poppins-{w}.ttf"), int(
 META = json.loads((HERE / "paginas" / "paginas.json").read_text())
 
 COMP = {"perrito": ("🐶", "Coco", "su perrito"), "gatito": ("🐱", "Michi", "su gatito"), "dinosaurio": ("🦖", "Rex", "su dinosaurio"),
-        "unicornio": ("🦄", "Luna", "su unicornio"), "dragon": ("🐉", "Chispa", "su dragón"), "robot": ("🤖", "Robi", "su robot")}
+        "unicornio": ("🦄", "Luna", "su unicornio"), "dragon": ("🐉", "Chispa", "su dragón"), "robot": ("🤖", "Robi", "su robot"),
+        "loro": ("🦜", "Paco", "su loro"), "amigo": ("🧒", "Leo", "su amigo")}
+# "Otro": lo que escriba el papá (un conejito, su hermana, la abuela…) → dibujo que corresponda, o ⭐
+EMO_OTRO = {"loro": "🦜", "perico": "🦜", "guacamaya": "🦜", "conej": "🐰", "tortuga": "🐢", "hamster": "🐹", "hámster": "🐹", "pez": "🐠", "pececito": "🐠",
+    "caballo": "🐴", "poni": "🐴", "oso": "🐻", "pollito": "🐥", "pato": "🦆", "leon": "🦁", "león": "🦁", "tigre": "🐯", "mono": "🐵", "panda": "🐼", "zorro": "🦊",
+    "vaca": "🐮", "cerdito": "🐷", "cochinito": "🐷", "rana": "🐸", "pinguino": "🐧", "pingüino": "🐧", "buho": "🦉", "búho": "🦉", "mariposa": "🦋", "abeja": "🐝",
+    "ballena": "🐳", "delfin": "🐬", "delfín": "🐬", "tiburon": "🦈", "tiburón": "🦈", "gat": "🐱", "perr": "🐶", "amig": "🧒", "herman": "🧒", "prim": "🧒",
+    "abuela": "👵", "abuelo": "👴", "hada": "🧚", "sirena": "🧜", "superh": "🦸", "extraterrestre": "👽", "marciano": "👽", "dinosaurio": "🦖"}
+def comp_otro(txt):
+    t = re.sub(r"^(un|una|el|la|su|mi)\s+", "", (txt or "").strip().lower())[:20]
+    emo = next((e for k, e in EMO_OTRO.items() if any(w.startswith(k) for w in t.split())), "⭐")
+    return emo, ("su " + t) if t else "su compañero"
 
 def ctx(d):
     nina = d.get("genero") != "nino"
-    tipo = d.get("comp_tipo") if d.get("comp_tipo") in COMP else "perrito"
+    tipo = d.get("comp_tipo") if d.get("comp_tipo") in COMP or d.get("comp_tipo") == "otro" else "perrito"
+    cn = (d.get("comp_nombre") or "").strip()[:16]
+    if tipo == "otro":
+        emo, Csu = comp_otro(d.get("comp_otro"))
+        C = cn or Csu[3:].capitalize()   # sin nombre: "Sofía y Conejito…"
+    else:
+        emo, C, Csu = COMP[tipo][0], cn or COMP[tipo][1], COMP[tipo][2]
     esp = (d.get("especial") or "").strip() or "el búho sabio del bosque"
     nom = (d.get("nombre") or "").strip()[:20] or "Sofía"
-    return {"N": nom, "NU": nom.upper(), "E": str(d.get("edad") or 5), "C": (d.get("comp_nombre") or "").strip()[:16] or COMP[tipo][1], "Cemo": COMP[tipo][0], "Csu": COMP[tipo][2],
+    return {"N": nom, "NU": nom.upper(), "E": str(d.get("edad") or 5), "C": C, "Cemo": emo, "Csu": Csu,
             "P": esp[:30], "Pm": esp[:1].upper() + esp[1:30], "L": inicial(nom),
             "heroe": "heroína" if nina else "héroe", "una": "una" if nina else "un", "listo": "lista" if nina else "listo",
             "solito": "solita" if nina else "solito", "nino": "niña" if nina else "niño", "Hemo": "👧" if nina else "👦",
@@ -173,7 +190,7 @@ def portada(c):
     d.rounded_rectangle([80, 330, W - 80, 760], radius=50, fill="white")
     d.text((W / 2, 420), "La gran aventura de", font=F(54), fill=INK, anchor="mm")
     d.text((W / 2, 555), c["N"], font=encajar(d, c["N"], W - 240, 170), fill=ROSA, anchor="mm", stroke_width=5, stroke_fill=INK)
-    sub = f"y {c['Csu']} {c['C']}"; d.text((W / 2, 690), sub, font=encajar(d, sub, W - 220, 52), fill=VIOLETA, anchor="mm")
+    sub = f"y {c['Csu']}" + ("" if c["C"].lower() == c["Csu"][3:].lower() else f" {c['C']}"); d.text((W / 2, 690), sub, font=encajar(d, sub, W - 220, 52), fill=VIOLETA, anchor="mm")
     pegar(im, c["Hemo"], W / 2 - 150, H - 330, 280); pegar(im, c["Cemo"], W / 2 + 170, H - 290, 220)
     for x, y in [(240, 870), (W - 260, 900), (W / 2, 840)]: estrella(d, x, y, 34, AMBAR)
     t = f"12 misiones para {c['una']} {c['heroe']} de {c['E']} años"

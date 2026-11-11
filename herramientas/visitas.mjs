@@ -34,7 +34,10 @@ try {   // 🔎 qué hacen al llegar (public/js/medir.js): cargó → 5 s → 15
     const g = (a, e) => w.find((x) => x.app === a && x.evento === e)?.n || 0;
     for (const a of ks.sort((x, y) => g(y, 'vio') - g(x, 'vio'))) {
       const v = g(a, 'vio'), pc = (n) => v ? ` (${Math.round(n / v * 100)}%)` : '';
+      const ex = { nombre: 'escribió el nombre', edad: 'eligió edad', comp: 'eligió compañero', otro: 'escribió otro compañero', quiero: 'tocó "Quiero su libro"', correo: 'dejó el correo → pago', pagar: 'pagó' };
+      const extra = Object.keys(ex).filter((e) => g(a, e)).map((e) => `${ex[e]} ${g(a, e)}${pc(g(a, e))}`);
       console.log(`  ${a.slice(2)}: cargó ${v} · 5 s ${g(a, 's5')}${pc(g(a, 's5'))} · 15 s ${g(a, 's15')}${pc(g(a, 's15'))} · 45 s ${g(a, 's45')}${pc(g(a, 's45'))} · bajó a la mitad ${g(a, 'mitad')}${pc(g(a, 'mitad'))} · tocó algo ${g(a, 'boton')}${pc(g(a, 'boton'))}`);
+      if (extra.length) console.log(`     ↳ ${extra.join(' · ')}`);
     }
     console.log('  (si "cargó" es mucho menor que las visitas, se van antes de que abra la página)');
   }

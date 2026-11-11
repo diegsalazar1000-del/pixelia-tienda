@@ -57,8 +57,9 @@ function datosPersonalizados(form, d = {}) {
     const nombre = txt(d.nombre, 20), edad = Math.round(Number(d.edad));
     if (!nombre) return { error: 'Escribe el nombre del niño o niña 😊' };
     if (!(edad >= 2 && edad <= 8)) return { error: 'Elige una edad entre 2 y 8 años' };
-    const tipos = ['perrito', 'gatito', 'dinosaurio', 'unicornio', 'dragon', 'robot'];
-    return { nombre, edad, genero: d.genero === 'nino' ? 'nino' : 'nina', comp_tipo: tipos.includes(d.comp_tipo) ? d.comp_tipo : 'perrito', comp_nombre: txt(d.comp_nombre, 16), especial: txt(d.especial, 30) };
+    const tipos = ['perrito', 'gatito', 'dinosaurio', 'unicornio', 'dragon', 'robot', 'loro', 'amigo', 'otro'];
+    const comp_tipo = tipos.includes(d.comp_tipo) ? d.comp_tipo : 'perrito', comp_otro = comp_tipo === 'otro' ? txt(d.comp_otro, 20) : '';
+    return { nombre, edad, genero: d.genero === 'nino' ? 'nino' : 'nina', comp_tipo: comp_tipo === 'otro' && !comp_otro ? 'perrito' : comp_tipo, comp_otro, comp_nombre: txt(d.comp_nombre, 16), especial: txt(d.especial, 30) };
   }
   return {};
 }
@@ -164,7 +165,12 @@ function visitaReal(req, productId) {
 
 // ===== Páginas =====
 on('GET', '/', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('index.html')); });
-on('GET', '/p/:slug', (req, res, { slug }) => {
+// Productos con LANDING corta: quien llega desde un anuncio (fbclid/utm) va directo a la landing; ?compra=1 es el paso de pago
+const LANDINGS = { 'mi-gran-aventura': '/aventura' };
+on('GET', '/p/:slug', (req, res, { slug }, url) => {
+  if (LANDINGS[slug] && url && !url.searchParams.has('compra') && (url.searchParams.has('fbclid') || url.searchParams.has('utm_source'))) {
+    res.writeHead(302, { location: LANDINGS[slug] + url.search }); return res.end();
+  }
   const p = Products.bySlug(slug);
   if (!p || !p.active) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }
   const pp = publicProduct(p);
@@ -231,7 +237,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -258,6 +264,25 @@ on('GET', '/jefa', (req, res, _p, url) => {   // link del perfil y de los anunci
   if (p && visitaReal(req, p.id)) Products.view(p.id);
   if (url.searchParams.has('info')) { res.writeHead(200, { 'content-type': MIME['.html'] }); return res.end(renderPage('jefa.html')); }
   res.writeHead(302, { location: '/app/jefa/demo' + (url.search || '') }); res.end();
+});
+// 📚 Landing de Mi Gran Aventura (Diego 11-nov): portada en vivo con el nombre → correo (+15%) → solo el paso de pago
+try { db.exec("CREATE TABLE IF NOT EXISTS aventura_leads (email TEXT PRIMARY KEY, datos TEXT, created_at TEXT DEFAULT (datetime('now')), sent INTEGER DEFAULT 0)"); } catch {}
+on('GET', '/aventura', (req, res, _p, url) => {
+  const p = Products.bySlug('mi-gran-aventura');
+  if (p && visitaReal(req, p.id)) Products.view(p.id);
+  let data = null; const t = readToken(url.searchParams.get('r'));   // viene del correo "todavía espera su aventura"
+  if (t && t.k === 'av') { const l = db.prepare('SELECT * FROM aventura_leads WHERE email = ?').get(t.e); const sb = Subscribers.add(t.e);
+    if (l) data = { email: l.email, datos: JSON.parse(l.datos || '{}'), code: sb.used_order ? '' : sb.code }; }
+  res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' });
+  res.end(renderPage('aventura.html', { PRICE: p ? (p.price_cents / 100).toFixed(2) : '4.99', DATA: JSON.stringify(data).replace(/</g, '\\u003c') }));
+});
+on('POST', '/api/aventura/lead', async (req, res) => {
+  const b = await body(req, 3000).catch(() => ({})); const email = String(b.email || '').trim().toLowerCase().slice(0, 120);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Revisa tu correo 😊');
+  const d = datosPersonalizados('aventura', b.datos || {}); if (d.error) return fail(res, 400, d.error);
+  const s = Subscribers.add(email, 'mi-gran-aventura');
+  if (!esDueno(req)) db.prepare("INSERT INTO aventura_leads (email, datos) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET datos = excluded.datos, created_at = datetime('now'), sent = 0").run(email, JSON.stringify(d));
+  json(res, 200, { code: s.used_order ? '' : s.code, off: s.used_order ? 0 : Math.round(COUPON_OFF * 100) });
 });
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
   const p = Products.bySlug('regalo-reto-30-dias');
