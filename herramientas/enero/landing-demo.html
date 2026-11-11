@@ -1,47 +1,54 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Demo · Que enero no te agarre desprevenido</title>
+<title>Demo · Que el nuevo año no te agarre desprevenido</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Poppins,system-ui,sans-serif}
-body{background:linear-gradient(180deg,#0e3b2e 0%,#145c45 40%,#1f7a5a 100%);min-height:100vh;color:#14261f}
-.wrap{max-width:440px;margin:auto;padding:30px 16px 120px}
+body{background:linear-gradient(180deg,#0e3b2e 0%,#145c45 45%,#1f7a5a 100%);min-height:100vh;color:#14261f}
+.wrap{max-width:440px;margin:auto;padding:30px 16px 40px}
 .demo{position:fixed;top:0;left:0;right:0;background:#111;color:#ffd23f;font-size:11px;text-align:center;padding:4px;z-index:10}
-h1{color:#fff;font-size:27px;line-height:1.15;text-align:center;font-weight:800}
+h1{color:#fff;font-size:26px;line-height:1.15;text-align:center;font-weight:800}
 h1 b{color:#ffd23f}
-.sub{color:#d7f5e8;text-align:center;font-size:14px;margin:6px 0 16px}
-.box{background:#fff;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-.box h3{font-size:16px;margin-bottom:4px}
-.box p.h{font-size:12px;color:#5d7a6e;margin-bottom:8px}
-.row{display:flex;align-items:center;gap:10px;margin-top:10px}
-.row label{flex:1;font-size:14px;font-weight:600}
-.row input{width:120px;padding:10px;border:2px solid #d9efe5;border-radius:12px;font-size:16px;text-align:right}
-.row input:focus{outline:none;border-color:#1f7a5a}
-.cur{font-size:13px;color:#5d7a6e}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{border:2px solid #d9efe5;background:#f4fbf8;border-radius:22px;padding:6px 11px;font-size:13px;cursor:pointer}
+.sub{color:#d7f5e8;text-align:center;font-size:14px;margin:6px 0 14px}
+.prog{height:8px;background:rgba(255,255,255,.2);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.prog i{display:block;height:100%;background:#ffd23f;width:0;transition:width .35s}
+.step{display:none;background:#fff;border-radius:20px;padding:18px 16px;box-shadow:0 10px 26px rgba(0,0,0,.2);animation:in .35s}
+.step.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.step h2{font-size:19px;line-height:1.25}
+.step p.h{font-size:13px;color:#5d7a6e;margin:4px 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:2px solid #d9efe5;background:#f4fbf8;border-radius:22px;padding:8px 12px;font-size:14px;cursor:pointer;user-select:none}
 .chip.on{background:#1f7a5a;border-color:#1f7a5a;color:#fff}
-input[type=range]{width:100%;margin-top:6px;accent-color:#1f7a5a}
-.res{position:sticky;top:26px;z-index:5;border-radius:18px;padding:14px 16px;color:#fff;margin-top:6px;transition:background .4s;box-shadow:0 8px 20px rgba(0,0,0,.25)}
-.res .t{font-size:13px;opacity:.9}
-.res .n{font-size:32px;font-weight:800;line-height:1.1}
-.res .m{font-size:13px;margin-top:2px}
-.bar{height:10px;background:rgba(255,255,255,.3);border-radius:10px;margin-top:8px;overflow:hidden}
-.bar i{display:block;height:100%;background:#fff;border-radius:10px;transition:width .4s}
-.verde{background:#16a34a}.amarillo{background:#d99a00}.rojo{background:#dc2626}
-.tope{background:#fff8dc;border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px}
-.tope b{color:#b45309}
-.inc{margin-top:14px;color:#fff;font-size:14px;line-height:1.6}
-.inc div{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;margin-top:6px}
-.sheet{margin-top:12px;border-radius:12px;overflow:hidden;border:1px solid #cfe7dc;font-size:11px}
-.sheet table{width:100%;border-collapse:collapse}
-.sheet th{background:#1f7a5a;color:#fff;padding:5px;text-align:left}
-.sheet td{padding:5px;border-top:1px solid #e3f1ea}
-.sheet td.r{text-align:right}.ok{color:#16a34a;font-weight:700}.bad{color:#dc2626;font-weight:700}
-.btn{display:block;width:100%;border:0;border-radius:16px;padding:16px;font-size:17px;font-weight:800;cursor:pointer;margin-top:14px;background:#ffd23f;color:#14261f;box-shadow:0 5px 0 #d9a800}
+.chip:active{transform:scale(.96)}
+.in{display:flex;align-items:center;gap:8px;margin-top:10px}
+.in label{flex:1;font-size:14px;font-weight:600}
+.in input{width:130px;padding:11px;border:2px solid #d9efe5;border-radius:12px;font-size:17px;text-align:right}
+.in input:focus{outline:none;border-color:#1f7a5a}
+.cs{font-size:14px;color:#5d7a6e}
+.nav{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;border:0;border-radius:16px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;background:#ffd23f;color:#14261f;box-shadow:0 5px 0 #d9a800}
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #d9a800}
-.fix{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px;justify-content:center}
-.fix .p{font-weight:800;font-size:18px}.fix .btn{margin:0;width:auto;flex:1;max-width:260px;padding:13px;font-size:15px}
+.back{flex:none;background:#eef6f2;box-shadow:none;color:#5d7a6e;padding:15px 16px}
+.tip{background:#f0faf5;border-radius:12px;padding:9px 11px;font-size:12.5px;color:#335b4c;margin-top:10px}
+/* resultado */
+.plan h2{font-size:20px}
+.big{font-size:30px;font-weight:800;color:#16a34a;line-height:1.1;margin-top:6px}
+.split{display:flex;height:22px;border-radius:12px;overflow:hidden;margin-top:12px}
+.split i{display:block;height:100%;transition:width .6s}
+.leg{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13.5px;margin-top:10px}
+.leg b{text-align:right}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.meses{display:flex;align-items:flex-end;gap:4px;height:90px;margin-top:14px;padding-bottom:16px;position:relative}
+.meses div{flex:1;background:#bbe6d2;border-radius:5px 5px 0 0;position:relative;transition:height .6s}
+.meses div.meta{background:#ffd23f}
+.meses div span{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:9px;color:#5d7a6e}
+.goal{background:#fff8dc;border-radius:12px;padding:10px 12px;font-size:13.5px;margin-top:12px}
+.lock{position:relative;margin-top:12px;border:1px dashed #9fd3bd;border-radius:12px;padding:10px 12px;font-size:13px;color:#335b4c}
+.lock .bl{filter:blur(3.5px);user-select:none}
+.lock .tag{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;color:#145c45;background:rgba(255,255,255,.35);border-radius:12px}
+.inc{margin-top:12px;font-size:13.5px;line-height:1.6}
+.inc div{background:#f4fbf8;border-radius:10px;padding:7px 10px;margin-top:5px}
 .modal{position:fixed;inset:0;background:rgba(0,20,10,.6);display:none;align-items:flex-end;justify-content:center;z-index:9}
 .modal.on{display:flex}
 .sh{background:#fff;width:100%;max-width:440px;border-radius:22px 22px 0 0;padding:20px 18px 26px;animation:up .3s}
@@ -53,103 +60,126 @@ input[type=range]{width:100%;margin-top:6px;accent-color:#1f7a5a}
 </style></head><body>
 <div class="demo">DEMO para revisar · no cobra ni envía nada</div>
 <div class="wrap">
-  <h1>Que enero <b>no te agarre</b> desprevenido</h1>
-  <p class="sub">Calcula en 30 segundos cómo vas a llegar al 15 de enero 👇</p>
+  <h1>Que el nuevo año <b>no te agarre desprevenido</b></h1>
+  <p class="sub">Crea tu plan financiero 2027, mes a mes, en 1 minuto 👇</p>
+  <div class="prog"><i id="pg"></i></div>
 
-  <div class="res verde" id="res">
-    <div class="t">El 15 de enero te van a quedar</div>
-    <div class="n" id="rN">$0</div>
-    <div class="m" id="rM">Llena tus números y mira tu enero</div>
-    <div class="bar"><i id="rB" style="width:50%"></i></div>
+  <!-- 1 -->
+  <div class="step on" data-n="1">
+    <h2>👋 ¿A qué te dedicas?</h2>
+    <p class="h">Así armamos tu plan a tu medida</p>
+    <div class="chips" id="prof"></div>
+    <input id="profOtro" placeholder="Escribe a qué te dedicas" style="display:none;width:100%;padding:11px;border:2px solid #d9efe5;border-radius:12px;font-size:15px;margin-top:10px">
+    <div class="nav"><button class="btn" onclick="ir(2)">Siguiente →</button></div>
   </div>
 
-  <div class="box">
-    <h3>💵 Lo que vas a cobrar en diciembre</h3>
-    <p class="h">Sueldo, aguinaldo, bonos, ventas… todo junto</p>
+  <!-- 2 -->
+  <div class="step" data-n="2">
+    <h2>💵 ¿Cuánto ganas al mes, más o menos?</h2>
+    <p class="h" id="ingH">Un estimado está bien</p>
     <div class="chips" id="mon"></div>
-    <div class="row"><label>Total que entra</label><span class="cur cs">$</span><input id="ing" type="number" inputmode="decimal" placeholder="Ej: 600"></div>
+    <div class="in"><label id="ingL">Un mes normal</label><span class="cs">$</span><input id="ing" type="number" inputmode="decimal" placeholder="Ej: 500"></div>
+    <div class="in" id="malo" style="display:none"><label>Un mes flojo</label><span class="cs">$</span><input id="ingMalo" type="number" inputmode="decimal" placeholder="Ej: 300"></div>
+    <div class="nav"><button class="btn back" onclick="ir(1)">←</button><button class="btn" onclick="ir(3)">Siguiente →</button></div>
   </div>
 
-  <div class="box">
-    <h3>🎄 Lo que piensas gastar en diciembre</h3>
-    <div class="row"><label>🎁 ¿A cuántas personas les regalas?</label><input id="per" type="number" inputmode="numeric" value="6" style="width:70px"></div>
-    <div class="row" style="margin-top:6px"><label>Monto por regalo: <span class="cs">$</span><b id="topV">20</b></label></div>
-    <input type="range" id="top" min="0" max="100" step="1" value="20">
-    <div class="row"><label>🍗 Cena y comida de fiestas</label><span class="cur cs">$</span><input id="cena" type="number" inputmode="decimal" placeholder="Ej: 80"></div>
-    <div class="row"><label>👕 Estreno y ropa</label><span class="cur cs">$</span><input id="ropa" type="number" inputmode="decimal" placeholder="Ej: 60"></div>
-    <div class="row"><label>🎉 Salidas y viajes</label><span class="cur cs">$</span><input id="sal" type="number" inputmode="decimal" placeholder="Ej: 50"></div>
+  <!-- 3 -->
+  <div class="step" data-n="3">
+    <h2>🏠 ¿Cuánto se te va en lo de siempre?</h2>
+    <p class="h">Toca lo que pagas cada mes y ajusta el monto</p>
+    <div class="chips" id="gas"></div>
+    <div id="gasIn"></div>
+    <div class="tip" id="gasTip">💡 Te pusimos un monto de ejemplo según tu ingreso. Cámbialo por el tuyo.</div>
+    <div class="nav"><button class="btn back" onclick="ir(2)">←</button><button class="btn" onclick="ir(4)">Siguiente →</button></div>
   </div>
 
-  <div class="box">
-    <h3>📅 Lo que tienes que pagar en enero</h3>
-    <p class="h">Antes de volver a cobrar</p>
-    <div class="row"><label>🏠 Renta o casa</label><span class="cur cs">$</span><input id="ren" type="number" inputmode="decimal" placeholder="Ej: 150"></div>
-    <div class="row"><label>💡 Luz, agua, internet, teléfono</label><span class="cur cs">$</span><input id="ser" type="number" inputmode="decimal" placeholder="Ej: 50"></div>
-    <div class="row"><label>🎒 Colegio y útiles</label><span class="cur cs">$</span><input id="col" type="number" inputmode="decimal" placeholder="Ej: 40"></div>
-    <div class="row"><label>💳 Tarjeta y deudas</label><span class="cur cs">$</span><input id="deu" type="number" inputmode="decimal" placeholder="Ej: 30"></div>
-    <div class="row"><label>🛒 Comida hasta que cobres</label><span class="cur cs">$</span><input id="com" type="number" inputmode="decimal" placeholder="Ej: 80"></div>
-    <div class="tope" id="tope">💡 Llena los montos y te digo cuánto puedes gastar por regalo sin que enero te duela.</div>
+  <!-- 4 -->
+  <div class="step" data-n="4">
+    <h2>🎯 ¿Qué quieres lograr en 2027?</h2>
+    <p class="h">Elige una meta (la más importante)</p>
+    <div class="chips" id="meta"></div>
+    <div class="in"><label>¿Cuánto necesitas?</label><span class="cs">$</span><input id="metaM" type="number" inputmode="decimal" placeholder="Ej: 600"></div>
+    <div class="nav"><button class="btn back" onclick="ir(3)">←</button><button class="btn" onclick="ir(5)">✨ Ver mi plan</button></div>
   </div>
 
-  <div class="inc"><b>Con tu plan completo te llevas:</b>
-    <div>📊 Tu presupuesto de diciembre y enero en <b>Excel y Google Sheets</b>, ya hecho</div>
-    <div>✍️ Anotas lo que sacas y gastas: el semáforo se pone verde, amarillo o rojo solo</div>
-    <div>🎁 Lista de regalos con tope por persona (para no pasarte)</div>
-    <div>📅 Lo que viene en enero, con cuánto apartar cada semana</div>
-    <div>📱 Funciona en el teléfono con Google Sheets, sin instalar nada</div>
+  <!-- 5: resultado -->
+  <div class="step plan" data-n="5">
+    <h2>📊 Tu plan 2027, <span id="pProf"></span></h2>
+    <p class="h">Así se reparte tu plata cada mes</p>
+    <div class="split" id="split"></div>
+    <div class="leg" id="leg"></div>
+    <div class="big" id="pAh"></div>
+    <p class="h" style="margin-top:2px">para ahorrar cada mes</p>
+    <div class="meses" id="meses"></div>
+    <div class="goal" id="goal"></div>
+    <div class="lock"><div class="bl">Enero: renta $150 · comida $120 · ahorro $60 · apartar dic $20<br>Febrero: renta $150 · comida $120 · ahorro $60 · colegio $40<br>Marzo: …</div><div class="tag">🔒 Tu plan mes a mes completo</div></div>
+    <div class="inc"><b>Te llevas tu plan hecho con tus números:</b>
+      <div>📅 12 meses de 2027, cada uno con su presupuesto listo</div>
+      <div>✍️ Anotas lo que gastas y el semáforo te avisa si te pasas</div>
+      <div>🎯 Tu meta con barra de avance y fecha en que la cumples</div>
+      <div>🎄 Diciembre 2027 ya apartado: el próximo enero no te agarra</div>
+      <div>📱 Excel y Google Sheets: lo usas en el teléfono sin instalar nada</div>
+    </div>
+    <div class="nav"><button class="btn back" onclick="ir(4)">←</button><button class="btn" onclick="abrir()">📊 Quiero mi plan · $3.99</button></div>
+    <p style="font-size:12px;color:#5d7a6e;text-align:center;margin-top:8px">⚡ Descarga inmediata · Pago único, sin suscripción</p>
   </div>
-
-  <div class="box">
-    <h3>👀 Así se ve por dentro</h3>
-    <div class="sheet"><table>
-      <tr><th>Gasto</th><th class="r">Plan</th><th class="r">Real</th><th></th></tr>
-      <tr><td>🎁 Regalos</td><td class="r" id="s1">$120</td><td class="r">$95</td><td class="ok">✔</td></tr>
-      <tr><td>🍗 Cena</td><td class="r" id="s2">$80</td><td class="r">$92</td><td class="bad">!</td></tr>
-      <tr><td>👕 Estreno</td><td class="r" id="s3">$60</td><td class="r">$40</td><td class="ok">✔</td></tr>
-      <tr><td><b>Te queda para enero</b></td><td class="r" id="s4"><b>$340</b></td><td class="r"><b>$373</b></td><td class="ok">✔</td></tr>
-    </table></div>
-  </div>
-  <button class="btn" onclick="abrir()">📊 Quiero mi plan completo · $3.99</button>
-  <p style="color:#d7f5e8;font-size:12px;text-align:center;margin-top:10px">⚡ Descarga inmediata · Pago único, sin suscripción</p>
 </div>
-
-<div class="fix"><div class="p">$3.99</div><button class="btn" onclick="abrir()">📊 Llévate tu plan</button></div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('on')">
   <div class="sh">
-    <h2>📊 Tu plan para llegar tranquilo a enero</h2>
-    <p style="font-size:13px;color:#5d7a6e;margin-top:6px">¿A qué correo te lo mandamos? Te regalamos <b>15% de descuento</b> y tu plan llega con <b>tus números ya puestos</b>.</p>
+    <h2>📊 Tu plan 2027 está casi listo</h2>
+    <p style="font-size:13px;color:#5d7a6e;margin-top:6px">¿A qué correo te lo mandamos? Te regalamos <b>15% de descuento</b> y te llega con <b>tus números ya puestos</b>.</p>
     <input type="email" placeholder="tucorreo@gmail.com">
-    <label class="chk"><input type="checkbox"> Acepto recibir el plan y correos con novedades y ofertas. Me puedo dar de baja cuando quiera.</label>
-    <button class="btn">Continuar al pago →</button>
-    <div class="nota">En la tienda real aquí sigue el pago con todo lleno ($3.39 con el 15%). Si no paga, a la hora le llega: "Tu enero todavía no está resuelto: te faltan $X" + su 15%.</div>
+    <label class="chk"><input type="checkbox"> Acepto recibir mi plan y correos con novedades y ofertas. Me puedo dar de baja cuando quiera.</label>
+    <button class="btn" style="width:100%;margin-top:12px">Continuar al pago →</button>
+    <div class="nota">En la tienda real aquí sigue el pago ($3.39 con el 15%) y el Excel/Sheets se genera solo con lo que puso. Si no paga, al rato le llega: "Tu plan 2027 te está esperando" + su 15%.</div>
   </div>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
+const PROF=[['empleado','💼 Empleado',0],['negocio','🛍️ Tengo un negocio',1],['indep','💻 Independiente',1],['ventas','📦 Vendo por redes',1],['delivery','🛵 Delivery / taxi',1],['oficio','🔧 Oficio (mecánica, uñas…)',1],['estudio','🎓 Estudiante',0],['casa','🏠 Ama de casa',0],['otro','✍️ Otro',1]];
 const MON=[['$','🇺🇸 USD'],['$','🇲🇽 MXN'],['$','🇨🇴 COP'],['S/','🇵🇪 PEN'],['$','🇨🇱 CLP'],['$','🇦🇷 ARS'],['Bs','🇻🇪 Bs']];
-let cs='$';
+const GAS=[['renta','🏠 Renta / casa',.25],['comida','🛒 Comida',.25],['servicios','💡 Luz, agua, internet',.08],['transporte','🚌 Transporte',.07],['colegio','🎒 Colegio / estudios',.06],['deudas','💳 Deudas / tarjeta',.08],['negocio','📦 Gastos del negocio',.1]];
+const META=[['emergencia','🛟 Fondo de emergencia'],['deudas','💳 Salir de deudas'],['viaje','✈️ Un viaje'],['estudio','🎓 Estudiar algo'],['negocio','🚀 Montar o crecer mi negocio'],['cosa','📱 Comprarme algo'],['diciembre','🎄 Un diciembre sin deudas']];
+let S={prof:'empleado',var:0,cs:'$',gas:{renta:1,comida:1,servicios:1,transporte:1},meta:'emergencia'};
+const chips=(id,arr,key,multi)=>{$(id).innerHTML=arr.map(a=>`<span class="chip" data-v="${a[0]}">${a[1]}</span>`).join('');mark(id,key,multi);
+  $(id).onclick=e=>{const c=e.target.closest('.chip');if(!c)return;const v=c.dataset.v;
+    if(multi){S[key][v]=S[key][v]?0:1}else{S[key]=v} if(key=='prof'){const p=PROF.find(x=>x[0]==v);S.var=p[2];$('profOtro').style.display=v=='otro'?'block':'none'} if(key=='cs')S.cs=c.dataset.s;
+    mark(id,key,multi);if(key=='gas')gasIn();}};
+const mark=(id,key,multi)=>[...$(id).children].forEach(c=>c.classList.toggle('on',multi?!!S[key][c.dataset.v]:S[key]==c.dataset.v));
+chips('prof',PROF,'prof');chips('gas',GAS,'gas',1);chips('meta',META,'meta');
 $('mon').innerHTML=MON.map((m,i)=>`<span class="chip${i?'':' on'}" data-s="${m[0]}">${m[1]}</span>`).join('');
-$('mon').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;[...$('mon').children].forEach(x=>x.classList.remove('on'));c.classList.add('on');cs=c.dataset.s;document.querySelectorAll('.cs').forEach(x=>x.textContent=cs);calc()};
-const v=id=>Math.max(0,parseFloat($(id).value)||0);
-const f=n=>cs+' '+Math.round(n).toLocaleString('es');
-function calc(){
-  const ing=v('ing'),per=v('per'),top=+$('top').value;$('topV').textContent=top;
-  const reg=per*top,dic=reg+v('cena')+v('ropa')+v('sal'),ene=v('ren')+v('ser')+v('col')+v('deu')+v('com');
-  const queda=ing-dic-ene,res=$('res');
-  $('s1').textContent=f(reg);$('s2').textContent=f(v('cena'));$('s3').textContent=f(v('ropa'));$('s4').innerHTML='<b>'+f(ing-dic)+'</b>';
-  if(!ing){res.className='res verde';$('rN').textContent=cs+' 0';$('rM').textContent='Pon lo que vas a cobrar y mira tu enero 👇';$('rB').style.width='50%';$('tope').innerHTML='💡 Llena los montos y te digo cuánto puedes gastar por regalo sin que enero te duela.';return}
-  $('rN').textContent=(queda<0?'−':'')+f(Math.abs(queda));
-  const pct=Math.max(0,Math.min(100,queda/ing*100));$('rB').style.width=(queda<0?4:Math.max(6,pct))+'%';
-  if(queda<0){res.className='res rojo';$('rN').textContent='Te faltan '+f(-queda);$('rM').textContent='😱 Así como vas, enero te agarra sin plata';}
-  else if(queda<ing*0.1){res.className='res amarillo';$('rM').textContent='😬 Llegas, pero muy justo. Cualquier imprevisto te tumba';}
-  else{res.className='res verde';$('rM').textContent='😎 ¡Vas bien! Llegas a enero con colchón';}
-  const libre=ing-(dic-reg)-ene-ing*0.1, tp=per?libre/per:0;
-  $('tope').innerHTML=per?(tp>0?`💡 Para llegar tranquilo a enero, tu tope ideal es <b>${f(tp)} por regalo</b>${tp<top?' (estás '+f(top-tp)+' por encima)':' ✅'}.`:'💡 Con estos números <b>no te alcanza para regalos</b> sin que enero te duela. Prueba bajar la cena o las salidas, o regala vales en vez de cosas.'):'';
+$('mon').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;[...$('mon').children].forEach(x=>x.classList.remove('on'));c.classList.add('on');S.cs=c.dataset.s;document.querySelectorAll('.cs').forEach(x=>x.textContent=S.cs);gasIn()};
+const V={};const v=id=>Math.max(0,parseFloat(($(id)||{}).value)||0);
+const f=n=>S.cs+' '+Math.round(n).toLocaleString('es');
+function gasIn(){const ing=v('ing')||500;$('gasIn').innerHTML=GAS.filter(g=>S.gas[g[0]]).map(g=>`<div class="in"><label>${g[1]}</label><span class="cs">${S.cs}</span><input data-g="${g[0]}" type="number" inputmode="decimal" value="${V[g[0]]??Math.round(ing*g[2])}"></div>`).join('');
+  $('gasIn').querySelectorAll('input').forEach(i=>i.oninput=()=>V[i.dataset.g]=parseFloat(i.value)||0)}
+function ir(n){
+  if(n==3&&!v('ing')){$('ing').focus();$('ing').style.borderColor='#dc2626';return}
+  document.querySelectorAll('.step').forEach(s=>s.classList.toggle('on',s.dataset.n==n));$('pg').style.width=(n-1)*25+'%';
+  if(n==2){$('malo').style.display=S.var?'flex':'none';$('ingH').textContent=S.var?'Como tu ingreso cambia, dinos un mes normal y uno flojo':'Un estimado está bien';}
+  if(n==3)gasIn(); if(n==5)plan(); scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelectorAll('input').forEach(i=>i.addEventListener('input',calc));
+function plan(){
+  const ing=v('ing'),base=S.var&&v('ingMalo')?(v('ing')+v('ingMalo'))/2:ing;
+  const fijo=GAS.filter(g=>S.gas[g[0]]).reduce((a,g)=>a+(V[g[0]]??Math.round(ing*g[2])),0);
+  let libre=Math.max(0,base-fijo),ah=Math.round(libre*(S.var?.5:.45)),dic=Math.round(libre*.1),gus=Math.max(0,libre-ah-dic);
+  const parts=[['Lo necesario',fijo,'#1f7a5a'],['Ahorro y meta',ah,'#ffd23f'],['Apartar para diciembre',dic,'#38bdf8'],['Gustos y salidas',gus,'#f472b6']],tot=parts.reduce((a,p)=>a+p[1],0)||1;
+  $('split').innerHTML=parts.map(p=>`<i style="width:${p[1]/tot*100}%;background:${p[2]}"></i>`).join('');
+  $('leg').innerHTML=parts.map(p=>`<span><span class="dot" style="background:${p[2]}"></span>${p[0]}</span><b>${f(p[1])}</b>`).join('');
+  const pr=PROF.find(x=>x[0]==S.prof);$('pProf').textContent=(S.prof=='otro'?($('profOtro').value||'a tu medida'):pr[1].replace(/^\S+\s/,'').toLowerCase());
+  $('pAh').textContent=f(ah);
+  const mm=v('metaM'),nm=META.find(x=>x[0]==S.meta)[1],M=['E','F','M','A','M','J','J','A','S','O','N','D'];
+  const mes=ah>0&&mm?Math.ceil(mm/ah):0;
+  $('meses').innerHTML=M.map((m,i)=>`<div class="${mes&&i+1>=mes?'meta':''}" style="height:${Math.max(6,(i+1)/12*100)}%"><span>${m}</span></div>`).join('');
+  const NOM=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  $('goal').innerHTML=fijo>=base?`😬 Hoy lo necesario se come todo lo que ganas. Tu plan te muestra dónde recortar mes a mes para empezar a ahorrar.`
+    :mm?(mes<=12?`🎯 <b>${nm}</b>: ahorrando ${f(ah)} al mes, la cumples en <b>${NOM[mes-1]} de 2027</b> 🎉`:`🎯 <b>${nm}</b>: con ${f(ah)} al mes llegas en ${mes} meses. Tu plan te dice cómo acortarlo.`)
+    :`🎯 Al final de 2027 tendrías <b>${f(ah*12)}</b> ahorrados, y diciembre pagado con ${f(dic*12)}.`;
+  if(S.var)$('goal').innerHTML+=`<br><small>💡 Como tu ingreso cambia, tu plan usa el promedio y en los meses buenos guarda más.</small>`;
+}
 function abrir(){$('modal').classList.add('on')}
-calc();
+document.addEventListener('keydown',e=>{if(e.key=='Enter'){const s=document.querySelector('.step.on');const n=+s.dataset.n;if(n<5)ir(n+1)}});
 </script>
 </body></html>
