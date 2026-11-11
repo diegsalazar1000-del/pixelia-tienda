@@ -4,7 +4,9 @@ import { config } from '../config.js';
 import { Products, Orders, Reviews } from '../db.js';
 import { reviewLink } from '../resenas.js';
 import crypto from 'node:crypto';
-import { tg, tgEnabled, notifyAdmin, esc } from './api.js';
+import { tg, tgEnabled, notifyAdmin, esc, setVentasChat, tgSendAudio } from './api.js';
+const _cfg = config;
+import path from 'node:path';
 import { deliver, downloadLink } from '../delivery/index.js';
 
 const isAdmin = (chatId) => String(chatId) === String(config.telegram.adminChatId);
@@ -87,6 +89,14 @@ async function myOrders(chatId) {
   return send(chatId, '📦 <b>Tus compras</b> (enlaces nuevos de descarga):', {
     inline_keyboard: rows.map((o) => [{ text: `⬇️ ${o.title}`, url: downloadLink(o.id) }]),
   });
+}
+
+// 💰 /ventas en un canal o grupo (con el bot como admin) → ahí llegan las ventas con su sonido de caja registradora
+async function activarVentas(chat) {
+  setVentasChat(chat.id);
+  await tg('sendMessage', { chat_id: chat.id, parse_mode: 'HTML', text: '✅ <b>Listo:</b> aquí te avisaré cada venta 💰\n\nPara que suene como caja registradora:\n1️⃣ Mantén presionado el audio de abajo → <b>Guardar para notificaciones</b>.\n2️⃣ Toca el nombre de este canal arriba → <b>Notificaciones</b> → <b>Sonido</b> → elige <b>Caja registradora</b>.' });
+  await tgSendAudio(chat.id, path.join(_cfg.paths.public, 'sonidos', 'caja-registradora.mp3'), '🔔 Caja registradora').catch((e) => console.error('[ventas]', e.message));
+  notifyAdmin('✅ Canal de ventas configurado: cada venta llegará allá con su campanita.');
 }
 
 async function onMessage(m) {
@@ -233,13 +243,15 @@ export async function startBot() {
   let offset = 0;
   for (;;) {
     try {
-      const updates = await tg('getUpdates', { offset, timeout: 30, allowed_updates: ['message', 'callback_query', 'pre_checkout_query'] });
+      const updates = await tg('getUpdates', { offset, timeout: 30, allowed_updates: ['message', 'callback_query', 'pre_checkout_query', 'channel_post'] });
       for (const u of updates) {
         offset = u.update_id + 1;
         try {
           if (u.pre_checkout_query) await onPreCheckout(u.pre_checkout_query);
           else if (u.callback_query) await onCallback(u.callback_query);
-          else if (u.message) await onMessage(u.message);
+          else if (u.channel_post && /^\/ventas\b/.test(u.channel_post.text || '')) await activarVentas(u.channel_post.chat);
+          else if (u.message && u.message.chat.type !== 'private' && /^\/ventas\b/.test(u.message.text || '')) await activarVentas(u.message.chat);
+          else if (u.message && u.message.chat.type === 'private') await onMessage(u.message);
         } catch (e) { console.error('[bot]', e.message); }
       }
     } catch (e) {

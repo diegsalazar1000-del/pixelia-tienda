@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { config } from '../config.js';
 import { Orders } from '../db.js';
-import { tg, tgSendFile, tgEnabled, notifyAdmin, esc } from '../telegram/api.js';
+import { tg, tgSendFile, tgEnabled, notifyAdmin, notifyVenta, esc } from '../telegram/api.js';
 import { sendEmail } from './email.js';
 import { sendWhatsApp } from './whatsapp.js';
 import { metaPurchase } from '../meta.js';
@@ -70,7 +70,7 @@ export async function deliver(orderId) {
   }
   Orders.update(o.id, { delivered_via: via.join(',') });
   metaPurchase(o).catch((e) => console.error('[meta]', e.message));
-  notifyAdmin(`💰 <b>Venta</b> ${esc(o.title)}\nPedido <code>${o.id}</code> · ${o.method} · ${o.currency === 'XTR' ? o.amount_cents + ' ⭐' : '$' + (o.amount_cents / 100).toFixed(2)}\nEntregado por: ${via.join(', ') || '⚠️ ningún canal (el cliente puede descargar desde la web)'}`);
+  notifyVenta(`💰 <b>Venta</b> ${esc(o.title)}\nPedido <code>${o.id}</code> · ${o.method} · ${o.currency === 'XTR' ? o.amount_cents + ' ⭐' : '$' + (o.amount_cents / 100).toFixed(2)}\nEntregado por: ${via.join(', ') || '⚠️ ningún canal (el cliente puede descargar desde la web)'}`);
   return via;
 }
 
