@@ -145,6 +145,17 @@ function reviewsHtml() {
 }
 
 function view() {
+  if (AVPRE && P.form === 'aventura') {   // paso de pago limpio (sin galería, FAQ ni descripción)
+    const n = escH(AVPRE.datos?.nombre || '');
+    $('#pdp').innerHTML = `<div style="grid-column:1/-1;max-width:560px;width:100%;margin:0 auto">
+      <p style="margin:0 0 6px"><a href="/aventura" style="color:var(--mut)">← Volver</a></p>
+      <h1 style="font-size:1.6rem;line-height:1.2;margin:0 0 6px">🎉 Último paso: la aventura de ${n}</h1>
+      <p class="short" style="margin:0 0 10px">⚡ Descarga inmediata: apenas pagas, el libro llega a tu correo listo para imprimir.</p>
+      <div class="big-price">${priceBox()}</div>
+      <div class="checkout" id="checkout"></div>
+      <p class="hint" style="margin-top:14px">✅ Pago único, sin suscripción · 💬 Soporte por Telegram · Garantía: si falla, te lo arreglamos o te devolvemos el dinero.</p></div>`;
+    return;
+  }
   const off = P.compare > P.price ? Math.round((1 - P.price / P.compare) * 100) : 0;
   $('#pdp').innerHTML = `
   <div class="media reveal"><img src="${escH(P.cover)}" alt="${escH(P.title)}"></div>
@@ -212,27 +223,44 @@ function checkoutWeb() {
   const bc = $('#bumpChk'); if (bc) bc.onchange = () => { BUMP = bc.checked;
     if (METHOD === 'binance' && ORDER) { ORDER = null; $('.methods').style.display = ''; pick('binance'); }  // el importe cambia: hay que generar el pedido de nuevo
     const bp = $('.big-price'); if (bp) bp.innerHTML = priceBox() + (BUMP ? ` <small style="color:var(--mut)">+ ${money(P.bump.bumpPrice)} = <b>${money(Math.round((PRICE + P.bump.bumpPrice) * 100) / 100)}</b></small>` : ''); };
+  prepAventura();
   pick(methods[0][0]);
 }
 
 function esVenezuela() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Caracas'; } catch { return false; } }
 
 // 📚 Mi Gran Aventura: los datos del niño para armar su libro (todo opcional menos nombre y edad)
-const COMPS = [['perrito', '🐶 Perrito'], ['gatito', '🐱 Gatito'], ['dinosaurio', '🦖 Dinosaurio'], ['unicornio', '🦄 Unicornio'], ['dragon', '🐉 Dragón'], ['robot', '🤖 Robot']];
+const COMPS = [['perrito', '🐶 Perrito'], ['gatito', '🐱 Gatito'], ['dinosaurio', '🦖 Dinosaurio'], ['unicornio', '🦄 Unicornio'], ['dragon', '🐉 Dragón'], ['robot', '🤖 Robot'], ['loro', '🦜 Loro'], ['amigo', '🧒 Un amigo'], ['otro', '✍️ Otro']];
+// Viene de la landing /aventura (?compra=1): datos y correo ya puestos → solo el paso de pago
+let AVPRE = null; try { if (QS.get('compra')) AVPRE = JSON.parse(sessionStorage.getItem('px_av') || 'null'); } catch {}
 function formAventura() {
-  return `<h3>📚 ¿Para quién es la aventura?</h3>
+  const d = AVPRE && AVPRE.datos;
+  const res = d ? `<details class="avd" style="margin:0 0 14px;padding:10px 14px;border:1px solid var(--line);border-radius:14px"><summary style="cursor:pointer">📚 Libro para <b>${escH(d.nombre)}</b> · ${d.edad} años <small style="color:var(--mut)">(tocar para cambiar)</small></summary>` : '';
+  return res + `<h3>📚 ¿Para quién es la aventura?</h3>
     <div class="field"><label>Nombre del niño o niña *</label><input id="avNom" maxlength="20" placeholder="Ej: Sofía"></div>
     <div class="field"><label>Edad *</label><select id="avEdad">${[2, 3, 4, 5, 6, 7, 8].map((e) => `<option value="${e}" ${e === 5 ? 'selected' : ''}>${e} años</option>`).join('')}</select></div>
     <div class="field"><label>Es…</label><select id="avGen"><option value="nina">Niña (heroína)</option><option value="nino">Niño (héroe)</option></select></div>
     <div class="field"><label>Su compañero de aventura</label><select id="avComp">${COMPS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    <div class="field" id="avOtroF" style="display:none"><label>¿Qué es su compañero?</label><input id="avOtro" maxlength="20" placeholder="Ej: un conejito, su hermana, una tortuga"></div>
     <div class="field"><label>Nombre del compañero <small>(su mascota real o uno inventado)</small></label><input id="avCompN" maxlength="16" placeholder="Ej: Coco"></div>
     <div class="field"><label>Alguien que quiere mucho <small>(opcional)</small></label><input id="avEsp" maxlength="30" placeholder="Ej: la abuela Rosa, el tío Juan"></div>
-    <p class="hint" style="margin-top:-4px">✨ Con esto armamos su libro: misiones de su edad, su nombre en cada página y un QR que lo felicita con su nombre.</p>`;
+    <p class="hint" style="margin-top:-4px">✨ Con esto armamos su libro: misiones de su edad, su nombre en cada página y un QR que lo felicita con su nombre.</p>` + (d ? '</details>' : '');
+}
+function prepAventura() {   // muestra "¿qué es?" con Otro y pone los datos que trajo de la landing
+  if (P.form !== 'aventura' || !$('#avComp')) return;
+  const sh = () => { $('#avOtroF').style.display = $('#avComp').value === 'otro' ? '' : 'none'; };
+  $('#avComp').onchange = sh;
+  const d = AVPRE && AVPRE.datos;
+  if (d) { $('#avNom').value = d.nombre || ''; $('#avEdad').value = String(d.edad || 5); $('#avGen').value = d.genero || 'nina';
+    $('#avComp').value = d.comp_tipo || 'perrito'; $('#avOtro').value = d.comp_otro || ''; $('#avCompN').value = d.comp_nombre || ''; $('#avEsp').value = d.especial || '';
+    if ($('#email') && AVPRE.email) $('#email').value = AVPRE.email; }
+  sh();
 }
 function datosAventura() {
   if (P.form !== 'aventura') return undefined;
-  const d = { nombre: $('#avNom').value.trim(), edad: Number($('#avEdad').value), genero: $('#avGen').value, comp_tipo: $('#avComp').value, comp_nombre: $('#avCompN').value.trim(), especial: $('#avEsp').value.trim() };
-  if (!d.nombre) { $('#avNom').focus(); throw new Error('Escribe el nombre del niño o niña para su libro 😊'); }
+  const d = { nombre: $('#avNom').value.trim(), edad: Number($('#avEdad').value), genero: $('#avGen').value, comp_tipo: $('#avComp').value, comp_otro: $('#avOtro').value.trim(), comp_nombre: $('#avCompN').value.trim(), especial: $('#avEsp').value.trim() };
+  if (d.comp_tipo === 'otro' && !d.comp_otro) { const de = $('.avd'); if (de) de.open = true; $('#avOtro').focus(); throw new Error('Escribe qué es su compañero de aventura 😊'); }
+  if (!d.nombre) { const de = $('.avd'); if (de) de.open = true; $('#avNom').focus(); throw new Error('Escribe el nombre del niño o niña para su libro 😊'); }
   return d;
 }
 
