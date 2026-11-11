@@ -16,25 +16,27 @@ const hora = () => new Date().toLocaleTimeString('es-VE', { timeZone: 'America/C
 
 // Productos con landing/demo medida. Para agregar uno nuevo: una línea aquí.
 export const PRODUCTOS = [
-  { k: 'jefa', t: '👑 La Jefa', slug: 'la-jefa', demo: 'jefa', camp: /jefa/i },
-  { k: 'aventura', t: '📚 Mi Gran Aventura', slug: 'mi-gran-aventura', w: 'aventura', camp: /aventura/i,
+  { k: 'jefa', b: '👑 Jefa', t: '👑 La Jefa', slug: 'la-jefa', demo: 'jefa', camp: /jefa/i },
+  { k: 'aventura', b: '📚 Aventura', t: '📚 Mi Gran Aventura', slug: 'mi-gran-aventura', w: 'aventura', camp: /aventura/i,
     pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['nombre', 'escribieron el nombre'], ['comp', 'eligieron compañero'], ['quiero', 'tocaron "Quiero su libro"'], ['correo', 'dejaron el correo']] },
-  { k: 'plan', t: '📊 Plan 2027', slug: 'plan-financiero-2027', w: 'plan', camp: /plan financiero/i,
+  { k: 'plan', b: '📊 Plan', t: '📊 Plan 2027', slug: 'plan-financiero-2027', w: 'plan', camp: /plan financiero/i,
     pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['p1', 'eligieron a qué se dedican'], ['p2', 'pusieron su ingreso'], ['p3', 'pusieron sus gastos'], ['plan', 'vieron su plan'], ['quiero', 'tocaron "Quiero mi plan"'], ['correo', 'dejaron el correo']] },
 ];
 
 export function teclado(v) {
   const b = (t, d) => ({ text: (v === d ? '• ' : '') + t, callback_data: 'pn:' + d });
-  return [[b('🏠 Resumen', 'inicio'), b('🛒 Ventas', 'ventas')], PRODUCTOS.map((p) => b(p.t.split(' ').slice(0, 2).join(' '), p.k)),
+  return [[b('🏠 Resumen', 'inicio'), b('🛒 Ventas', 'ventas')], PRODUCTOS.map((p) => b(p.b || p.t, p.k)),
     [b('📣 Campañas', 'camps'), { text: '🔄 Actualizar', callback_data: 'pn:' + v + ':r' }]];
 }
 
 // --- Meta (con caché de 3 min para que los botones respondan rápido) ---
 const CACHE = new Map();
+const dia = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 async function ins(id, preset, extra = {}) {
   const k = id + preset + JSON.stringify(extra), c = CACHE.get(k);
   if (c && Date.now() - c.t < 180e3) return c.v;
-  const v = await api('GET', `${id}/insights`, { fields: 'spend,impressions,reach,frequency,clicks,ctr,actions', date_preset: preset, ...extra }).then((r) => r.data || []).catch(() => []);
+  const rango = preset === 'last_7d' ? { time_range: JSON.stringify({ since: dia(6), until: dia(0) }) } : { date_preset: preset };
+  const v = await api('GET', `${id}/insights`, { fields: 'spend,impressions,reach,frequency,clicks,ctr,actions', ...rango, ...extra }).then((r) => r.data || []).catch(() => []);
   CACHE.set(k, { t: Date.now(), v }); return v;
 }
 const acc = (r, t) => Number((r?.actions || []).find((a) => a.action_type === t)?.value || 0);
