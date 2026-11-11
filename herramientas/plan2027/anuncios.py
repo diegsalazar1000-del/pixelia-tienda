@@ -5,7 +5,7 @@ import sys, pathlib, asyncio
 from playwright.async_api import async_playwright
 
 HERE = pathlib.Path(__file__).resolve().parent
-OUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parents[1] / "storage" / "anuncios" / "plan-financiero-2027"
+OUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 and __name__ == "__main__" else HERE.parents[1] / "storage" / "anuncios" / "plan-financiero-2027"
 
 CSS = """
 *{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,'Noto Color Emoji',sans-serif}
@@ -107,4 +107,4 @@ async def main():
         await b.close()
     print("listo:", OUT)
 
-asyncio.run(main())
+if __name__ == "__main__": asyncio.run(main())
