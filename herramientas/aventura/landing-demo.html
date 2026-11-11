@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo · Landing Mi Gran Aventura</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Poppins,system-ui,sans-serif}
+body{background:linear-gradient(180deg,#7b5cff 0%,#b65cf0 45%,#f25aa8 100%);min-height:100vh;color:#1d1b3a}
+.wrap{max-width:440px;margin:auto;padding:18px 16px 110px}
+h1{color:#fff;font-size:27px;line-height:1.15;text-align:center;font-weight:800}
+h1 b{color:#ffd23f}
+.sub{color:#f3eaff;text-align:center;font-size:14px;margin:6px 0 14px}
+/* portada en vivo */
+.cover{position:relative;margin:0 auto;width:78%;aspect-ratio:3/4;border-radius:14px;overflow:hidden;
+ background:linear-gradient(#bfe3ff 0%,#dff3ff 55%,#8fd47a 56%,#6cc35a 100%);box-shadow:0 14px 30px rgba(0,0,0,.3);transform:rotate(-2deg);transition:transform .3s}
+.cover.pop{animation:pop .45s}
+@keyframes pop{0%{transform:rotate(-2deg) scale(1)}40%{transform:rotate(-2deg) scale(1.06)}100%{transform:rotate(-2deg) scale(1)}}
+.sun{position:absolute;top:6%;right:8%;font-size:34px}.cl{position:absolute;font-size:26px}
+.card{position:absolute;top:22%;left:8%;right:8%;background:#fff;border-radius:14px;padding:12px 8px;text-align:center}
+.card small{display:block;font-weight:700;font-size:13px}
+.nom{font-size:34px;font-weight:800;color:#ff4fa0;-webkit-text-stroke:1.5px #3a1b4a;line-height:1.1;word-break:break-word}
+.comp{color:#6b4cff;font-weight:700;font-size:13px}
+.kid{position:absolute;bottom:14%;left:22%;font-size:46px}.pet{position:absolute;bottom:15%;right:20%;font-size:40px}
+.tag{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);background:#24213f;color:#fff;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.stars{position:absolute;top:52%;width:100%;text-align:center;font-size:16px;letter-spacing:22px}
+.live{text-align:center;color:#fff;font-size:12px;margin:10px 0 0;opacity:.9}
+/* formulario */
+.box{background:#fff;border-radius:18px;padding:16px;margin-top:16px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+label{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+label:first-child{margin-top:0}
+input{width:100%;padding:12px;border:2px solid #e4defa;border-radius:12px;font-size:16px}
+input:focus{outline:none;border-color:#7b5cff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:2px solid #e4defa;background:#faf8ff;border-radius:22px;padding:7px 12px;font-size:14px;cursor:pointer;user-select:none}
+.chip.on{background:#7b5cff;border-color:#7b5cff;color:#fff}
+.chip:active{transform:scale(.95)}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:16px;font-size:17px;font-weight:800;cursor:pointer;margin-top:16px;
+ background:#ffd23f;color:#1d1b3a;box-shadow:0 5px 0 #d9a800}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #d9a800}
+.btn:disabled{opacity:.5}
+.ok{font-size:13px;color:#5b577a;text-align:center;margin-top:10px;line-height:1.5}
+.inc{margin-top:16px;color:#fff;font-size:14px;line-height:1.7}
+.inc div{background:rgba(255,255,255,.15);border-radius:12px;padding:8px 12px;margin-top:6px}
+/* barra fija */
+.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;justify-content:center}
+.bar .p{font-weight:800;font-size:18px}.bar .p s{display:none}
+.bar button{margin:0;width:auto;flex:1;max-width:260px;padding:13px}
+/* ventana */
+.modal{position:fixed;inset:0;background:rgba(20,10,40,.6);display:none;align-items:flex-end;justify-content:center;z-index:9}
+.modal.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:440px;border-radius:22px 22px 0 0;padding:20px 18px 26px;animation:up .3s}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+.sheet h2{font-size:20px;line-height:1.2}
+.sheet h2 b{color:#ff4fa0}
+.mini{display:flex;gap:12px;align-items:center;margin:12px 0}
+.mini .m{width:62px;aspect-ratio:3/4;border-radius:8px;background:linear-gradient(#bfe3ff,#8fd47a);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none}
+.chk{display:flex;gap:8px;font-size:12px;color:#5b577a;margin-top:10px;align-items:flex-start}
+.chk input{width:auto;margin-top:2px}
+.precio{font-size:15px;margin-top:8px}.precio b{font-size:22px;color:#18a957}
+.precio span{color:#8a86a6;text-decoration:line-through;margin-right:6px}
+.paso{display:none}.paso.on{display:block}
+.pagos{display:grid;gap:8px;margin-top:12px}
+.pagos div{border:2px solid #e4defa;border-radius:12px;padding:12px;font-weight:700;font-size:15px}
+.nota{background:#fff6d6;border-radius:10px;padding:8px 10px;font-size:12px;margin-top:12px;color:#6b5a00}
+.demo{position:fixed;top:0;left:0;right:0;background:#1d1b3a;color:#ffd23f;font-size:11px;text-align:center;padding:4px;z-index:10}
+</style></head><body>
+<div class="demo">DEMO para revisar · no cobra ni envía nada</div>
+<div class="wrap" style="padding-top:30px">
+  <h1>Un libro donde <b id="hNom">tu peque</b> es el protagonista</h1>
+  <p class="sub">12 misiones con su nombre · 2 a 8 años · llega a tu correo en minutos</p>
+
+  <div class="cover" id="cover">
+    <div class="sun">☀️</div><div class="cl" style="top:8%;left:8%">☁️</div><div class="cl" style="top:14%;left:42%;font-size:20px">☁️</div>
+    <div class="card"><small>La gran aventura de</small><div class="nom" id="cNom">Sofía</div><div class="comp" id="cComp">y su perrito Coco</div></div>
+    <div class="stars">⭐⭐⭐</div>
+    <div class="kid" id="cKid">👧</div><div class="pet" id="cPet">🐶</div>
+    <div class="tag" id="cTag">12 misiones para una heroína de 5 años</div>
+  </div>
+  <p class="live">✨ Escribe su nombre y mira cómo cambia la portada</p>
+
+  <div class="box">
+    <label>¿Cómo se llama tu peque?</label>
+    <input id="fNom" placeholder="Ej: Sofía" maxlength="14" autocomplete="off">
+    <label>¿Cuántos años tiene?</label>
+    <div class="chips" id="fEdad"></div>
+    <label>Es…</label>
+    <div class="chips" id="fSexo"><span class="chip on" data-v="nina">👧 Niña</span><span class="chip" data-v="nino">👦 Niño</span></div>
+    <label>Su compañero de aventura</label>
+    <div class="chips" id="fComp"></div>
+    <input id="fOtro" placeholder="¿Qué es? Ej: un conejito, su hermana, una tortuga…" maxlength="20" style="margin-top:8px;display:none">
+    <input id="fCompNom" placeholder="¿Cómo se llama? (opcional)" maxlength="12" style="margin-top:8px">
+    <button class="btn" id="go">🎁 ¡Quiero su libro!</button>
+    <p class="ok">✅ Pago único, sin suscripción · 📩 Llega a tu correo listo para imprimir · 🔊 Con mensajes de voz por QR</p>
+  </div>
+
+  <div class="inc"><b>Lo que recibe:</b>
+    <div>✏️ Traza su nombre y aprende sus letras</div>
+    <div>🗺️ Mapa con 12 misiones: laberintos, contar, colorear</div>
+    <div>🔊 Al terminar cada misión, escanea el QR y alguien le habla por su nombre</div>
+    <div>🏅 Diploma de "Gran Aventurero" con su nombre</div>
+  </div>
+</div>
+
+<div class="bar"><div class="p">$4.99</div><button class="btn" onclick="abrir()">🎁 Crear su libro</button></div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="sheet">
+    <div class="paso on" id="p1">
+      <h2>¡El libro de <b class="mNom">Sofía</b> está casi listo! 🎉</h2>
+      <div class="mini"><div class="m" id="mPet">🐶</div><div style="font-size:13px;color:#5b577a">¿A qué correo te lo mandamos? Te regalamos <b>15% de descuento</b> por dejarlo.</div></div>
+      <input id="fMail" type="email" placeholder="tucorreo@gmail.com">
+      <label class="chk"><input type="checkbox" checked> Acepto recibir el libro y novedades de Pixelia (puedes darte de baja cuando quieras)</label>
+      <button class="btn" onclick="paso2()">Continuar →</button>
+    </div>
+    <div class="paso" id="p2">
+      <h2>Último paso para la aventura de <b class="mNom">Sofía</b></h2>
+      <p class="precio"><span>$4.99</span><b>$4.24</b> con tu 15%</p>
+      <div class="pagos"><div>💳 Tarjeta / PayPal</div><div>🟡 Binance</div><div>💚 Pago Móvil (Venezuela)</div></div>
+      <div class="nota">En la tienda real aquí sigue el pago de siempre, con los datos del niño ya llenos. Si no paga, en 1 hora le llega un correo con SU portada: "<span class="mNom">Sofía</span> todavía espera su aventura" + el 15%.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COMP={perrito:['🐶','su perrito'],gatito:['🐱','su gatito'],dinosaurio:['🦖','su dinosaurio'],unicornio:['🦄','su unicornio'],dragon:['🐉','su dragón'],robot:['🤖','su robot'],loro:['🦜','su loro'],amigo:['🧒','su amigo'],otro:['⭐','']};
+const EMO={loro:'🦜',perico:'🦜',guacamaya:'🦜',conejo:'🐰',conejito:'🐰',tortuga:'🐢',hamster:'🐹','hámster':'🐹',pez:'🐠',pececito:'🐠',caballo:'🐴',poni:'🐴',oso:'🐻',osito:'🧸',pollito:'🐥',pato:'🦆',patito:'🦆',leon:'🦁','león':'🦁',tigre:'🐯',mono:'🐵',monito:'🐵',panda:'🐼',zorro:'🦊',vaca:'🐮',cerdito:'🐷',cochinito:'🐷',rana:'🐸',pinguino:'🐧','pingüino':'🐧',buho:'🦉','búho':'🦉',mariposa:'🦋',abeja:'🐝',ballena:'🐳',delfin:'🐬','delfín':'🐬',tiburon:'🦈','tiburón':'🦈',gato:'🐱',perro:'🐶',amigo:'🧒',amiga:'👧',hermano:'👦',hermana:'👧',primo:'👦',prima:'👧',abuela:'👵',abuelo:'👴',hada:'🧚',sirena:'🧜‍♀️',astronauta:'👩‍🚀',superheroe:'🦸','superhéroe':'🦸',extraterrestre:'👽',marciano:'👽',muñeca:'🪆',dinosaurio:'🦖'};
+const NCOMP={perrito:'Coco',gatito:'Michi',dinosaurio:'Rex',unicornio:'Luna',dragon:'Chispa',robot:'Bip',loro:'Paco',amigo:'Leo',otro:''};
+let S={nom:'',edad:5,sexo:'nina',comp:'perrito',cnom:'',otro:''};
+const $=id=>document.getElementById(id);
+$('fEdad').innerHTML=[2,3,4,5,6,7,8].map(e=>`<span class="chip${e==5?' on':''}" data-v="${e}">${e}</span>`).join('');
+$('fComp').innerHTML=Object.entries(COMP).map(([k,v],i)=>`<span class="chip${i?'':' on'}" data-v="${k}">${k=='otro'?'✍️ Otro':v[0]+' '+(k=='dragon'?'dragón':k)}</span>`).join('');
+function chips(id,key){$(id).onclick=e=>{const c=e.target.closest('.chip');if(!c)return;[...$(id).children].forEach(x=>x.classList.remove('on'));c.classList.add('on');S[key]=key=='edad'?+c.dataset.v:c.dataset.v;pinta(true)}}
+chips('fEdad','edad');chips('fSexo','sexo');chips('fComp','comp');
+$('fNom').oninput=e=>{S.nom=e.target.value.trim();pinta(true)};
+$('fOtro').oninput=e=>{S.otro=e.target.value.trim();pinta(true)};
+$('fCompNom').oninput=e=>{S.cnom=e.target.value.trim();pinta(false)};
+let t;function pinta(pop){
+  const nom=S.nom?S.nom[0].toUpperCase()+S.nom.slice(1):'Sofía';
+  $('cNom').textContent=nom;$('hNom').textContent=S.nom?nom:'tu peque';
+  document.querySelectorAll('.mNom').forEach(x=>x.textContent=nom);
+  $('fOtro').style.display=S.comp=='otro'?'block':'none';
+  let c=COMP[S.comp],quien=c[1];
+  if(S.comp=='otro'){const o=S.otro.toLowerCase().replace(/^(un|una|el|la|su|mi)\s+/,'');
+    const k=Object.keys(EMO).find(w=>o.split(/\s+/).some(p=>p==w||p==w+'s'||p.startsWith(w)));
+    c=[k?EMO[k]:'⭐'];quien=o?('su '+o):'su compañero'}
+  if(S.comp=='amigo'&&S.sexo){} 
+  $('cPet').textContent=c[0];$('mPet').textContent=c[0];
+  const n=S.cnom||NCOMP[S.comp];
+  $('cComp').textContent=`y ${quien}${n?' '+n:''}`;
+  $('cKid').textContent=S.sexo=='nina'?'👧':'👦';
+  $('cTag').textContent=`12 misiones para ${S.sexo=='nina'?'una heroína':'un héroe'} de ${S.edad} años`;
+  $('cNom').style.fontSize=nom.length>9?'26px':'34px';
+  if(pop){clearTimeout(t);t=setTimeout(()=>{const v=$('cover');v.classList.remove('pop');void v.offsetWidth;v.classList.add('pop')},250)}
+}
+function abrir(){if(!S.nom){$('fNom').focus();$('fNom').scrollIntoView({behavior:'smooth',block:'center'});$('fNom').style.borderColor='#ff4fa0';return}
+  $('p1').classList.add('on');$('p2').classList.remove('on');$('modal').classList.add('on')}
+$('go').onclick=abrir;
+function paso2(){$('p1').classList.remove('on');$('p2').classList.add('on')}
+pinta(false);
+</script>
+</body></html>
