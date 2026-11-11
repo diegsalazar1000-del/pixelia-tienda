@@ -466,9 +466,12 @@ def main():
         try:
             try:   # 📚 libros personalizados pagados (Mi Gran Aventura): van primero, el cliente está esperando
                 L = api("POST", "/api/studio/libro-next", {})
-                if L:
-                    sys.path.insert(0, str(PIXELIA / "herramientas" / "aventura")); import fabrica
-                    fabrica.fabricar(L, PIXELIA, api); continue
+                if L:   # cada producto personalizado tiene su fábrica en herramientas/<carpeta>/fabrica.py
+                    import importlib.util
+                    carpeta = {"aventura": "aventura", "plan": "plan2027"}.get(L.get("form"), "aventura")
+                    spec = importlib.util.spec_from_file_location(f"fabrica_{carpeta}", PIXELIA / "herramientas" / carpeta / "fabrica.py")
+                    fab = importlib.util.module_from_spec(spec); sys.path.insert(0, str(PIXELIA / "herramientas" / carpeta)); spec.loader.exec_module(fab)
+                    fab.fabricar(L, PIXELIA, api); continue
             except Exception as e: print("libros:", e, flush=True)
             J = api("POST", "/api/studio/next", {})
             if J: print("Trabajo", J["job"], J["product"]["slug"], flush=True); run_job(J); continue

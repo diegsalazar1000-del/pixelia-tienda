@@ -61,6 +61,12 @@ function datosPersonalizados(form, d = {}) {
     const comp_tipo = tipos.includes(d.comp_tipo) ? d.comp_tipo : 'perrito', comp_otro = comp_tipo === 'otro' ? txt(d.comp_otro, 20) : '';
     return { nombre, edad, genero: d.genero === 'nino' ? 'nino' : 'nina', comp_tipo: comp_tipo === 'otro' && !comp_otro ? 'perrito' : comp_tipo, comp_otro, comp_nombre: txt(d.comp_nombre, 16), especial: txt(d.especial, 30) };
   }
+  if (form === 'plan') {   // 📊 Plan financiero 2027: lo que la persona puso en /plan
+    const n = (v) => Math.max(0, Math.min(1e9, Number(v) || 0));
+    const ing = n(d.ing); if (!ing) return { error: 'Escribe cuánto ganas al mes para armar tu plan 😊' };
+    const gas = (Array.isArray(d.gas) ? d.gas : []).slice(0, 10).map((g) => [txt(g && g[0], 40), n(g && g[1])]).filter((g) => g[0]);
+    return { nombre: txt(d.nombre, 30), prof: txt(d.prof, 40), ing, malo: n(d.malo), var: d.var ? 1 : 0, cs: txt(d.cs, 3) || '$', gas, meta: txt(d.meta, 40), mm: n(d.mm) };
+  }
   return {};
 }
 function jsonList(v) { if (Array.isArray(v)) return v; try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
@@ -166,13 +172,13 @@ function visitaReal(req, productId) {
 // ===== Páginas =====
 on('GET', '/', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('index.html')); });
 // Productos con LANDING corta: quien llega desde un anuncio (fbclid/utm) va directo a la landing; ?compra=1 es el paso de pago
-const LANDINGS = { 'mi-gran-aventura': '/aventura' };
+const LANDINGS = { 'mi-gran-aventura': '/aventura', 'plan-financiero-2027': '/plan' };
 on('GET', '/p/:slug', (req, res, { slug }, url) => {
-  if (LANDINGS[slug] && url && !url.searchParams.has('compra') && (url.searchParams.has('fbclid') || url.searchParams.has('utm_source'))) {
+  if (LANDINGS[slug] && url && !url.searchParams.has('compra') && (url.searchParams.has('fbclid') || url.searchParams.has('utm_source') || slug === 'plan-financiero-2027')) {
     res.writeHead(302, { location: LANDINGS[slug] + url.search }); return res.end();
   }
   const p = Products.bySlug(slug);
-  if (!p || !p.active) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }
+  if (!p || (!p.active && !esDueno(req))) { res.writeHead(404, { 'content-type': MIME['.html'] }); return res.end(renderPage('index.html')); }   // el dueño puede probar productos ocultos
   const pp = publicProduct(p);
   if (visitaReal(req, p.id)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] });
@@ -237,7 +243,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -282,6 +288,23 @@ on('POST', '/api/aventura/lead', async (req, res) => {
   const d = datosPersonalizados('aventura', b.datos || {}); if (d.error) return fail(res, 400, d.error);
   const s = Subscribers.add(email, 'mi-gran-aventura');
   if (!esDueno(req)) db.prepare("INSERT INTO aventura_leads (email, datos) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET datos = excluded.datos, created_at = datetime('now'), sent = 0").run(email, JSON.stringify(d));
+  json(res, 200, { code: s.used_order ? '' : s.code, off: s.used_order ? 0 : Math.round(COUPON_OFF * 100) });
+});
+// 📊 Landing del Plan financiero 2027 (Diego 11-nov): pasos cortos → su plan en vivo → correo (+15%) → solo el pago
+try { db.exec("CREATE TABLE IF NOT EXISTS form_leads (email TEXT, slug TEXT, datos TEXT, created_at TEXT DEFAULT (datetime('now')), sent INTEGER DEFAULT 0, PRIMARY KEY (email, slug))"); } catch {}
+on('GET', '/plan', (req, res) => {
+  const p = Products.bySlug('plan-financiero-2027');
+  if (p && visitaReal(req, p.id)) Products.view(p.id);
+  res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' });
+  res.end(renderPage('plan.html', { PRICE: p ? (p.price_cents / 100).toFixed(2) : '3.99' }));
+});
+on('POST', '/api/lead/:slug', async (req, res, { slug }) => {   // correo + datos del formulario de una landing (sirve para todos los productos personalizados)
+  const p = Products.bySlug(slug); if (!p || !p.form) return fail(res, 404, 'No existe');
+  const b = await body(req, 5000).catch(() => ({})); const email = String(b.email || '').trim().toLowerCase().slice(0, 120);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Revisa tu correo 😊');
+  const d = datosPersonalizados(p.form, b.datos || {}); if (d.error) return fail(res, 400, d.error);
+  const s = Subscribers.add(email, slug);
+  if (!esDueno(req)) db.prepare("INSERT INTO form_leads (email, slug, datos) VALUES (?, ?, ?) ON CONFLICT(email, slug) DO UPDATE SET datos = excluded.datos, created_at = datetime('now'), sent = 0").run(email, slug, JSON.stringify(d));
   json(res, 200, { code: s.used_order ? '' : s.code, off: s.used_order ? 0 : Math.round(COUPON_OFF * 100) });
 });
 on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto (para saber cuánta gente llega desde los reels)
@@ -345,7 +368,7 @@ on('GET', '/api/products/:slug', (req, res, { slug }) => {
 on('POST', '/api/orders', async (req, res) => {
   const b = await body(req, 1e5);
   const p = Products.bySlug(String(b.slug || ''));
-  if (!p?.active) return fail(res, 404, 'Producto no disponible');
+  if (!p || (!p.active && !esDueno(req))) return fail(res, 404, 'Producto no disponible');
   const email = String(b.email || '').trim().slice(0, 120);
   const whatsapp = String(b.whatsapp || '').replace(/[^\d+]/g, '').slice(0, 20);
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Correo no válido');
@@ -410,7 +433,7 @@ on('POST', '/api/pagomovil/submit', async (req, res) => {
 // Cupón: comprobar antes de pagar
 on('POST', '/api/coupon', async (req, res) => {
   const b = await body(req, 1e4); const p = Products.bySlug(String(b.slug || ''));
-  if (!p?.active) return fail(res, 404, 'Producto no disponible');
+  if (!p || (!p.active && !esDueno(req))) return fail(res, 404, 'Producto no disponible');
   try { const pr = priceFor(p, { coupon: b.code }); json(res, 200, { code: pr.coupon, price: pr.cents / 100, off: Math.round((pr.off || COUPON_OFF) * 100) }); }
   catch (e) { fail(res, 400, e.message); }
 });
@@ -516,14 +539,17 @@ on('GET', '/d/:id/:exp/:sig', (req, res, { id, exp, sig }, url) => {
   if (item.external_url) { res.writeHead(302, { location: item.external_url }); return res.end(); }
   if (item.form) {   // personalizado: su propio archivo
     const f = o.archivo && !o.archivo.startsWith('generando') ? path.join(STORAGE, o.archivo) : '';
+    const esPlan = item.form === 'plan';
     if (!f || !fs.existsSync(f)) {   // aún se fabrica: página amable que se recarga sola y descarga cuando esté listo
       if (o.downloads > 0) Orders.update(o.id, { downloads: o.downloads - 1 });
       res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-store' });
       return res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="12"><title>Creando tu libro…</title>
 <style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:linear-gradient(160deg,#7c5cff,#ff4fa3);color:#fff;text-align:center;padding:24px;box-sizing:border-box}
 .e{font-size:90px;animation:g 2s linear infinite}@keyframes g{50%{transform:scale(1.15) rotate(8deg)}}h1{font-size:28px}p{font-size:19px;max-width:440px;line-height:1.4;opacity:.95}</style></head>
-<body><div class="e">📚</div><h1>¡Estamos creando su libro!</h1><p>Estamos poniendo su nombre en cada página y grabando su voz de premio. Tarda unos minutos: esta página se actualiza sola y también te llega al correo. ✨</p></body></html>`);
+<body>${esPlan ? '<div class="e">📊</div><h1>¡Estamos armando tu plan!</h1><p>Estamos poniendo tus números en los 12 meses de 2027. Tarda unos minutos: esta página se actualiza sola y también te llega al correo. ✨</p>'
+  : '<div class="e">📚</div><h1>¡Estamos creando su libro!</h1><p>Estamos poniendo su nombre en cada página y grabando su voz de premio. Tarda unos minutos: esta página se actualiza sola y también te llega al correo. ✨</p>'}</body></html>`);
     }
+    if (esPlan) return serveFile(res, f, { 'content-disposition': 'attachment; filename="Mi-plan-financiero-2027.xlsx"' });
     const dn = (JSON.parse(o.datos || '{}').nombre || 'libro').normalize('NFKD').replace(/[^\w ]/g, '').trim().replace(/ /g, '-');
     return serveFile(res, f, { 'content-disposition': `attachment; filename="La-gran-aventura-de-${dn}.pdf"` });
   }

@@ -100,9 +100,31 @@ async function aventuraAbandonos() {
   return n;
 }
 
+// 📊 Plan financiero (y futuros personalizados con landing): dejó el correo y no pagó → 1 recordatorio con su 15%
+const LANDING = { 'plan-financiero-2027': { url: '/plan', asunto: '📊 Tu plan 2027 te está esperando', titulo: 'Tu plan 2027 está casi listo',
+  texto: 'Ya pusiste tus números: solo falta un paso para recibir tu plan de los 12 meses en Excel y Google Sheets, con cuánto gastar, cuánto ahorrar y en qué mes cumples tu meta.' } };
+async function formAbandonos() {
+  let n = 0, L = [];
+  try { L = db.prepare(`SELECT * FROM form_leads WHERE sent = 0 AND created_at < datetime('now','-1 hour') AND created_at > datetime('now','-2 days') LIMIT 30`).all(); } catch { return 0; }
+  for (const l of L) {
+    db.prepare('UPDATE form_leads SET sent = 1 WHERE email = ? AND slug = ?').run(l.email, l.slug);
+    const C = LANDING[l.slug], p = Products.list().find((x) => x.slug === l.slug); if (!C || !p) continue;
+    const pago = db.prepare(`SELECT 1 FROM orders WHERE lower(email) = ? AND product_id = ? AND status = 'paid' LIMIT 1`).get(l.email, p.id);
+    const sb = db.prepare('SELECT * FROM subscribers WHERE email = ?').get(l.email) || {};
+    if (pago || sb.unsub) continue;
+    const url = `${base()}${C.url}`, cup = sb.code && !sb.used_order ? `<p>Tu <b>15% de descuento</b> sigue guardado: <b>${sb.code}</b></p>` : '';
+    const html = `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px;background:#f0faf5;color:#14261f;border-radius:16px">
+      <h2 style="margin:0 0 8px">${C.titulo}</h2><p>${C.texto}</p>${cup}
+      <p><a href="${url}" style="display:inline-block;padding:14px 22px;background:#1f7a5a;color:#fff;border-radius:12px;text-decoration:none;font-weight:700">Terminar mi plan 📊</a></p>
+      <p style="color:#777;font-size:12px"><a style="color:#777" href="${bajaLink(l.email)}">No quiero más correos</a></p></div>`;
+    await sendEmail(l.email, C.asunto, `${C.texto} ${url}`, html).then(() => n++).catch((e) => console.error('[form]', e.message));
+  }
+  return n;
+}
+
 export async function enviarSecuencia() {
   if (!config.email.resendKey) return 0;
-  let n = await aventuraAbandonos();
+  let n = await aventuraAbandonos(); n += await formAbandonos();
   const q1 = db.prepare(`SELECT * FROM subscribers WHERE COALESCE(seq_step,0)=0 AND COALESCE(unsub,0)=0 AND created_at < datetime('now','-2 days') AND created_at > datetime('now','-10 days') LIMIT 40`).all();
   for (const s of q1) {
     db.prepare('UPDATE subscribers SET seq_step = 1 WHERE email = ?').run(s.email);

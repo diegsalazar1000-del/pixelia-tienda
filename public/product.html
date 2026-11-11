@@ -145,6 +145,17 @@ function reviewsHtml() {
 }
 
 function view() {
+  if (P.form && P.form !== 'aventura') {   // se compra desde su landing (ahí se llenan los datos)
+    if (!FPRE) { location.replace('/' + ({ plan: 'plan' }[P.form] || '')); return; }
+    $('#pdp').innerHTML = `<div style="grid-column:1/-1;max-width:560px;width:100%;margin:0 auto">
+      <p style="margin:0 0 6px"><a href="/plan" style="color:var(--mut)">← Volver</a></p>
+      <h1 style="font-size:1.6rem;line-height:1.2;margin:0 0 6px">🎉 Último paso: tu plan 2027</h1>
+      <p class="short" style="margin:0 0 10px">⚡ Descarga inmediata: apenas pagas, te llega al correo tu Excel (también abre en Google Sheets) con tus números ya puestos.</p>
+      <div class="big-price">${priceBox()}</div>
+      <div class="checkout" id="checkout"></div>
+      <p class="hint" style="margin-top:14px">✅ Pago único, sin suscripción · 💬 Soporte por Telegram · Garantía: si falla, te lo arreglamos o te devolvemos el dinero.</p></div>`;
+    return;
+  }
   if (AVPRE && P.form === 'aventura') {   // paso de pago limpio (sin galería, FAQ ni descripción)
     const n = escH(AVPRE.datos?.nombre || '');
     $('#pdp').innerHTML = `<div style="grid-column:1/-1;max-width:560px;width:100%;margin:0 auto">
@@ -224,6 +235,7 @@ function checkoutWeb() {
     if (METHOD === 'binance' && ORDER) { ORDER = null; $('.methods').style.display = ''; pick('binance'); }  // el importe cambia: hay que generar el pedido de nuevo
     const bp = $('.big-price'); if (bp) bp.innerHTML = priceBox() + (BUMP ? ` <small style="color:var(--mut)">+ ${money(P.bump.bumpPrice)} = <b>${money(Math.round((PRICE + P.bump.bumpPrice) * 100) / 100)}</b></small>` : ''); };
   prepAventura();
+  if (FPRE?.email && $('#email') && !$('#email').value) $('#email').value = FPRE.email;
   pick(methods[0][0]);
 }
 
@@ -233,6 +245,8 @@ function esVenezuela() { try { return Intl.DateTimeFormat().resolvedOptions().ti
 const COMPS = [['perrito', '🐶 Perrito'], ['gatito', '🐱 Gatito'], ['dinosaurio', '🦖 Dinosaurio'], ['unicornio', '🦄 Unicornio'], ['dragon', '🐉 Dragón'], ['robot', '🤖 Robot'], ['loro', '🦜 Loro'], ['amigo', '🧒 Un amigo'], ['otro', '✍️ Otro']];
 // Viene de la landing /aventura (?compra=1): datos y correo ya puestos → solo el paso de pago
 let AVPRE = null; try { if (QS.get('compra')) AVPRE = JSON.parse(sessionStorage.getItem('px_av') || 'null'); } catch {}
+// Otros personalizados (ej. plan financiero): los datos vienen de su landing en sessionStorage px_form_<slug>
+let FPRE = null; try { if (QS.get('compra')) FPRE = JSON.parse(sessionStorage.getItem('px_form_' + P.slug) || 'null'); } catch {}
 function formAventura() {
   const d = AVPRE && AVPRE.datos;
   const res = d ? `<details class="avd" style="margin:0 0 14px;padding:10px 14px;border:1px solid var(--line);border-radius:14px"><summary style="cursor:pointer">📚 Libro para <b>${escH(d.nombre)}</b> · ${d.edad} años <small style="color:var(--mut)">(tocar para cambiar)</small></summary>` : '';
@@ -273,7 +287,7 @@ function contact() {
 
 async function createOrder(method) {
   $('#err').textContent = '';
-  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact(), datos: datosAventura(),
+  ORDER = await api('/api/orders', { method: 'POST', body: { slug: P.slug, method, lang: LANG, ...contact(), datos: datosAventura() ?? FPRE?.datos,
     coupon: COUPON || undefined, upsell: UPSELL ? { id: QS.get('up'), key: QS.get('k') } : undefined, bump: BUMP && P.bump ? P.bump.slug : undefined } });
   fbq('track', 'InitiateCheckout', { content_ids: BUMP && P.bump ? [P.slug, P.bump.slug] : [P.slug], value: BUMP && P.bump ? PRICE + P.bump.bumpPrice : PRICE, currency: 'USD' });
   return ORDER;
