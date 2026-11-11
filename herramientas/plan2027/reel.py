@@ -88,6 +88,6 @@ sh("ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", T / "l.txt", "-c:v", "lib
 c2, c3, c4 = CORTE, CORTE + D1, CORTE + D1 + D2
 sh("ffmpeg", "-y", "-i", T / "base.mp4", "-i", T / "w.wav", "-i", T / "w.wav", "-i", T / "w.wav", "-i", str(CAJA), "-filter_complex",
    f"[1:a]adelay={int((c2-0.2)*1000)}|{int((c2-0.2)*1000)}[a1];[2:a]adelay={int((c3-0.2)*1000)}|{int((c3-0.2)*1000)}[a2];"
-   f"[3:a]adelay={int((c4-0.2)*1000)}|{int((c4-0.2)*1000)}[a3];[4:a]volume=0.8,adelay={int((c3+0.15)*1000)}|{int((c3+0.15)*1000)}[a4];"
+   f"[3:a]adelay={int((c4-0.2)*1000)}|{int((c4-0.2)*1000)}[a3];[4:a]volume=0.28,adelay={int((c3+0.15)*1000)}|{int((c3+0.15)*1000)}[a4];"
    "[0:a][a1][a2][a3][a4]amix=inputs=5:normalize=0[a]", "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", OUT)
 print("listo:", OUT)
