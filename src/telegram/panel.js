@@ -38,7 +38,6 @@ function vistaApps() {
     const e = fil("date('now','-6 day')"), h = fil("date('now')"), base = e.vio || 0;
     l.push('', `<b>${t}</b>`);
     for (const [ev, et] of pasos) l.push(`▸ ${et}: <b>${e[ev] || 0}</b>${h[ev] ? ` (${h[ev]})` : ''}${ev === 'vio' ? '' : pct(e[ev], base)}`);
-    if (e.robot_meta || e.robot) l.push(`🤖 robots descartados: <b>${(e.robot_meta || 0) + (e.robot || 0)}</b>${e.robot_meta ? ` (Meta revisando: ${e.robot_meta})` : ''}`);
     const otras = Object.entries(e).filter(([x]) => x.startsWith('otra_'));
     if (otras.length) l.push('↪️ Saltaron a otra app: ' + otras.map(([x, n]) => `${x.slice(5)} ${n}`).join(' · '));
   }
@@ -150,7 +149,6 @@ async function producto(P) {
     const NOM = { caro: '💸 cara', pago: '💳 no sabe pagar', nosirve: '🤷 no le sirve', dificil: '😵 difícil', luego: '⏳ después' };
     const no = Object.entries(e).filter(([k]) => k.startsWith('no_')).sort((a, b) => b[1] - a[1]);
     if (no.length) l.push('🚧 Qué las frenó: ' + no.map(([k, n]) => `${NOM[k.slice(3)] || k} ${n}`).join(' · '));
-    if (w.robot_meta || w.robot) l.push(`🤖 Robots descartados: <b>${(w.robot_meta || 0) + (w.robot || 0)}</b>${w.robot_meta ? ` (Meta revisando: ${w.robot_meta})` : ''}`);
   } else {
     const e = ev('w:' + P.w), base = e.vio || 0;
     l.push('🧭 <b>Hasta dónde llegan</b>');
@@ -160,7 +158,6 @@ async function producto(P) {
       if (k !== 'vio' && ant > 4) { const caida = 1 - n / ant; if (!peor || caida > peor.c) peor = { t, c: caida }; }
       ant = n;
     }
-    if (e.robot_meta || e.robot) l.push(`🤖 Robots descartados: <b>${(e.robot_meta || 0) + (e.robot || 0)}</b>${e.robot_meta ? ` (Meta revisando: ${e.robot_meta})` : ''}`);
     if (peor && peor.c > 0.3) l.push('', `🎯 Donde más se van: antes de "<b>${esc(peor.t)}</b>" (se pierde el ${Math.round(peor.c * 100)}%)`);
   }
   l.push('', `🛒 Ventas: <b>${ven.n || 0}</b> · ${usd(ven.c)}`);
