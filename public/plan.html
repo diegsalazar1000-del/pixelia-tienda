@@ -287,7 +287,8 @@ function pinta(){
   }
   $('fP').innerHTML=h;$('full').scrollTop=0;
 }
-const EVS={};function ev(e){if(EVS[e])return;EVS[e]=1;try{navigator.sendBeacon('/api/vista',new Blob([JSON.stringify({k:'plan',e})],{type:'application/json'}))}catch(x){}}
+const PXE={p1:'EmpezoPlan',plan:'VioSuPlan'};
+const EVS={};function ev(e){if(EVS[e])return;EVS[e]=1;if(PXE[e])try{fbq('trackCustom',PXE[e],{producto:'plan'})}catch(x){}try{navigator.sendBeacon('/api/vista',new Blob([JSON.stringify({k:'plan',e})],{type:'application/json'}))}catch(x){}}
 function abrir(){ev('quiero');$('modal').classList.add('on');setTimeout(()=>$('fNom').focus(),300);try{fbq('track','ViewContent',{content_ids:['plan-financiero-2027']})}catch(x){}}
 function datosPlan(){const ing=v('ing');return{nombre:$('fNom').value.trim(),prof:(S.prof=='otro'?($('profOtro').value||'otro'):PROF.find(x=>x[0]==S.prof)[1].replace(/^\S+\s/,'')),
   ing,malo:v('ingMalo'),var:S.var,cs:S.cs,gas:GAS.filter(g=>S.gas[g[0]]).map(g=>[g[1],V[g[0]]??Math.round(ing*g[2])]),meta:META.find(x=>x[0]==S.meta)[1],mm:v('metaM')}}

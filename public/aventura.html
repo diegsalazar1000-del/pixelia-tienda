@@ -153,7 +153,8 @@ function abrir(){ev('quiero');if(!S.nom){$('fNom').focus();$('fNom').scrollIntoV
   $('modal').classList.add('on');setTimeout(()=>$('fMail').focus(),300);try{fbq('track','ViewContent',{content_ids:['mi-gran-aventura']})}catch(x){}}
 $('go').onclick=abrir;
 // medir: qué hace la gente (1 por persona/día, sin datos personales)
-const EVS={};function ev(e){if(EVS[e])return;EVS[e]=1;try{navigator.sendBeacon('/api/vista',new Blob([JSON.stringify({k:'aventura',e})],{type:'application/json'}))}catch(x){}}
+const PXE={nombre:'EmpezoAventura',quiero:'QuiereAventura'};
+const EVS={};function ev(e){if(EVS[e])return;EVS[e]=1;if(PXE[e])try{fbq('trackCustom',PXE[e],{producto:'aventura'})}catch(x){}try{navigator.sendBeacon('/api/vista',new Blob([JSON.stringify({k:'aventura',e})],{type:'application/json'}))}catch(x){}}
 function datos(){return{nombre:S.nom,edad:S.edad,genero:S.sexo,comp_tipo:S.comp,comp_otro:S.otro,comp_nombre:S.cnom}}
 async function paso2(){
   const email=$('fMail').value.trim(),err=$('err');err.textContent='';

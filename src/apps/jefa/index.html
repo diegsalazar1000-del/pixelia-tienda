@@ -647,10 +647,13 @@ $('#instr').innerHTML = ios ? 'En Safari toca <b>Compartir</b> (el cuadrito con 
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && !leer('vio-instalar', false) && productos.length) { $('#instalar').style.display = 'block'; $('#instalar').innerHTML = '📲 <b>Tenla como app:</b> ' + $('#instr').innerHTML; guardar('vio-instalar', true); }
 // 🎁 DEMO: 3 usos gratis (calcular, copiar mensaje/lista/recordatorio, compartir o guardar estado); lo que haga se queda si la compra
+// 🎯 Píxel: momentos de uso real de la demo → públicos personalizados y similares en Meta (Diego 11-nov)
+const PX_DEMO = { uso1: 'UsoDemo', uso3: 'DemoCompleta', muro: 'DemoCompleta', compra: 'QuiereComprar' };
+const pxDemo = (e) => { const n = PX_DEMO[e]; if (n) try { fbq('trackCustom', n, { app: 'la-jefa' }); } catch (x) {} };
 if (window.APP_DEMO) {
   const D = window.APP_DEMO, ACC = ['#calc', '#copmsg', '#coprec', '#walista', '#eshare', '#esave'];
   const quedan = () => Math.max(0, D.usos - (leer('demo-usados', 0) || 0));
-  const evd = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} };
+  const evd = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} pxDemo(e); };
   const vistas = new Set();
   document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => { const t = b.dataset.v; if (!vistas.has(t)) { vistas.add(t); evd('tab_' + t); } }));
   const barra = document.createElement('div'); barra.style.cssText = 'position:sticky;top:0;z-index:50;background:#F5B83D;color:#2B1630;font-weight:700;font-size:13px;text-align:center;padding:8px 10px';
@@ -690,7 +693,7 @@ if (window.APP_DEMO) {
     const el = e.target.closest(ACC.join(',')); if (!el) return;
     if (!quedan()) { e.preventDefault(); e.stopImmediatePropagation(); muro(); return; }
     guardar('demo-usados', (leer('demo-usados', 0) || 0) + 1); pintarBarra();
-    const ev = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} };
+    const ev = (e) => { try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e }), keepalive: true }).catch(() => {}); } catch (x) {} pxDemo(e); };
     ev('uso' + leer('demo-usados', 0));
     if (leer('demo-usados', 0) === 2) setTimeout(ofertar, 2200);
     if (!quedan()) setTimeout(muro, 1600);
