@@ -192,6 +192,8 @@ const REGALOS = {
     next: { slug: 'la-jefa', text: '¿Te gustó? Llévatela completa, sin límites y para siempre:' } },
   ahorro: { title: 'Reto de Ahorro 52 Semanas 2027', file: '/regalos/Reto-de-Ahorro-52-Semanas-Pixelia.zip' },
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
+  racha: { title: 'Mi Racha de 30 días (app gratis)', file: '/racha', app: true,
+    next: { slug: 'mi-2027-en-habitos', text: '¿Te gusta llevar tu racha? Imagina TODOS tus hábitos del año así: 12 meses, niveles y tu resumen del año.' } },
   reto: { title: 'Reto 30 Días (Google Sheets / Excel)', file: '/regalos/Reto-30-Dias-Pixelia.xlsx',
     next: { slug: 'mi-2027-en-habitos', text: '¿Te gustó? Imagina TODO tu 2027 así: 12 meses, niveles, ánimo diario y tu resumen del año.' } },
 };
@@ -244,7 +246,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo)$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -313,6 +315,7 @@ on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto 
   if (p && visitaReal(req, p.id)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html'));
 });  // página corta del Reto 30 Días (reel → bio)
+on('GET', '/racha', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(renderPage('racha.html')); });   // 🧰 herramienta gratis (12-nov)
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
   const n = (subHits.get(ip) || 0) + 1; subHits.set(ip, n); if (subHits.size > 5000) subHits.clear();
