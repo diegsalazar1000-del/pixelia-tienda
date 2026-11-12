@@ -28,6 +28,7 @@ for (const c of camps) {
   let res, nom;
   if (compras) { res = compras; nom = 'compras'; }
   else if (esSeguidores && (perfil || seg)) { res = seg || perfil; nom = seg ? 'seguidores' : 'visitas al perfil'; }
+  else if (esSeguidores) { res = 0; nom = 'perfil'; }   // Meta no separa las visitas al perfil en "actions": no juzgar por visitas a la página
   else if (lpv) { res = lpv; nom = 'visitas a la página'; }
   else { res = clic; nom = 'clics'; }
   filas.push({ n: c.name, st: c.effective_status, pres, g: Number(i.spend), res, nom, cpr: res ? Number(i.spend) / res : null, ctr: Number(i.ctr || 0), fr: Number(i.frequency || 0), leads, compras, seg, perfil, esSeguidores });
@@ -41,13 +42,14 @@ for (const f of filas.sort((a, b) => b.g - a.g)) {
   const est = f.st === 'ACTIVE' ? '🟢' : '⏸️';
   // Veredicto simple: visitas a la página ≤ $0.04 bien; perfil ≤ $0.10 bien; seguidor ≤ $0.30 bien; frecuencia ≥ 3 = cansancio.
   let v = '';
-  if (!f.res) v = '🔴 gasta y no trae nada';
+  if (f.nom === 'perfil') v = 'ℹ️ campaña de seguidores: Meta no da aquí las visitas al perfil → mira "Resultados" en el Administrador de anuncios';
+  else if (!f.res) v = '🔴 gasta y no trae nada';
   else if (f.nom === 'visitas a la página') v = f.cpr <= 0.04 ? '✅ visitas baratas' : f.cpr <= 0.08 ? '🟡 visitas algo caras' : '🔴 visitas caras';
   else if (f.nom === 'visitas al perfil') v = f.cpr <= 0.10 ? '✅ perfil barato' : '🟡 perfil caro';
   else if (f.nom === 'seguidores') v = f.cpr <= 0.30 ? '✅ seguidores baratos' : '🟡 seguidores caros';
   if (f.fr >= 3) v += ' · 😴 la gente ya lo vio mucho (frecuencia ' + f.fr.toFixed(1) + ')';
   console.log(`${est} ${f.n}${f.pres ? ` · $${f.pres.toFixed(0)}/día` : ''}`);
-  console.log(`   $${f.g.toFixed(2)} → ${Math.round(f.res)} ${f.nom}${f.cpr ? ` ($${f.cpr.toFixed(3)} c/u)` : ''} · CTR ${f.ctr.toFixed(1)}%`
+  if (f.nom === 'perfil') console.log(`   $${f.g.toFixed(2)} gastados · CTR ${f.ctr.toFixed(1)}%`); else console.log(`   $${f.g.toFixed(2)} → ${Math.round(f.res)} ${f.nom}${f.cpr ? ` ($${f.cpr.toFixed(3)} c/u)` : ''} · CTR ${f.ctr.toFixed(1)}%`
     + (f.leads ? ` · ${f.leads} correos` : '') + (f.compras ? ` · 🛒 ${f.compras} compras` : '') + (f.esSeguidores && f.perfil && f.seg ? ` · ${f.perfil} visitas al perfil` : ''));
   console.log(`   ${v}`);
 }
