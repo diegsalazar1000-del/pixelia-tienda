@@ -1,57 +1,77 @@
 <!doctype html><html><head><meta charset="utf-8"><style>
-*{margin:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:#000}
-.s{width:1080px;height:1350px;position:relative;overflow:hidden;color:#fff;background:radial-gradient(120% 80% at 50% 0%,#33226a 0%,#140f26 62%);padding:80px 70px}
-.brand{font-size:30px;color:#c9c2ee;font-weight:700;letter-spacing:1px}
-.n{position:absolute;top:80px;right:70px;font-size:28px;color:#8f86bd;font-weight:700}
-h1{font-size:92px;line-height:1.02;font-weight:900;margin-top:40px}
-h2{font-size:72px;line-height:1.05;font-weight:900;margin-top:34px}
-.o{color:#ff7a4d}
-p.t{font-size:38px;line-height:1.35;color:#ddd6ff;margin-top:24px;max-width:900px}
-.tiles{display:flex;gap:30px;margin-top:70px}
-.tile{flex:1;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 20px;text-align:center}
-.tile .i{width:150px;height:150px;border-radius:42px;margin:0 auto 22px;display:grid;place-items:center;font-size:84px}
-.tile b{font-size:34px;line-height:1.15;display:block}
-.bot{position:absolute;left:70px;right:70px;bottom:70px;display:flex;justify-content:space-between;align-items:center}
-.pill{background:linear-gradient(90deg,#ff6a3d,#ff3d8b);border-radius:999px;padding:24px 40px;font-size:36px;font-weight:900}
-.url{font-size:32px;color:#c9c2ee;font-weight:700}
-.phone{position:absolute;right:60px;bottom:170px;width:430px;height:760px;border-radius:64px;background:#0b0816;border:14px solid #2d2450;box-shadow:0 40px 90px rgba(0,0,0,.6);overflow:hidden}
+@font-face{font-family:Poppins;font-weight:500;src:url(file:///home/claude/tienda/estudio/fonts/Poppins-Medium.ttf)}
+@font-face{font-family:Poppins;font-weight:600 900;src:url(file:///home/claude/tienda/estudio/fonts/Poppins-Bold.ttf)}
+
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:'Inter Display','Inter',sans-serif}
+.s{width:1080px;height:1350px;position:relative;overflow:hidden;color:#fff;
+ background:radial-gradient(70% 50% at 85% 20%,rgba(255,61,139,.45),transparent 70%),radial-gradient(60% 45% at 10% 85%,rgba(61,184,255,.35),transparent 70%),linear-gradient(160deg,#2b1b63 0%,#140f26 70%)}
+.grain{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:22px 22px;opacity:.6}
+.brand{position:absolute;top:60px;left:70px;font:700 28px Poppins;letter-spacing:3px;color:#d8d0ff}
+.dots{position:absolute;top:66px;right:70px;display:flex;gap:10px}.dots i{width:14px;height:14px;border-radius:9px;background:rgba(255,255,255,.25)}.dots i.on{width:42px;background:#ffd23d}
+.h{position:absolute;left:70px;top:150px;font-weight:900;line-height:.92;letter-spacing:-3px}
+.mark{display:inline-block;background:#ffd23d;color:#1a1033;padding:0 22px 8px;border-radius:18px;transform:rotate(-4deg);box-shadow:0 14px 0 rgba(0,0,0,.25)}
+.mark.p{background:linear-gradient(90deg,#ff6a3d,#ff3d8b);color:#fff}
+.mark.g{background:#3dd6a0;color:#0b2a1e}
+.sub{position:absolute;left:70px;font:500 38px/1.3 Poppins;color:#e6e0ff}
+.phone{position:absolute;width:420px;height:860px;border-radius:62px;background:#0b0816;border:13px solid #2e2554;box-shadow:0 50px 90px rgba(0,0,0,.6),0 0 0 2px rgba(255,255,255,.08) inset;overflow:hidden}
 .phone img{width:100%;display:block}
-.txt{max-width:450px}
-.gratis{display:inline-block;background:#3dd6a0;color:#0b2a1e;font-weight:900;font-size:30px;padding:10px 24px;border-radius:999px;margin-top:30px}
+.phone::before{content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:30px;border-radius:20px;background:#0b0816;z-index:2}
+.st{position:absolute;background:#fff;color:#1a1033;font:700 32px Poppins;padding:18px 26px;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.4);white-space:nowrap;z-index:5}
+.st small{display:block;font:500 22px Poppins;color:#6a5f99}
+.swipe{position:absolute;right:70px;bottom:70px;display:flex;align-items:center;gap:16px;font:800 40px Poppins;background:#fff;color:#1a1033;padding:22px 34px;border-radius:999px;box-shadow:0 18px 40px rgba(0,0,0,.4);z-index:6}
+.swipe b{font-size:46px;animation:none}
+.url{position:absolute;left:70px;bottom:88px;font:600 30px Poppins;color:#d8d0ff;z-index:6}
+.num{position:absolute;left:70px;top:150px;font:800 30px Poppins;background:rgba(255,255,255,.12);padding:10px 22px;border-radius:999px;color:#ffd23d}
+.free{display:inline-block;background:#3dd6a0;color:#0b2a1e;font:900 32px Poppins;padding:10px 26px;border-radius:999px;transform:rotate(-3deg)}
 </style></head><body>
-<div class="s" id="c1">
- <div class="brand">✨ PIXELIA</div><div class="n">1/4</div>
- <h1>3 mini apps que puedes usar <span class="o">GRATIS</span></h1>
- <p class="t">Sin registrarte, sin descargar nada. Las abres en tu teléfono y listo.</p>
- <div class="tiles">
-  <div class="tile"><div class="i" style="background:linear-gradient(135deg,#ff6a3d,#ff3d8b)">🔥</div><b>Mi Racha de 30 días</b></div>
-  <div class="tile"><div class="i" style="background:linear-gradient(135deg,#3dd6a0,#3db8ff)">💸</div><b>Mi mes en dinero</b></div>
-  <div class="tile"><div class="i" style="background:linear-gradient(135deg,#ffb13d,#ff6a3d)">💌</div><b>Tu invitación bonita</b></div>
- </div>
- <div class="bot"><div class="url">👇 Toca el enlace de abajo</div><div class="pill">Desliza 👉</div></div>
+
+<!-- 1. PORTADA: sin nombres, solo gancho + visual -->
+<div class="s" id="c1"><div class="grain"></div>
+ <div class="brand">✨ PIXELIA</div><div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+ <div class="h" style="font-size:150px">3 mini apps<br><span style="font-size:96px;letter-spacing:-2px">que puedes usar</span><br><span class="mark" style="font-size:150px;margin-top:18px">GRATIS</span></div>
+ <div class="phone" style="left:40px;top:780px;transform:rotate(-14deg);width:360px;height:740px"><img src="s-dinero.png"></div>
+ <div class="phone" style="left:360px;top:690px;transform:rotate(-2deg);z-index:3"><img src="s-racha.png"></div>
+ <div class="phone" style="left:800px;top:760px;transform:rotate(12deg);width:380px;height:780px"><img src="s-inv.png"></div>
+ <div class="st" style="left:600px;top:600px;transform:rotate(6deg)">🔥 9 días seguidos</div>
+ <div class="st" style="left:60px;top:690px;transform:rotate(-7deg)">👀 ¿En qué se me fue?</div>
+ <div class="swipe">Desliza <b>👉</b></div>
 </div>
-<div class="s" id="c2">
- <div class="brand">✨ PIXELIA</div><div class="n">2/4</div>
- <div class="txt"><h2>🔥 Mi Racha de 30 días</h2>
- <p class="t">Elige tus hábitos: agua, caminar, leer, dormir… Márcalos cada día y mira crecer tu racha 🔥</p>
- <p class="t" style="color:#ffd9a8">A los 30 días: tu resultado y qué mejorar 📊</p><div class="gratis">GRATIS</div></div>
- <div class="phone"><img src="s-racha.png"></div>
- <div class="bot"><div class="url">pixeliadigital.app/apps</div><div class="pill">Desliza 👉</div></div>
+
+<!-- 2. Racha -->
+<div class="s" id="c2"><div class="grain"></div>
+ <div class="brand">✨ PIXELIA</div><div class="dots"><i></i><i class="on"></i><i></i><i></i></div>
+ <div class="num">App 1 de 3 · <span style="color:#3dd6a0">gratis</span></div>
+ <div class="h" style="top:230px;font-size:112px">¿Siempre<br>abandonas<br>tus <span class="mark p">metas?</span></div>
+ <div class="sub" style="top:690px;width:430px">Elige tus hábitos, márcalos cada día y no rompas tu <b style="color:#ffd23d">racha 🔥</b></div>
+ <div class="phone" style="right:-30px;top:610px;transform:rotate(8deg)"><img src="s-racha.png"></div>
+ <div class="st" style="left:70px;top:960px;transform:rotate(-5deg)">✅ Varios hábitos a la vez</div>
+ <div class="st" style="left:110px;top:1085px;transform:rotate(3deg)">📊 Tu resultado a los 30 días</div>
+ <div class="swipe">Desliza <b>👉</b></div>
 </div>
-<div class="s" id="c3">
- <div class="brand">✨ PIXELIA</div><div class="n">3/4</div>
- <div class="txt"><h2>💸 Mi mes en dinero</h2>
- <p class="t">Cuánto te entró, cuánto gastaste, cuánto te quedó…</p>
- <p class="t" style="color:#ffd9a8">…y en qué se te fue la plata 👀</p><div class="gratis">GRATIS</div></div>
- <div class="phone"><img src="s-dinero.png"></div>
- <div class="bot"><div class="url">pixeliadigital.app/apps</div><div class="pill">Desliza 👉</div></div>
+
+<!-- 3. Dinero -->
+<div class="s" id="c3"><div class="grain"></div>
+ <div class="brand">✨ PIXELIA</div><div class="dots"><i></i><i></i><i class="on"></i><i></i></div>
+ <div class="num">App 2 de 3 · <span style="color:#3dd6a0">gratis</span></div>
+ <div class="h" style="top:230px;font-size:112px">¿Cobras y<br>no sabes en<br>qué se te <span class="mark g">fue?</span></div>
+ <div class="sub" style="top:690px;width:430px">Pon cuánto te entró y cuánto gastaste: te lo muestra en una <b style="color:#ffd23d">gráfica 💸</b></div>
+ <div class="phone" style="right:-30px;top:610px;transform:rotate(-7deg)"><img src="s-dinero.png"></div>
+ <div class="st" style="left:70px;top:960px;transform:rotate(4deg)">💸 Entró · gastaste · quedó</div>
+ <div class="st" style="left:100px;top:1085px;transform:rotate(-4deg)">🏠 30% se fue en la casa</div>
+ <div class="swipe">Desliza <b>👉</b></div>
 </div>
-<div class="s" id="c4">
- <div class="brand">✨ PIXELIA</div><div class="n">4/4</div>
- <div class="txt"><h2>💌 Tu invitación bonita</h2>
- <p class="t">¿Asado, cumple o reunión? Crea una invitación bonita en 1 minuto…</p>
- <p class="t" style="color:#ffd9a8">…y mándala por WhatsApp a tus 15 o 20 invitados 🎉</p><div class="gratis">GRATIS</div></div>
- <div class="phone"><img src="s-inv.png"></div>
- <div class="bot"><div class="url">pixeliadigital.app/apps</div><div class="pill">Úsalas gratis 👇</div></div>
+
+<!-- 4. Invitación -->
+<div class="s" id="c4"><div class="grain"></div>
+ <div class="brand">✨ PIXELIA</div><div class="dots"><i></i><i></i><i></i><i class="on"></i></div>
+ <div class="num">App 3 de 3 · <span style="color:#3dd6a0">gratis</span></div>
+ <div class="h" style="top:230px;font-size:112px">¿Asado,<br>cumple o<br><span class="mark">reunión?</span></div>
+ <div class="sub" style="top:690px;width:430px">Crea una invitación bonita en 1 minuto y mándala por <b style="color:#3dd6a0">WhatsApp 💬</b></div>
+ <div class="phone" style="right:-30px;top:610px;transform:rotate(7deg)"><img src="s-inv.png"></div>
+ <div class="st" style="left:70px;top:960px;transform:rotate(-4deg)">💌 Para tus 15 o 20 invitados</div>
+ <div class="st" style="left:100px;top:1085px;transform:rotate(3deg)">📍 Con mapa y calendario</div>
+ <div class="url">Las 3 en: <b style="color:#fff">pixeliadigital.app/apps</b></div>
+ <div class="swipe" style="background:#ffd23d">Úsalas gratis <b>👇</b></div>
 </div>
 </body></html>
