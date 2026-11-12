@@ -47,6 +47,7 @@
     <p class="mini" style="margin-top:12px">¿Cuáles hiciste hoy? Toca para marcar ✅</p>
     <div id="lista"></div>
     <div class="msg" id="msg"></div>
+    <div class="tip" id="tipHoy"></div>
     <div class="grid" id="grid"></div>
     <button class="btn sec" id="verRes">📊 Ver cómo voy</button>
   </div>
@@ -74,6 +75,21 @@ const key = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.g
 const hoy = () => key(new Date());
 const masDias = (k, n) => { const d = new Date(k + 'T12:00'); d.setDate(d.getDate() + n); return key(d); };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+// 💡 consejos por hábito (palabra clave en el nombre) + generales
+const TIPS = [
+  [/agua|litro/i, ['Deja una botella llena a la vista apenas te levantas: lo que ves, lo haces.', 'Tómate un vaso de agua antes de cada comida y ya llevas medio litro sin pensarlo.', 'Ponle sabor con limón o pepino si te aburre el agua sola.']],
+  [/camin|ejerc|correr|gym/i, ['Deja los zapatos listos en la puerta desde la noche: quita una excusa.', 'Si no tienes 20 minutos, haz 5. Un poquito cuenta más que nada.', 'Camina mientras hablas por teléfono o escuchas un audio largo.']],
+  [/leer|lectura|libro|p[aá]gina/i, ['Deja el libro en tu almohada: lo lees antes de agarrar el celular.', 'Lee 1 página. Casi siempre terminas leyendo más.', 'Lleva lo que lees en el teléfono para los ratos de espera.']],
+  [/dorm|sueño/i, ['Pon una alarma para ACOSTARTE, no solo para levantarte.', 'Deja el celular cargando lejos de la cama.', 'Cena liviano y sin café después de las 4 pm.']],
+  [/escrib|diario/i, ['Escribe solo 3 líneas: qué pasó, qué sentí, qué agradezco.', 'Ten la libreta junto al cepillo de dientes: lo haces antes de dormir.']],
+  [/celular|pantalla|redes/i, ['Activa el modo "no molestar" 1 hora antes de dormir.', 'Saca las redes de la pantalla principal del teléfono.']],
+  [/ahorr|plata|dinero/i, ['Aparta el ahorro apenas cobras, no lo que sobre al final.', 'Guarda aunque sea un poquito: el hábito vale más que el monto.']],
+  [/comer|sano|comida|dieta/i, ['Prepara tu merienda sana desde la noche anterior.', 'Llena medio plato de vegetales antes de servir lo demás.']],
+  [/calma|medit|respir|orar/i, ['Hazlo siempre a la misma hora, por ejemplo apenas te sientas en la cama.', 'Respira 4 segundos, aguanta 4, suelta 4. Repite 5 veces.']],
+];
+const GENERALES = ['Hazlo siempre después de algo que ya haces (después del café, después de bañarte).', 'Si fallas un día, no pasa nada. La regla de oro: nunca fallar dos seguidos.', 'Más vale 5 minutos todos los días que 1 hora una vez a la semana.', 'Cuéntale a alguien tu reto: cumplir es más fácil cuando otro sabe.', 'Celebra cada día perfecto: tu cerebro aprende que vale la pena.'];
+const tipsDe = (n) => { for (const [re, l] of TIPS) if (re.test(n)) return l; return GENERALES; };
+const nDia = () => Math.floor(Date.now() / 864e5);
 let S = PX.load({});
 let elegidos = [];
 
@@ -117,6 +133,10 @@ function pintar() {
   });
   const t = hh.length, n = S.hab.length;
   $('msg').textContent = t === n ? '🏆 ¡Día perfecto! Hiciste todo' : t ? `¡Vas bien! Te faltan ${n - t}` : 'Marca lo que hiciste hoy 👆';
+  // consejo del día: para un hábito que falta hoy (o general si ya hizo todo)
+  const falta = S.hab.map((x, i) => [x, i]).filter(([, i]) => !hh.includes(i));
+  const obj = falta.length ? falta[nDia() % falta.length][0] : null, lista = obj ? tipsDe(obj.n) : GENERALES;
+  $('tipHoy').innerHTML = `💡 <b>Consejo de hoy${obj ? ' para ' + obj.e + ' ' + esc(obj.n.toLowerCase()) : ''}:</b> ${lista[nDia() % lista.length]}`;
   const g = $('grid'); g.innerHTML = '';
   for (let d = 0; d < 30; d++) {
     const k = masDias(S.inicio, d), c = document.createElement('div'), p = hechos(k).length / n;
@@ -151,6 +171,7 @@ function resultado(final) {
   else if (total >= 0.5) tips.push('💪 <b>Vas bien, pero hay días que se te escapan.</b> Ponles una hora fija a tus hábitos (ej: "después del café") y será más fácil no olvidarlos.');
   else tips.push('🌱 <b>Arrancar cuesta, y es normal.</b> Mejor pocos hábitos bien hechos que muchos a medias: quédate con 1 o 2 y hazlos más fáciles (5 minutos cuentan).');
   if (n > 1 && mejor.p - peor.p >= 0.3) tips.push(`✅ Lo que mejor te sale: <b>${mejor.e} ${esc(mejor.n)}</b>.<br>⚠️ Lo que más te cuesta: <b>${peor.e} ${esc(peor.n)}</b>.<br>Truco: hazlo justo después de "${esc(mejor.n.toLowerCase())}", así uno arrastra al otro.`);
+  if (peor.p < 0.8) tips.push(`💡 <b>Para mejorar en ${peor.e} ${esc(peor.n.toLowerCase())}:</b> ${tipsDe(peor.n)[0]}`);
   if (Math.max(...st.map((x) => x.m)) >= 7) tips.push('🔥 Lograste una racha de una semana o más: ya sabes hacerlo. Si fallas un día no pasa nada; lo importante es <b>no fallar dos seguidos</b>.');
   if (final) tips.push('🔁 ¿Otro mes? Toca "Empezar de nuevo" y sube un nivel.');
   $('tips').innerHTML = tips.map((t) => `<div class="tip">${t}</div>`).join('');
