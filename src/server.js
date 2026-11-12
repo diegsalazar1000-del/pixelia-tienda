@@ -440,12 +440,11 @@ on('POST', '/api/pagomovil/aviso', async (req, res, _, url) => {
   a.id = db.prepare(`INSERT INTO pagomovil_avisos (monto, tel, ref, txt) VALUES (?, ?, ?, ?)`).run(a.monto, a.tel, a.ref, txt).lastInsertRowid;
   const abiertos = `method='pagomovil' AND status IN ('pending','review') AND created_at > datetime('now','-2 days')`;
   const c = db.prepare(`SELECT id FROM orders WHERE ${abiertos} AND bs = ?`).all(a.monto);
-  if (c.length === 1 && await pagarPorAviso(c[0].id, a, 'monto exacto')) return json(res, 200, { ok: true, pedido: c[0].id });
-  // Plan B: el cliente ya escribió su referencia y pagó al menos lo pedido
+  // Diego 12-nov: SOLO se entrega si coinciden REFERENCIA y MONTO (el cliente escribe su referencia antes o después del aviso)
   const porRef = db.prepare(`SELECT id, bs, provider_ref FROM orders WHERE ${abiertos} AND status = 'review'`).all()
     .filter((o) => refCoincide(a.ref, String(o.provider_ref).split(' ')[0]) && Number(a.monto) >= Number(o.bs) - 0.01);
-  if (porRef.length === 1 && await pagarPorAviso(porRef[0].id, a, 'referencia')) return json(res, 200, { ok: true, pedido: porRef[0].id });
-  notifyAdmin(`🤖 Llegó un Pago Móvil de <b>Bs ${a.monto}</b>${a.tel ? ' desde ' + a.tel : ''}${a.ref ? ' (ref ' + a.ref + ')' : ''} pero ${c.length > 1 ? 'coincide con varios pedidos' : 'no coincide con ningún pedido abierto'}. Si el cliente escribe su referencia, se entrega solo. Si no, revísalo con /pendientes.`).catch(() => {});
+  if (porRef.length === 1 && await pagarPorAviso(porRef[0].id, a, 'referencia + monto')) return json(res, 200, { ok: true, pedido: porRef[0].id });
+  notifyAdmin(`🤖 Llegó un Pago Móvil de <b>Bs ${a.monto}</b>${a.tel ? ' desde ' + a.tel : ''}${a.ref ? ' (ref ' + a.ref + ')' : ''} ${c.length ? 'aún no coincide la referencia (' + c.length + ' pedido con ese monto esperando que el cliente la escriba)' : 'no coincide con ningún pedido abierto'}. Cuando el cliente escriba su referencia, se entrega solo. Si no, revísalo con /pendientes.`).catch(() => {});
   return json(res, 200, { ok: false, coincidencias: c.length });
 });
 on('POST', '/api/pagomovil/submit', async (req, res) => {
@@ -458,7 +457,7 @@ on('POST', '/api/pagomovil/submit', async (req, res) => {
   // ¿ya llegó el aviso del banco con esa referencia? → se entrega al instante
   const av = db.prepare(`SELECT * FROM pagomovil_avisos WHERE pedido = '' AND created_at > datetime('now','-2 days') ORDER BY id DESC`).all()
     .filter((a) => refCoincide(a.ref, ref) && Number(a.monto) >= Number(o.bs) - 0.01);
-  if (av.length === 1 && await pagarPorAviso(o.id, av[0], 'referencia')) return json(res, 200, { status: 'paid' });
+  if (av.length === 1 && await pagarPorAviso(o.id, av[0], 'referencia + monto')) return json(res, 200, { status: 'paid' });
   await askBinance(Orders.withProduct(o.id));
   return json(res, 200, { status: 'review' });
 });
