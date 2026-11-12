@@ -44,7 +44,8 @@
   <button class="btn sec" id="copiar">📋 Copiar enlace</button>
   <button class="btn sec" id="abrir">👀 Ver cómo la reciben</button>
   <div class="cta">✨ <b>Muy pronto: Invitación Plus</b> — quién confirma, quién lleva qué (carne, hielo, refrescos…), dividir gastos y temas para bodas, 15 años y baby shower.</div>
-  <p class="mini"><a href="#" id="otra">Crear otra invitación</a></p>
+  <div id="otras"></div>
+<p class="mini"><a href="#" id="otra">Crear otra invitación</a></p>
 </section>
 </div>
 <script src="/js/medir.js" data-k="invitacion" defer></script>
@@ -72,7 +73,7 @@ $('crear').onclick = async () => {
     const r = await fetch('/api/invitacion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo crear');
     url = location.origin + '/i/' + j.id; $('link').value = url;
-    S.creadas++; PX.save(S); PX.ev('creo'); if (S.creadas === 1) PX.px('UsoApp', { interes: 'interactivo-whatsapp', tipo });
+    S.creadas++; PX.save(S); PX.extra = tipo; PX.ev('creo'); if (S.creadas === 1) PX.px('UsoApp', { interes: 'interactivo-whatsapp', tipo });
     $('s1').hidden = true; $('s2').hidden = false; $('err').textContent = ''; window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => PX.pedirCorreo('💌 ¿Te gustó la app?'), 3000);
   } catch (e) { $('err').textContent = e.message; } finally { $('crear').disabled = false; }
@@ -81,5 +82,6 @@ $('wa').onclick = () => { PX.ev('wa'); const d = datos(); location.href = 'https
 $('copiar').onclick = async () => { try { await navigator.clipboard.writeText(url); $('copiar').textContent = '✅ ¡Copiado!'; } catch { $('link').select(); } };
 $('abrir').onclick = () => window.open(url, '_blank');
 $('otra').onclick = (e) => { e.preventDefault(); $('s2').hidden = true; $('s1').hidden = false; };
+PX.otras(document.getElementById('otras'));
 </script>
 </body></html>

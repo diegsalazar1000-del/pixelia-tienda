@@ -354,7 +354,8 @@ on('POST', '/api/regalo', async (req, res) => {
   if (!b.consent) return fail(res, 400, 'Marca la casilla para poder enviarte el regalo');
   const ids = [...new Set((Array.isArray(b.regalos) ? b.regalos : []).filter((x) => REGALOS[x]))];
   if (!ids.length) return fail(res, 400, 'Elige al menos un regalo');
-  const s = Subscribers.add(email, 'regalo:' + ids.join('+'));
+  const tipoEv = ids.includes('invitacion') && INV_TIPOS.includes(b.tipo) ? ':' + b.tipo : '';   // tipo de evento de la invitación → correos relacionados después
+  const s = Subscribers.add(email, 'regalo:' + ids.join('+') + tipoEv);
   const com = String(b.comentario || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
   if (com) { db.prepare('INSERT INTO app_comentarios (email, app, texto) VALUES (?, ?, ?)').run(email, ids.join('+'), com); notifyAdmin(`💬 Comentario en <b>${esc(ids.join('+'))}</b>: “${esc(com)}”`).catch(() => {}); }
   const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file, app: !!REGALOS[id].app }));

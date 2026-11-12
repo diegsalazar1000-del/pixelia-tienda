@@ -51,7 +51,8 @@
     <div class="grid" id="grid"></div>
     <button class="btn sec" id="verRes">📊 Ver cómo voy</button>
   </div>
-  <p class="mini">Se guarda en este teléfono. <a href="#" id="reset">Empezar de nuevo</a></p>
+  <div id="otras"></div>
+<p class="mini">Se guarda en este teléfono. <a href="#" id="reset">Empezar de nuevo</a></p>
 </section>
 
 <section id="s3" hidden>
@@ -62,6 +63,7 @@
     <div id="tips"></div>
     <button class="btn" id="volver">Seguir marcando 🔥</button>
   </div>
+  <div id="otras2"></div>
   <div class="cta">¿Quieres llevar TODOS tus hábitos del año así, con niveles y tu resumen de 12 meses? <a href="/p/mi-2027-en-habitos?ref=racha">Mira Mi 2027 en Hábitos 👉</a></div>
 </section>
 </div>
@@ -181,5 +183,6 @@ function resultado(final) {
 $('verRes').onclick = () => resultado(false);
 $('volver').onclick = () => { $('s3').hidden = true; $('s2').hidden = false; };
 pintar();
+PX.otras(document.getElementById('otras')); PX.otras(document.getElementById('otras2'));
 </script>
 </body></html>

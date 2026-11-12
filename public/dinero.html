@@ -45,6 +45,7 @@
   <div class="cta">¿Quieres saber cuánto ahorrar cada mes para cumplir una meta en 2027? <a href="/plan?ref=dinero">Haz tu plan del año 👉</a></div>
 </section>
 
+<div id="otras"></div>
 <section id="s3" class="card" hidden><b>📅 Mis meses</b><div class="hist" id="hist"></div></section>
 </div>
 <script src="/js/medir.js" data-k="dinero" defer></script>
@@ -92,5 +93,6 @@ function hist() {
 $('ver').onclick = ver;
 $('editar').onclick = () => { $('s2').hidden = true; $('s1').hidden = false; };
 cargar(); hist();
+PX.otras(document.getElementById('otras'));
 </script>
 </body></html>
