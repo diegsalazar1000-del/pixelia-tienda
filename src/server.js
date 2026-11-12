@@ -247,8 +247,25 @@ on('POST', '/api/app-evento', async (req, res) => {
   if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10}|(c_)?of_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
   json(res, 200, { ok: true });
 });
+// ¿Robot? (Diego 12-nov: "ya no sé si la gente que entra es robot"). Meta revisa cada enlace de un anuncio nuevo desde
+// sus propios servidores con un navegador real; esos 'vio' no son personas. Se cuentan aparte como robot_meta / robot.
+const META_NETS = [['31.13.24.0', 21], ['31.13.64.0', 18], ['66.220.144.0', 20], ['69.63.176.0', 20], ['69.171.224.0', 19], ['74.119.76.0', 22], ['102.132.96.0', 20], ['103.4.96.0', 22], ['129.134.0.0', 16], ['147.75.208.0', 20], ['157.240.0.0', 16], ['163.70.128.0', 17], ['173.252.64.0', 18], ['179.60.192.0', 22], ['185.60.216.0', 22], ['185.89.216.0', 22], ['204.15.20.0', 22]];
+const ip4 = (ip) => ip.split('.').reduce((a, x) => a * 256 + Number(x), 0);
+function esMeta(ip) {
+  if (/^2a03:2880:/i.test(ip)) return true;
+  const m = ip.match(/(\d+\.\d+\.\d+\.\d+)$/); if (!m) return false; const n = ip4(m[1]);
+  return META_NETS.some(([net, bits]) => Math.floor(n / 2 ** (32 - bits)) === Math.floor(ip4(net) / 2 ** (32 - bits)));
+}
+function tipoVisita(req, b) {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (esMeta(ip)) return 'robot_meta';
+  const ua = req.headers['user-agent'] || '', movil = /Android|iPhone|iPad|Mobile/i.test(ua);
+  if (Number(b.wd) === 1 || (movil && Number(b.tc) === 0) || (b.tz !== undefined && b.tz !== '' && !/^(America|Europe|Atlantic)\//.test(String(b.tz)))) return 'robot';
+  return 'humano';
+}
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
+  if (e === 'vio' && /^[a-z0-9-]{2,40}$/.test(k)) { const t = tipoVisita(req, b); if (t !== 'humano') { if (visitaReal(req, `ev:${k}:${t}`)) appEvento('w:' + k, t); return json(res, 200, { ok: true }); } }
   if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|s120|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|msj|msjhost|sobre|crear|mapa|cal|mon|mes|hist|habito|resultado|(?:ir|otra)_(?:racha|dinero|invitacion)|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });

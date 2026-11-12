@@ -9,7 +9,9 @@
     var hechos = {};
     var ev = function (e) {
       if (hechos[e]) return; hechos[e] = 1;
-      var b = JSON.stringify({ k: k, e: e });
+      var o = { k: k, e: e };
+      if (e === 'vio') { try { o.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (x) {} o.wd = navigator.webdriver ? 1 : 0; o.tc = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 1 : 0; o.sw = screen.width || 0; }
+      var b = JSON.stringify(o);
       try { if (navigator.sendBeacon) navigator.sendBeacon('/api/vista', new Blob([b], { type: 'application/json' })); else fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: b, keepalive: true }); } catch (x) {}
     };
     var arrancar = function () {

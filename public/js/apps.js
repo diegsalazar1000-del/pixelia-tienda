@@ -7,7 +7,7 @@
     $: (id) => document.getElementById(id),
     load(def) { try { return Object.assign(def || {}, JSON.parse(localStorage.getItem(ST)) || {}); } catch { return def || {}; } },
     save(s) { try { localStorage.setItem(ST, JSON.stringify(s)); } catch {} },
-    ev(e) { try { fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ k: K, e }), keepalive: true }); } catch {} },
+    ev(e) { try { const o = { k: K, e }; if (e === 'vio') { try { o.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch {} o.wd = navigator.webdriver ? 1 : 0; o.tc = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 1 : 0; o.sw = screen.width || 0; } fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o), keepalive: true }); } catch {} },
     px(n, extra) { try { fbq('trackCustom', n, Object.assign({ app: K }, extra || {})); } catch {} },
     // "También te puede servir": las otras apps (Diego 12-nov)
     APPS: { racha: ['🔥', 'Mi Racha de 30 días', '/racha'], dinero: ['💸', 'Mi mes en dinero', '/dinero'], invitacion: ['💌', 'Tu invitación bonita', '/invitacion'] },
