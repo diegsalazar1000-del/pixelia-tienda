@@ -1,7 +1,16 @@
 # Muñeca vestible v2 (anime) — prompts para Gemini
 
 Base aprobada por Diego (12-nov): v2/base.png (anime ~4,5 cabezas, calva, camiseta y short blancos, brazos separados).
-Método: chat NUEVO en Gemini + adjuntar v2/plantilla_4.png (4 copias idénticas) + prompt → la imagen vuelve aquí → se recorta y alinea con la base (como fila.py).
+MÉTODO CORRECTO (Diego 12-nov, NO vestir la plantilla: Gemini deforma y amontona las muñecas y gasta créditos): adjuntar SOLO v2/base.png como referencia de tamaño y pedir ÚNICAMENTE la ropa, sin muñeca ni piel, cada prenda SEPARADA con espacio. Claude la recorta y la calza sobre la base por código.
+
+## Prompt ropa (cambiar la lista de 4 trajes)
+Use the attached doll ONLY as a size reference. Draw ONLY the clothes, NO doll, no body, no skin, no face. Paper-doll clothes, front view, flat, same scale and proportions as the doll's body so they fit her exactly. 4 outfits in one row, each piece well separated with white space between them (shoes separate under each outfit). Anime style, flat soft colors, gentle cel shading, clean dark-purple outline. Pure white background, no text, no logos.
+1) ...
+2) ...
+3) ...
+4) ...
+
+(Los prompts de abajo vistiendo la plantilla quedaron OBSOLETOS.)
 
 ## Prompt 1 · Venezuela y fiesta
 Edit this image. Keep the 4 girls EXACTLY identical: same size, same position, same pose, same face, same skin, same outline style. Only dress them, each with a different original outfit, anime style, flat soft colors with gentle cel shading, clean dark-purple outline:
