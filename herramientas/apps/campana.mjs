@@ -1,6 +1,6 @@
 // 🧰 Herramientas gratis de Pixelia (12-nov): carrusel de 4 láminas → /apps, /racha, /dinero, /invitacion.
 // --publicar: sube el carrusel al perfil de Instagram (orgánico).  Campaña: tráfico, PÚBLICO ABIERTO (sin intereses), 18-55,
-// todos los países latinos, $3/día (o --usd N), cada tarjeta lleva a SU app. Queda EN PAUSA salvo --activar.
+// todos los países latinos, 18-45, $3/día repartidos en 2 conjuntos (Instagram $1.50 + Facebook $1.50), cada tarjeta lleva a SU app. Queda EN PAUSA salvo --activar.
 // Uso: docker exec pixelia node --no-warnings /app/herramientas/apps/campana.mjs [--publicar] [--usd 3] [--activar] [--sin-campana]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,7 +9,7 @@ import { api, cuenta } from '../../src/telegram/anuncios-meta.js';
 import { G, call } from '../../src/telegram/redes.js';
 
 const A = process.argv.slice(2), opt = (k, d) => (A.includes(k) ? A[A.indexOf(k) + 1] : d);
-const USD = Number(opt('--usd', 3)), ACTIVAR = A.includes('--activar');
+const USD = Number(opt('--usd', 3)), ACTIVAR = A.includes('--activar'), EDAD = [18, Number(opt('--edad-max', 45))];
 const base = config.baseUrl.replace(/\/$/, '');
 const dirImg = path.join(config.paths.public, 'img', 'apps');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -61,20 +61,28 @@ if (!A.includes('--sin-campana')) {
     cards.push({ image_hash: hash, link: utm(t.ruta), name: t.titulo, description: t.desc, call_to_action: { type: 'LEARN_MORE', value: { link: utm(t.ruta) } } });
   }
   const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION', is_adset_budget_sharing_enabled: false });
-  const set = await api('POST', `${act}/adsets`, { name: nombre, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-    daily_budget: Math.round(USD * 100), destination_type: 'WEBSITE', optimization_goal: 'LANDING_PAGE_VIEWS',
-    targeting: { geo_locations: { countries: PAISES }, age_min: 18, age_max: 55, targeting_automation: { advantage_audience: 0 },
-      publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['stream', 'story', 'explore', 'explore_home', 'profile_feed'], facebook_positions: ['feed', 'story'] } });
+  // 2 conjuntos (Diego 12-nov): Instagram y Facebook por separado, mitad del presupuesto cada uno → se ve cuál rinde más
   const msg = CAPTION.replace('(enlace en el perfil)', '').replace(/\n\n#.*$/s, '');
   const cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · carrusel`, object_story_spec: { page_id: page, ...(ig ? { instagram_user_id: ig } : {}),
     link_data: { link: utm('/apps'), message: msg, child_attachments: cards, multi_share_optimized: false, multi_share_end_card: false } } });
-  const ad = await api('POST', `${act}/ads`, { name: `${nombre} · carrusel`, adset_id: set.id, creative: { creative_id: cr.id }, status: ACTIVAR ? 'ACTIVE' : 'PAUSED' });
-  if (ACTIVAR) { await api('POST', set.id, { status: 'ACTIVE' }); await api('POST', camp.id, { status: 'ACTIVE' }); }
+  const LUGARES = [
+    { nom: 'Instagram', p: { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'explore', 'explore_home', 'profile_feed'] } },
+    { nom: 'Facebook', p: { publisher_platforms: ['facebook'], facebook_positions: ['feed', 'story'] } }];
+  const sets = [], ads = [];
+  for (const L of LUGARES) {
+    const set = await api('POST', `${act}/adsets`, { name: `${nombre} · ${L.nom}`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      daily_budget: Math.round(USD * 100 / LUGARES.length), destination_type: 'WEBSITE', optimization_goal: 'LANDING_PAGE_VIEWS',
+      targeting: { geo_locations: { countries: PAISES }, age_min: EDAD[0], age_max: EDAD[1], targeting_automation: { advantage_audience: 0 }, ...L.p } });
+    const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${L.nom}`, adset_id: set.id, creative: { creative_id: cr.id }, status: ACTIVAR ? 'ACTIVE' : 'PAUSED' });
+    if (ACTIVAR) await api('POST', set.id, { status: 'ACTIVE' });
+    sets.push(set.id); ads.push({ letra: L.nom, id: ad.id, nombre: 'carrusel · ' + L.nom }); console.log(`✔ Conjunto ${L.nom}: $${(USD / LUGARES.length).toFixed(2)}/día`);
+  }
+  if (ACTIVAR) await api('POST', camp.id, { status: 'ACTIVE' });
   const F = path.join(path.dirname(config.paths.files), '..', 'data', 'campanas.json');
   let cs = []; try { cs = JSON.parse(fs.readFileSync(F, 'utf8')); } catch {}
-  cs.push({ camp: camp.id, set: set.id, sets: [set.id], ads: [{ letra: 'carrusel', id: ad.id, nombre: 'carrusel 3 apps' }], titulo: '🧰 3 apps gratis', presupuesto: USD,
-    estado: ACTIVAR ? 'activa' : 'pausada', fecha: new Date().toISOString(), modo: 'web', publico: { paises: PAISES, edad: '18-55', genero: 'todos', intereses: [] } });
+  cs.push({ camp: camp.id, set: sets[0], sets, ads, titulo: '🧰 3 apps gratis', presupuesto: USD,
+    estado: ACTIVAR ? 'activa' : 'pausada', fecha: new Date().toISOString(), modo: 'web', publico: { paises: PAISES, edad: EDAD.join('-'), genero: 'todos', intereses: [], lugares: 'Instagram y Facebook por separado' } });
   fs.writeFileSync(F, JSON.stringify(cs.slice(-50), null, 1));
-  console.log(`\n✅ Campaña ${ACTIVAR ? 'ACTIVA' : 'creada EN PAUSA'}: $${USD}/día · público abierto 18-55 · ${PAISES.length} países latinos`);
+  console.log(`\n✅ Campaña ${ACTIVAR ? 'ACTIVA' : 'creada EN PAUSA'}: $${USD}/día ($${USD / 2} Instagram + $${USD / 2} Facebook) · público abierto ${EDAD.join('-')} · ${PAISES.length} países latinos`);
   console.log(`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${act.replace('act_', '')}&selected_campaign_ids=${camp.id}`);
 }
