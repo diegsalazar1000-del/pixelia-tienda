@@ -4,6 +4,7 @@
 //   node herramientas/ajustar-campana.mjs activar <id_campaña>
 //   node herramientas/ajustar-campana.mjs presupuesto <id_campaña> <usd_por_dia>
 // El presupuesto se cambia donde esté puesto: en la campaña (CBO) o repartido en sus conjuntos activos (ABO).
+import '../src/config.js';   // carga .env (token de Meta) cuando se corre con docker exec
 import { api } from '../src/telegram/anuncios-meta.js';
 
 const [acc, id, usd] = process.argv.slice(2);

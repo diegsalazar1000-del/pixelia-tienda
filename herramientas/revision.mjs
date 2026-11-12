@@ -2,6 +2,7 @@
 // Todas las campañas de la cuenta con gasto en los últimos 7 días (incluye hoy): gasto, resultado principal, costo por resultado,
 // CTR, frecuencia, y su veredicto. Al final: seguidores nuevos de Instagram por día (para cruzar con las campañas de seguidores).
 // Uso: docker exec pixelia node --no-warnings /app/herramientas/revision.mjs   (en el bot: /revision)
+import '../src/config.js';   // carga .env (token de Meta) cuando se corre con docker exec
 import { api } from '../src/telegram/anuncios-meta.js';
 
 const env = (k) => process.env[k] || '';
