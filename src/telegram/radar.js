@@ -374,6 +374,7 @@ const LISTA = `📋 <b>Todos los comandos de Pixelia</b>
 📈 <b>Ver cómo vamos</b>
 /visitas — visitas a la tienda y a /reto, correos nuevos, pedidos reales y cada campaña de Meta en detalle (hoy, ayer, 7 días y por anuncio).
 /promocionar — 🔥 campaña de SEGUIDORES con los reels del Reto 30 Días publicados ($3/día, sin fecha de fin; te pide confirmar).
+/revision — qué campaña da seguidores, cuál funciona y cuál gasta sin traer nada (7 días)
 /respaldo — copia de seguridad: te manda aquí la lista de clientes y el respaldo completo
 /sinan — quitar Audience Network y Messenger de las campañas ya creadas (las nuevas ya salen así).
 
@@ -590,6 +591,7 @@ export async function onMessage(m) {
     const v = await vistaPanel('inicio').catch((e) => ({ text: '⚠️ ' + esc(e.message), reply_markup: { inline_keyboard: [] } }));
     return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, ...v });
   }
+  if (text.startsWith('/revision') || text.startsWith('/revisión')) return herramienta('revision.mjs', [], '🔍 Revisando todas las campañas…');
   if (text.startsWith('/respaldo')) return herramienta('respaldo.mjs', [], '💾 Armando el respaldo…');
   if (text.startsWith('/sinan')) return herramienta('sin-audience-network.mjs', [], '🧹 Quitando Audience Network de las campañas…');
   if (text.startsWith('/promocionar')) return rtg('sendMessage', { chat_id: config.telegram.adminChatId, parse_mode: 'HTML',
@@ -914,7 +916,7 @@ export async function startRadarBot() {
   startComentarios(send, (text, rows) => rtg('sendMessage', { chat_id: config.telegram.adminChatId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }));
   await rtg('setMyCommands', { commands: [  // menú que aparece al escribir "/"
     ['lista', 'Todos los comandos y para qué sirven'], ['publicar', 'Subir el kit a Instagram y Facebook'], ['campanas', 'Ver y activar campañas de anuncios'], ['reporte', 'Resultados A/B e interesados'], ['publicos', 'Públicos de interesados reales'], ['calendario', 'Publicaciones automáticas'], ['leccion', 'Lección de la semana'], ['remarketing', 'Campaña a quienes ya te conocen'], ['similares', 'Públicos similares'], ['anuncios', 'Crear anuncios de un producto'], ['gemini', 'Prompts para el clip realista en Gemini'],
-    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['respaldo', 'Copia de seguridad (clientes + todo)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'], ['visitas', '📊 Panel: cómo vamos (con botones)'], ['promocionar', 'Campaña de seguidores (Reto 30 Días)'], ['sinan', 'Quitar Audience Network de campañas'], ['comentarios', 'Revisar comentarios ya'],
+    ['creditos', 'Créditos y gastos (ElevenLabs, Claude, Meta)'], ['revision', 'Qué campaña funciona y cuál gasta de más'], ['respaldo', 'Copia de seguridad (clientes + todo)'], ['ahorro', 'Modo ahorro on/off'], ['explorar', 'Buscar productos en tendencia'], ['exotico', 'Buscador exótico: ideas de otras culturas'], ['fusionar', 'Combinar productos del radar'], ['visitas', '📊 Panel: cómo vamos (con botones)'], ['promocionar', 'Campaña de seguidores (Reto 30 Días)'], ['sinan', 'Quitar Audience Network de campañas'], ['comentarios', 'Revisar comentarios ya'],
     ['musica', 'Música para los anuncios'], ['cancelar', 'Quitar anuncios de la fila']].map(([command, description]) => ({ command, description })) }).catch(() => {});
   console.log('[radar] escuchando botones del radar…');
   let offset = 0;
