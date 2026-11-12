@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carritos para Armar · demo Pixelia</title>
+<style>
+  :root{--az:#1f5fd6;--ro:#ef3b3b;--am:#ffc928;--tinta:#1d2440}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#e6f0ff,#fff6e0);color:var(--tinta)}
+  .wrap{max-width:1000px;margin:0 auto;padding:18px 14px 60px}
+  .cinta{display:inline-block;background:var(--tinta);color:#fff;border-radius:999px;padding:6px 14px;font-weight:700;font-size:14px}
+  h1{font-size:clamp(28px,6vw,46px);margin:8px 0 2px;text-align:center;line-height:1.05}
+  h1 span{color:var(--ro)}
+  .sub{text-align:center;margin:0 0 14px;font-weight:600}
+  .center{text-align:center}
+  .modelos{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:8px 0}
+  .modelos button,.tabs button{border:0;border-radius:14px;padding:10px 16px;font-weight:800;font-size:15px;background:#fff;color:var(--tinta);box-shadow:0 2px 0 #c9d7f5;cursor:pointer}
+  .modelos button.on,.tabs button.on{background:var(--tinta);color:#fff}
+  .datos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 12px}
+  .datos label{font-size:13px;font-weight:700;display:flex;flex-direction:column;gap:4px}
+  .datos input{padding:9px 11px;border-radius:12px;border:2px solid #c9d7f5;font-size:16px;width:150px}
+  .tabs{display:flex;gap:8px;justify-content:center;margin:10px 0 14px;flex-wrap:wrap}
+  .panel{background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 20px rgba(31,95,214,.12)}
+  /* 3D */
+  .escena{height:360px;perspective:900px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at 50% 70%,#dfe8f7 0,#fff 70%);border-radius:16px;touch-action:none;cursor:grab}
+  .mundo{position:relative;transform-style:preserve-3d;width:0;height:0}
+  .f{position:absolute;backface-visibility:visible;background-size:100% 100%}
+  .rueda{position:absolute;border-radius:50%}
+  .piso{position:absolute;width:520px;height:520px;left:-260px;top:-260px;border-radius:50%;background:radial-gradient(circle,#c7d3ea 0,#c7d3ea 30%,transparent 62%);opacity:.6}
+  .nota{font-size:13px;color:#5b6687;text-align:center;margin-top:8px}
+  .pasos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  @media(max-width:720px){.pasos{grid-template-columns:1fr 1fr}}
+  .paso{background:#f4f8ff;border-radius:14px;padding:10px;font-size:13px}
+  .paso b{display:block;font-size:20px}
+  .hojas svg{width:100%;height:auto;background:#fff;border:1px solid #d6dff0;border-radius:6px;margin-bottom:12px}
+  .leyenda{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
+  .ventajas{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:16px 0 4px}
+  .ventajas div{background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;box-shadow:0 2px 0 #dbe5f7}
+  @media print{body{background:#fff}.wrap>*:not(#v-hojas){display:none!important}#v-hojas{display:block!important}.hojas svg{border:0;page-break-after:always;margin:0}.leyenda,.nota{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="center"><span class="cinta">🏎️ DEMO · Pixelia</span></div>
+  <h1>Carritos <span>para Armar</span></h1>
+  <p class="sub">Imprime, recorta, dobla y pega · ruedas que giran de verdad · con su nombre en la placa</p>
+
+  <div class="modelos" id="modelos"></div>
+  <div class="datos">
+    <label>Nombre del piloto<input id="nom" maxlength="10" value="SANTIAGO"></label>
+    <label>Número<input id="num" maxlength="2" value="7" style="width:80px"></label>
+  </div>
+
+  <div class="tabs"><button class="on" data-v="3d">🔄 Así queda armado</button><button data-v="hojas">✂️ Hojas para imprimir</button><button data-v="pasos">📋 Cómo se arma</button></div>
+
+  <div id="v-3d" class="panel">
+    <div class="escena" id="escena"><div class="mundo" id="mundo"></div></div>
+    <p class="nota">👆 Arrastra para girarlo. Este modelo 3D está hecho con las MISMAS piezas de la hoja: si aquí cierra, en papel cierra.</p>
+  </div>
+
+  <div id="v-hojas" class="panel" style="display:none">
+    <div class="leyenda"><span>━━ cortar</span><span>┅┅ doblar</span><span>▭ gris = pestaña para pegar</span></div>
+    <div class="hojas" id="hojas"></div>
+    <p class="nota">Tamaño real: hoja carta. Mejor en cartulina o papel grueso. 🖨️ Teléfono: Compartir → Imprimir · Computadora: Ctrl + P.</p>
+  </div>
+
+  <div id="v-pasos" class="panel" style="display:none">
+    <div class="pasos" id="pasos"></div>
+    <p class="nota">Necesitas: tijera, pega blanca o barra, 2 pitillos y 2 palitos de altura (o de brocheta sin punta). Tiempo: 30-40 min con ayuda de un adulto.</p>
+  </div>
+
+  <div class="ventajas"><div>🏁 Ruedas que giran</div><div>🪪 Placa y carnet con su nombre</div><div>📏 Piezas a tamaño real</div><div>🖨️ Imprímelo las veces que quieras</div></div>
+  <p class="nota">Demo con 2 modelos. El producto traería 10+ (bomberos, taxi, camión, autobús escolar, ambulancia, 4x4…) y una pista para competir.</p>
+</div>
+
+<script>
+// ===== Todo se mide en milímetros: la hoja impresa sale a tamaño real (carta 216 x 279 mm) =====
+const ST = { m: 'policia', nom: 'SANTIAGO', num: '7' };
+const esc = (t) => String(t || '').replace(/[<&>]/g, '').toUpperCase();
+const LN = 'stroke="#1d2440" stroke-width="0.6"';
+
+// --- Caras de cada carro. Cada cara se dibuja "derecha" (techo hacia arriba), vista desde afuera, en su propio cuadro w x h ---
+const MODELOS = {
+  policia: {
+    n: '🚓 Patrulla', rueda: 12, pitillo: 60, palito: 75,
+    cuerpo: { L: 110, W: 50, H: 28 }, cabina: { L: 56, W: 46, H: 22, dx: 6 },
+    lado: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><rect y="${h * .58}" width="${w}" height="${h * .42}" fill="#1d2440"/>
+      <rect y="${h * .5}" width="${w}" height="${h * .08}" fill="${'#1f5fd6'}"/>
+      <text x="${w / 2}" y="${h * .43}" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="9" fill="#1f5fd6">POLICÍA</text>
+      <path d="M${w * .38} 2 V${h - 2} M${w * .62} 2 V${h - 2}" ${LN} fill="none"/><rect x="${w * .44}" y="${h * .64}" width="4" height="1.6" fill="#ccc"/><rect x="${w * .52}" y="${h * .64}" width="4" height="1.6" fill="#ccc"/>
+      <path d="M${w * .12} ${h} a10 10 0 0 1 20 0 M${w * .88 - 20} ${h} a10 10 0 0 1 20 0" fill="#555"/>`,
+    frente: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><rect x="${w * .25}" y="${h * .3}" width="${w * .5}" height="${h * .3}" rx="2" fill="#2b2f45"/>
+      <circle cx="${w * .12}" cy="${h * .4}" r="3.6" fill="#ffe37a" ${LN}/><circle cx="${w * .88}" cy="${h * .4}" r="3.6" fill="#ffe37a" ${LN}/>
+      <rect x="${w * .2}" y="${h * .68}" width="${w * .6}" height="${h * .24}" rx="1.2" fill="#fff" ${LN}/><text x="${w / 2}" y="${h * .87}" text-anchor="middle" font-family="Arial" font-weight="700" font-size="4.6" fill="#1d2440">${esc(ST.nom)}</text>`,
+    atras: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><rect x="${w * .04}" y="${h * .3}" width="${w * .18}" height="${h * .2}" rx="1" fill="#ef3b3b"/><rect x="${w * .78}" y="${h * .3}" width="${w * .18}" height="${h * .2}" rx="1" fill="#ef3b3b"/>
+      <rect x="${w * .2}" y="${h * .62}" width="${w * .6}" height="${h * .26}" rx="1.2" fill="#fff" ${LN}/><text x="${w / 2}" y="${h * .82}" text-anchor="middle" font-family="Arial" font-weight="700" font-size="4.6" fill="#1d2440">${esc(ST.nom)}</text>`,
+    techo: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><rect x="${w * .02}" y="${h * .42}" width="${w * .96}" height="${h * .16}" fill="#1f5fd6"/>
+      <text x="${w * .82}" y="${h * .54}" text-anchor="middle" font-family="Arial Black,Arial" font-size="6" fill="#fff">${esc(ST.num)}</text>`,
+    abajo: (w, h) => `<rect width="${w}" height="${h}" fill="#e9eef8"/>`,
+    cLado: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><path d="M3 ${h - 2} L8 4 H${w / 2 - 1} V${h - 2} Z M${w / 2 + 1} ${h - 2} V4 H${w - 8} L${w - 3} ${h - 2} Z" fill="#9fd0ff" ${LN}/>`,
+    cFrente: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><path d="M4 ${h - 2} L8 3 H${w - 8} L${w - 4} ${h - 2} Z" fill="#9fd0ff" ${LN}/><path d="M12 ${h * .6} L20 6" stroke="#fff" stroke-width="1.4"/>`,
+    cAtras: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><path d="M5 ${h - 3} L9 4 H${w - 9} L${w - 5} ${h - 3} Z" fill="#9fd0ff" ${LN}/>`,
+    cTecho: (w, h) => `<rect width="${w}" height="${h}" fill="#fff"/><rect x="${w * .18}" y="${h * .3}" width="${w * .32}" height="${h * .4}" rx="2" fill="#ef3b3b" ${LN}/><rect x="${w * .5}" y="${h * .3}" width="${w * .32}" height="${h * .4}" rx="2" fill="#1f5fd6" ${LN}/>`,
+    rin: '#c9d2e6',
+  },
+  f1: {
+    n: '🏎️ Fórmula de carreras', rueda: 15, pitillo: 34, palito: 80, ruedasAfuera: true,
+    cuerpo: { L: 130, W: 34, H: 16 }, cabina: { L: 36, W: 24, H: 11, dx: 8 },
+    lado: (w, h) => `<rect width="${w}" height="${h}" fill="#e3262f"/><path d="M0 ${h * .7} H${w}" stroke="#fff" stroke-width="2.2"/>
+      <circle cx="${w / 2}" cy="${h * .42}" r="6" fill="#fff" ${LN}/><text x="${w / 2}" y="${h * .42 + 3.2}" text-anchor="middle" font-family="Arial Black,Arial" font-size="8" fill="#1d2440">${esc(ST.num)}</text>
+      <text x="${w * .22}" y="${h * .5}" text-anchor="middle" font-family="Arial Black,Arial" font-size="5" fill="#fff">${esc(ST.nom)}</text><text x="${w * .78}" y="${h * .5}" text-anchor="middle" font-family="Arial Black,Arial" font-size="5" fill="#fff">${esc(ST.nom)}</text>`,
+    frente: (w, h) => `<rect width="${w}" height="${h}" fill="#e3262f"/><rect x="${w * .3}" y="${h * .3}" width="${w * .4}" height="${h * .4}" rx="1.5" fill="#1d2440"/>`,
+    atras: (w, h) => `<rect width="${w}" height="${h}" fill="#e3262f"/><rect x="${w * .4}" y="${h * .35}" width="${w * .2}" height="${h * .3}" fill="#ffd34d"/>`,
+    techo: (w, h) => `<rect width="${w}" height="${h}" fill="#e3262f"/><rect y="${h * .4}" width="${w}" height="${h * .2}" fill="#fff"/><rect y="${h * .46}" width="${w}" height="${h * .08}" fill="#1d2440"/>`,
+    abajo: (w, h) => `<rect width="${w}" height="${h}" fill="#f1d3d4"/>`,
+    cLado: (w, h) => `<rect width="${w}" height="${h}" fill="#1d2440"/><path d="M0 ${h * .4} H${w}" stroke="#e3262f" stroke-width="1.5"/>`,
+    cFrente: (w, h) => `<rect width="${w}" height="${h}" fill="#1d2440"/><rect x="${w * .15}" y="${h * .15}" width="${w * .7}" height="${h * .45}" rx="1.5" fill="#9fd0ff"/>`,
+    cAtras: (w, h) => `<rect width="${w}" height="${h}" fill="#1d2440"/>`,
+    cTecho: (w, h) => `<rect width="${w}" height="${h}" fill="#1d2440"/><circle cx="${w * .55}" cy="${h / 2}" r="${h * .32}" fill="#ffd34d" ${LN}/><rect x="${w * .55 - 1}" y="${h * .3}" width="${w * .2}" height="${h * .4}" rx="1.5" fill="#1d2440"/>`,
+    alas: true, rin: '#ffd34d',
+  },
+};
+
+// ===== Plantillas (red) de una caja: centro + 4 paredes (+ tapa opcional), con pestañas =====
+// cuerpo: centro = PISO, paredes hacia afuera = techo afuera, tapa (techo) pegada a la pared de abajo.
+// cabina: centro = TECHO, paredes hacia afuera = base afuera, sin piso; pestañas en la base para pegarla encima del cuerpo.
+const T = 6; // fondo de cada pestaña (mm)
+function tab(x1, y1, x2, y2, nx, ny) { // trapecio hacia afuera del borde
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, i = Math.min(3, len / 4);
+  const a = [x1 + ux * i + nx * T, y1 + uy * i + ny * T], b = [x2 - ux * i + nx * T, y2 - uy * i + ny * T];
+  return `<path d="M${x1} ${y1} L${a[0]} ${a[1]} L${b[0]} ${b[1]} L${x2} ${y2}" fill="#dfe3ea" stroke="#1d2440" stroke-width="0.5"/>`;
+}
+const doblez = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#1d2440" stroke-width="0.45" stroke-dasharray="2 1.4"/>`;
+const corte = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#1d2440" stroke-width="0.6"/>`;
+const cara = (tx, ty, rot, w, h, dib) => `<g transform="translate(${tx} ${ty}) rotate(${rot})">${dib(w, h)}</g>`;
+
+function redCuerpo(M, x0, y0) { // x0,y0 = esquina del piso
+  const { L, W, H } = M.cuerpo; let s = '';
+  s += cara(x0, y0, 0, L, W, M.abajo);
+  // marcas de los pitillos en el piso
+  for (const fx of [0.2, 0.8]) s += `<path d="M${x0 + L * fx} ${y0 + 2} V${y0 + W - 2}" stroke="#8a93ad" stroke-width="0.5" stroke-dasharray="1 1"/><text x="${x0 + L * fx + 1.5}" y="${y0 + W / 2}" font-size="3" fill="#8a93ad" font-family="Arial">pitillo</text>`;
+  s += cara(x0, y0 - H, 0, L, H, M.lado);                 // pared de arriba (lado izquierdo del carro)
+  s += cara(x0 + L, y0 + W + H, 180, L, H, M.lado);       // pared de abajo (lado derecho)
+  s += cara(x0 - H, y0 + W, -90, W, H, M.frente);         // frente (a la izquierda)
+  s += cara(x0 + L + H, y0, 90, W, H, M.atras);           // atrás (a la derecha)
+  s += cara(x0 + L, y0 + 2 * W + H, 180, L, W, M.techo);  // techo, pegado a la pared de abajo
+  // dobleces
+  s += doblez(x0, y0, x0 + L, y0) + doblez(x0, y0 + W, x0 + L, y0 + W) + doblez(x0, y0, x0, y0 + W) + doblez(x0 + L, y0, x0 + L, y0 + W) + doblez(x0, y0 + W + H, x0 + L, y0 + W + H);
+  // pestañas: extremos de las 2 paredes largas (se pegan al frente y atrás) + 3 bordes libres del techo
+  for (const [ya, yb] of [[y0 - H, y0], [y0 + W, y0 + W + H]]) { s += tab(x0, yb, x0, ya, -1, 0) + doblez(x0, ya, x0, yb) + tab(x0 + L, ya, x0 + L, yb, 1, 0) + doblez(x0 + L, ya, x0 + L, yb); }
+  const yt = y0 + W + H, yb2 = yt + W;
+  s += tab(x0, yb2, x0, yt, -1, 0) + doblez(x0, yt, x0, yb2) + tab(x0 + L, yt, x0 + L, yb2, 1, 0) + doblez(x0 + L, yt, x0 + L, yb2) + tab(x0, yb2, x0 + L, yb2, 0, 1) + doblez(x0, yb2, x0 + L, yb2);
+  // cortes de los bordes libres
+  s += corte(x0, y0 - H, x0 + L, y0 - H) + corte(x0 - H, y0, x0 - H, y0 + W) + corte(x0 - H, y0, x0, y0) + corte(x0 - H, y0 + W, x0, y0 + W)
+    + corte(x0 + L + H, y0, x0 + L + H, y0 + W) + corte(x0 + L, y0, x0 + L + H, y0) + corte(x0 + L, y0 + W, x0 + L + H, y0 + W);
+  return s;
+}
+function redCabina(M, x0, y0) { // x0,y0 = esquina del techo de la cabina
+  const { L, W, H } = M.cabina; let s = '';
+  s += cara(x0, y0, 0, L, W, M.cTecho);
+  s += cara(x0 + L, y0, 180, L, H, M.cLado);      // pared de arriba: el techo queda pegado al centro
+  s += cara(x0, y0 + W, 0, L, H, M.cLado);         // pared de abajo
+  s += cara(x0, y0, 90, W, H, M.cFrente);          // frente a la izquierda
+  s += cara(x0 + L, y0 + W, -90, W, H, M.cAtras);  // atrás a la derecha
+  s += doblez(x0, y0, x0 + L, y0) + doblez(x0, y0 + W, x0 + L, y0 + W) + doblez(x0, y0, x0, y0 + W) + doblez(x0 + L, y0, x0 + L, y0 + W);
+  for (const [ya, yb] of [[y0 - H, y0], [y0 + W, y0 + W + H]]) { s += tab(x0, yb, x0, ya, -1, 0) + doblez(x0, ya, x0, yb) + tab(x0 + L, ya, x0 + L, yb, 1, 0) + doblez(x0 + L, ya, x0 + L, yb); }
+  // pestañas de la base (para pegarla sobre el cuerpo)
+  s += tab(x0, y0 - H, x0 + L, y0 - H, 0, -1) + doblez(x0, y0 - H, x0 + L, y0 - H) + tab(x0 + L, y0 + W + H, x0, y0 + W + H, 0, 1) + doblez(x0, y0 + W + H, x0 + L, y0 + W + H)
+    + tab(x0 - H, y0 + W, x0 - H, y0, -1, 0) + doblez(x0 - H, y0, x0 - H, y0 + W) + tab(x0 + L + H, y0, x0 + L + H, y0 + W, 1, 0) + doblez(x0 + L + H, y0, x0 + L + H, y0 + W);
+  s += corte(x0 - H, y0, x0, y0) + corte(x0 - H, y0 + W, x0, y0 + W) + corte(x0 + L, y0, x0 + L + H, y0) + corte(x0 + L, y0 + W, x0 + L + H, y0 + W);
+  return s;
+}
+function ruedas(M, x0, y0) { // 8 círculos = 4 ruedas dobles (más gruesas y firmes)
+  const r = M.rueda; let s = '';
+  for (let i = 0; i < 8; i++) {
+    const cx = x0 + r + (i % 4) * (2 * r + 4), cy = y0 + r + Math.floor(i / 4) * (2 * r + 4);
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#23263a" stroke="#1d2440" stroke-width="0.6"/><circle cx="${cx}" cy="${cy}" r="${r * .55}" fill="${M.rin}"/><circle cx="${cx}" cy="${cy}" r="${r * .55}" fill="none" stroke="#fff" stroke-width="0.4" stroke-dasharray="1.5 1.5"/><circle cx="${cx}" cy="${cy}" r="1.2" fill="#fff" stroke="#1d2440" stroke-width="0.4"/>`;
+  }
+  return s;
+}
+function alas(x0, y0) { // alerón delantero y trasero del fórmula
+  let s = '';
+  // delantero: placa 70x14 + lengüeta central 22x12 que se pega debajo de la nariz
+  s += `<rect x="${x0}" y="${y0}" width="70" height="14" fill="#e3262f"/><rect x="${x0}" y="${y0 + 5}" width="70" height="3" fill="#fff"/>` + tab(x0 + 24, y0 + 14, x0 + 46, y0 + 14, 0, 1).replace('fill="#dfe3ea"', 'fill="#dfe3ea"') + `<rect x="${x0 + 24}" y="${y0 + 14}" width="22" height="12" fill="#dfe3ea" stroke="#1d2440" stroke-width="0.5"/>` + doblez(x0 + 24, y0 + 14, x0 + 46, y0 + 14)
+    + `<rect x="${x0}" y="${y0}" width="70" height="14" fill="none" stroke="#1d2440" stroke-width="0.6"/><text x="${x0 + 35}" y="${y0 - 2}" text-anchor="middle" font-size="3.2" font-family="Arial">alerón delantero</text>`;
+  // trasero: placa 54x16 + 2 patas 8x18 con pie para pegar
+  const xr = x0 + 84;
+  s += `<rect x="${xr}" y="${y0}" width="54" height="16" fill="#1d2440" stroke="#1d2440" stroke-width="0.6"/><text x="${xr + 27}" y="${y0 + 10.5}" text-anchor="middle" font-family="Arial Black,Arial" font-size="6" fill="#fff">${esc(ST.nom)}</text>`;
+  for (const px of [xr + 10, xr + 36]) s += `<rect x="${px}" y="${y0 + 16}" width="8" height="18" fill="#e3262f" stroke="#1d2440" stroke-width="0.6"/>` + doblez(px, y0 + 16, px + 8, y0 + 16) + tab(px, y0 + 34, px + 8, y0 + 34, 0, 1) + doblez(px, y0 + 34, px + 8, y0 + 34);
+  s += `<text x="${xr + 27}" y="${y0 - 2}" text-anchor="middle" font-size="3.2" font-family="Arial">alerón trasero</text>`;
+  return s;
+}
+function carnet(x0, y0) {
+  return `<g transform="translate(${x0} ${y0})"><rect width="85" height="54" rx="4" fill="#fff" stroke="#1d2440" stroke-width="0.6"/><rect width="85" height="12" rx="4" fill="#1d2440"/><rect y="8" width="85" height="4" fill="#1d2440"/>
+    <text x="42.5" y="8.4" text-anchor="middle" font-family="Arial Black,Arial" font-size="5" fill="#fff">LICENCIA DE PILOTO</text>
+    <rect x="5" y="17" width="22" height="28" rx="2" fill="#eef2fa" stroke="#8a93ad" stroke-width="0.4" stroke-dasharray="1 1"/><text x="16" y="32" text-anchor="middle" font-size="3" fill="#8a93ad" font-family="Arial">tu foto</text>
+    <text x="32" y="22" font-size="3" fill="#5b6687" font-family="Arial">PILOTO</text><text x="32" y="29" font-size="6" font-weight="700" fill="#1d2440" font-family="Arial">${esc(ST.nom)}</text>
+    <text x="32" y="36" font-size="3" fill="#5b6687" font-family="Arial">NÚMERO</text><text x="32" y="43" font-size="6" font-weight="700" fill="#e3262f" font-family="Arial">#${esc(ST.num)}</text>
+    <text x="80" y="50" text-anchor="end" font-size="2.6" fill="#8a93ad" font-family="Arial">Pixelia</text></g>`;
+}
+const hoja = (titulo, inner) => `<svg viewBox="0 0 216 279" width="216mm" height="279mm" xmlns="http://www.w3.org/2000/svg"><rect width="216" height="279" fill="#fff"/><text x="10" y="12" font-family="Arial Black,Arial" font-size="5.5" fill="#1d2440">${titulo}</text><text x="206" y="12" text-anchor="end" font-size="3.2" fill="#8a93ad" font-family="Arial">Pixelia · imprime al 100% (tamaño real)</text>${inner}</svg>`;
+
+function hojas() {
+  const M = MODELOS[ST.m], c = M.cuerpo, k = M.cabina;
+  // hoja 1: cuerpo centrado
+  const x0 = (216 - c.L) / 2, y0 = 22 + c.H + T + 4;
+  let h1 = redCuerpo(M, x0, y0) + `<text x="108" y="${y0 + 2 * c.W + c.H + T + 12}" text-anchor="middle" font-size="4" fill="#5b6687" font-family="Arial">1 · Cuerpo del carro</text>`;
+  // hoja 2: cabina + ruedas + extras
+  const kx = 10 + k.H + T, ky = 24 + k.H + T;
+  let h2 = redCabina(M, kx, ky) + `<text x="${kx + k.L / 2}" y="${ky + k.W + k.H + T + 8}" text-anchor="middle" font-size="4" fill="#5b6687" font-family="Arial">2 · Cabina</text>`;
+  // ruedas: a la derecha de la cabina si caben; si no, debajo (nunca encima de otra pieza)
+  const finCab = kx + k.L + k.H + T + 6, anchoR = 4 * (2 * M.rueda + 4);
+  let rx = 216 - 10 - anchoR, ry = 22;
+  if (rx < finCab) { rx = 14; ry = ky + k.W + k.H + T + 14; }
+  h2 += ruedas(M, rx, ry) + `<text x="${rx}" y="${ry + 4 * M.rueda + 12}" font-size="4" fill="#5b6687" font-family="Arial">3 · Ruedas (pega 2 juntas = 1 rueda gruesa)</text>`;
+  let yy = Math.max(ky + k.W + k.H + T + 12, ry + 4 * M.rueda + 18);
+  if (M.alas) { h2 += alas(14, yy + 6); yy += 52; }
+  // carnet y lista de materiales en la hoja 1 (tiene espacio de sobra)
+  const yc = y0 + 2 * c.W + c.H + T + 20;
+  h1 += carnet(14, yc) + `<text x="104" y="${yc + 10}" font-size="3.6" fill="#1d2440" font-family="Arial"><tspan x="104" dy="0">✔ Pitillos: 2 de ${M.pitillo} mm</tspan><tspan x="104" dy="6">✔ Palitos: 2 de ${M.palito} mm</tspan><tspan x="104" dy="6">✔ Pega blanca o de barra</tspan><tspan x="104" dy="6">✔ Mejor en cartulina</tspan></text>`;
+  document.getElementById('hojas').innerHTML = hoja(`${M.n.replace(/^\S+ /, '')} · hoja 1 de 2`, h1) + hoja(`${M.n.replace(/^\S+ /, '')} · hoja 2 de 2`, h2);
+}
+
+// ===== Vista 3D hecha con las MISMAS caras =====
+const S3 = 2.1; // px por mm
+const uri = (w, h, dib) => "url('data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${dib(w, h)}</svg>`).replace(/'/g, '%27') + "')";
+function face(w, h, dib, tf) {
+  return `<div class="f" style="width:${w * S3}px;height:${h * S3}px;left:${-w * S3 / 2}px;top:${-h * S3 / 2}px;background-image:${uri(w, h, dib)};transform:${tf}"></div>`;
+}
+function caja(L, W, H, f, cx, cy, sinPiso) { // centro (cx, cy) en mm; Y hacia abajo
+  const t = (s) => `translate3d(${cx * S3}px,${cy * S3}px,0) ${s}`;
+  let s = face(L, H, f.lado, t(`translateZ(${W * S3 / 2}px)`)) + face(L, H, f.lado, t(`rotateY(180deg) translateZ(${W * S3 / 2}px)`))
+    + face(W, H, f.frente, t(`rotateY(-90deg) translateZ(${L * S3 / 2}px)`)) + face(W, H, f.atras, t(`rotateY(90deg) translateZ(${L * S3 / 2}px)`))
+    + face(L, W, f.techo, t(`rotateX(90deg) translateZ(${H * S3 / 2}px)`));
+  if (!sinPiso) s += face(L, W, f.abajo, t(`rotateX(-90deg) translateZ(${H * S3 / 2}px)`));
+  return s;
+}
+function rueda3d(M, x, y, z) {
+  const r = M.rueda, d = 2 * r * S3; let s = '';
+  for (const dz of [-1.2, 1.2]) s += `<div class="rueda" style="width:${d}px;height:${d}px;left:${-d / 2}px;top:${-d / 2}px;background:radial-gradient(circle,${M.rin} 0 ${r * .55 * S3}px,#23263a ${r * .55 * S3 + .5}px);transform:translate3d(${x * S3}px,${y * S3}px,${(z + dz) * S3}px)"></div>`;
+  return s;
+}
+let rotY = -35, rotX = -18;
+function armar3d() {
+  const M = MODELOS[ST.m], c = M.cuerpo, k = M.cabina;
+  const r = M.rueda, yBase = 0;
+  let s = '<div class="piso" style="transform:translateY(' + ((c.H / 2 + r * .9) * S3) + 'px) rotateX(90deg)"></div>';
+  s += caja(c.L, c.W, c.H, M, 0, yBase, false);
+  s += caja(k.L, k.W, k.H, { lado: M.cLado, frente: M.cFrente, atras: M.cAtras, techo: M.cTecho }, k.dx, yBase - c.H / 2 - k.H / 2, true);
+  const yr = c.H / 2 - r * .1, zr = M.ruedasAfuera ? c.W / 2 + 6 : c.W / 2 + 2.5;
+  for (const xf of [-0.3, 0.3]) for (const zs of [-1, 1]) s += rueda3d(M, c.L * xf, yr, zs * zr);
+  if (M.alas) {
+    // alerones: placas horizontales a lo ancho del carro (eje Z)
+    s += `<div class="f" style="width:${14 * S3}px;height:${70 * S3}px;left:${-7 * S3}px;top:${-35 * S3}px;background:linear-gradient(90deg,#e3262f 0 40%,#fff 40% 60%,#e3262f 60%);border:1px solid #1d2440;transform:translate3d(${(-c.L / 2 - 4) * S3}px,${(c.H / 2 - 1) * S3}px,0) rotateX(90deg)"></div>`;
+    s += `<div class="f" style="width:${16 * S3}px;height:${54 * S3}px;left:${-8 * S3}px;top:${-27 * S3}px;background:#1d2440;border:1px solid #e3262f;transform:translate3d(${(c.L / 2 - 8) * S3}px,${(-c.H / 2 - 18) * S3}px,0) rotateZ(-12deg) rotateX(90deg)"></div>`;
+    for (const z of [-13, 13]) s += `<div class="f" style="width:${8 * S3}px;height:${18 * S3}px;left:${-4 * S3}px;top:${-9 * S3}px;background:#e3262f;transform:translate3d(${(c.L / 2 - 8) * S3}px,${(-c.H / 2 - 9) * S3}px,${z * S3}px)"></div>`;
+  }
+  const m = document.getElementById('mundo');
+  m.innerHTML = s;
+  pose();
+}
+const pose = () => (document.getElementById('mundo').style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`);
+(() => { // arrastrar para girar + giro suave solo
+  const e = document.getElementById('escena'); let x = null, y = null, auto = true;
+  e.onpointerdown = (ev) => { x = ev.clientX; y = ev.clientY; auto = false; e.setPointerCapture(ev.pointerId); };
+  e.onpointermove = (ev) => { if (x === null) return; rotY += (ev.clientX - x) * .5; rotX = Math.max(-70, Math.min(10, rotX - (ev.clientY - y) * .3)); x = ev.clientX; y = ev.clientY; pose(); };
+  e.onpointerup = () => { x = null; };
+  setInterval(() => { if (auto) { rotY += .4; pose(); } }, 30);
+})();
+
+// ===== Pasos =====
+function pasos() {
+  const M = MODELOS[ST.m];
+  const p = [
+    ['✂️', 'Recorta', 'Recorta por la línea continua. No cortes las líneas punteadas.'],
+    ['📐', 'Dobla', 'Dobla todas las líneas punteadas hacia adentro, también las pestañas grises.'],
+    ['🧴', 'Arma el cuerpo', 'Pega las pestañas por dentro y cierra la caja con el techo.'],
+    ['🚘', 'Pega la ' + (M.alas ? 'cabina y los alerones' : 'cabina'), 'Pega las pestañas de la cabina encima del cuerpo, un poquito hacia atrás.' + (M.alas ? ' El alerón grande va atrás y el pequeño debajo de la nariz.' : '')],
+    ['🥤', 'Pitillos', `Pega 2 pitillos de ${M.pitillo} mm debajo del piso, donde dice "pitillo".`],
+    ['🛞', 'Ruedas', `Pega las ruedas de 2 en 2. Haz el huequito, mete un palito de ${M.palito} mm por el pitillo y pega una rueda en cada punta. ¡A correr!`],
+  ];
+  document.getElementById('pasos').innerHTML = p.map(([i, t, d], n) => `<div class="paso"><b>${i} ${n + 1}. ${t}</b>${d}</div>`).join('');
+}
+
+// ===== Controles =====
+function todo() { hojas(); armar3d(); pasos(); }
+const mod = document.getElementById('modelos');
+for (const [k, v] of Object.entries(MODELOS)) {
+  const b = document.createElement('button'); b.textContent = v.n; b.className = k === ST.m ? 'on' : '';
+  b.onclick = () => { ST.m = k; [...mod.children].forEach((x) => x.classList.toggle('on', x === b)); todo(); };
+  mod.appendChild(b);
+}
+document.getElementById('nom').oninput = (e) => { ST.nom = e.target.value; todo(); };
+document.getElementById('num').oninput = (e) => { ST.num = e.target.value; todo(); };
+document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  for (const v of ['3d', 'hojas', 'pasos']) document.getElementById('v-' + v).style.display = b.dataset.v === v ? '' : 'none';
+}));
+todo();
+</script>
+</body>
+</html>
