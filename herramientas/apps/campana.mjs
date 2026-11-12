@@ -60,23 +60,26 @@ if (!A.includes('--sin-campana')) {
     const hash = Object.values(r.images || {})[0]?.hash; if (!hash) throw new Error('no se subió ' + t.img);
     cards.push({ image_hash: hash, link: utm(t.ruta), name: t.titulo, description: t.desc, call_to_action: { type: 'LEARN_MORE', value: { link: utm(t.ruta) } } });
   }
+  // limpia intentos anteriores que quedaron vacíos (sin conjuntos)
+  const viejas = await api('GET', `${act}/campaigns`, { fields: 'id,name,adsets.limit(1){id}', limit: 50 }).catch(() => ({ data: [] }));
+  for (const v of viejas.data || []) if (v.name.startsWith('Pixelia · 3 apps gratis') && !(v.adsets && v.adsets.data && v.adsets.data.length)) { await api('DELETE', v.id, {}).catch(() => {}); console.log('🧹 Borré una campaña vacía de un intento anterior'); }
   const camp = await api('POST', `${act}/campaigns`, { name: nombre, objective: 'OUTCOME_TRAFFIC', status: 'PAUSED', special_ad_categories: [], buying_type: 'AUCTION', is_adset_budget_sharing_enabled: false });
   // 2 conjuntos (Diego 12-nov): Instagram y Facebook por separado, mitad del presupuesto cada uno → se ve cuál rinde más
   const msg = CAPTION.replace('(enlace en el perfil)', '').replace(/\n\n#.*$/s, '');
   const cr = await api('POST', `${act}/adcreatives`, { name: `${nombre} · carrusel`, object_story_spec: { page_id: page, ...(ig ? { instagram_user_id: ig } : {}),
     link_data: { link: utm('/apps'), message: msg, child_attachments: cards, multi_share_optimized: false, multi_share_end_card: false } } });
   const LUGARES = [
-    { nom: 'Instagram', p: { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'explore', 'explore_home', 'profile_feed'] } },
+    { nom: 'Instagram', p: { publisher_platforms: ['instagram'], instagram_positions: ['stream', 'story', 'explore_home', 'profile_feed'] } },
     { nom: 'Facebook', p: { publisher_platforms: ['facebook'], facebook_positions: ['feed', 'story'] } }];
   const sets = [], ads = [];
-  for (const L of LUGARES) {
+  try { for (const L of LUGARES) {
     const set = await api('POST', `${act}/adsets`, { name: `${nombre} · ${L.nom}`, campaign_id: camp.id, status: 'PAUSED', billing_event: 'IMPRESSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
       daily_budget: Math.round(USD * 100 / LUGARES.length), destination_type: 'WEBSITE', optimization_goal: 'LANDING_PAGE_VIEWS',
       targeting: { geo_locations: { countries: PAISES }, age_min: EDAD[0], age_max: EDAD[1], targeting_automation: { advantage_audience: 0 }, ...L.p } });
     const ad = await api('POST', `${act}/ads`, { name: `${nombre} · ${L.nom}`, adset_id: set.id, creative: { creative_id: cr.id }, status: ACTIVAR ? 'ACTIVE' : 'PAUSED' });
     if (ACTIVAR) await api('POST', set.id, { status: 'ACTIVE' });
     sets.push(set.id); ads.push({ letra: L.nom, id: ad.id, nombre: 'carrusel · ' + L.nom }); console.log(`✔ Conjunto ${L.nom}: $${(USD / LUGARES.length).toFixed(2)}/día`);
-  }
+  } } catch (e) { if (!sets.length) await api('DELETE', camp.id, {}).catch(() => {}); throw e; }
   if (ACTIVAR) await api('POST', camp.id, { status: 'ACTIVE' });
   const F = path.join(path.dirname(config.paths.files), '..', 'data', 'campanas.json');
   let cs = []; try { cs = JSON.parse(fs.readFileSync(F, 'utf8')); } catch {}
