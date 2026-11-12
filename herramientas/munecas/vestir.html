@@ -26,13 +26,21 @@ small{display:block;margin:14px;color:#8a7a96}
   <button data-r="vestido" class="on">🌼 Vestido</button>
   <button data-r="casual">💗 Casual</button>
   <button data-r="estrellas">⭐ Estrellas</button>
+  <button data-r="fiesta">👑 Fiesta</button>
+  <button data-r="uniforme">🎒 Colegio</button>
+  <button data-r="pijama">☁️ Pijama</button>
+  <button data-r="lluvia">☔ Lluvia</button>
 </div>
 <div class="fila"><b>Peinado</b>
   <button data-p="">Sin peinado</button>
-  <button data-p="pelo" class="on">Rizos con cintillo</button>
+  <button data-p="pelo" class="on">Rizos</button>
+  <button data-p="trenzas">Trenzas</button>
+  <button data-p="cola">Cola</button>
+  <button data-p="rubia">Melena rubia</button>
+  <button data-p="lisa">Lacio con flequillo</button>
 </div>
 <div class="fila"><input id="inp" placeholder="Nombre de la niña" maxlength="14" value="Sofía"></div>
-<small>Demo de prueba · 3 conjuntos y 1 peinado</small>
+<small>Demo de prueba · 7 conjuntos y 5 peinados</small>
 <script>
 const ropa=document.getElementById('ropa'),pelo=document.getElementById('pelo');
 function sel(attr,img){document.querySelectorAll('['+attr+']').forEach(b=>b.onclick=()=>{
