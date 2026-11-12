@@ -1,0 +1,84 @@
+"""Muñeca chibi anime de Pixelia, dibujada en SVG (v3). Calva: los peinados van aparte.
+python3 base.py [piel] → base.svg + base.png"""
+import sys, subprocess
+PIEL = sys.argv[1] if len(sys.argv) > 1 else '#ffe0cc'
+def sh(c, k):
+    n = int(c[1:], 16); r, g, b = n >> 16, (n >> 8) & 255, n & 255
+    f = lambda v: max(0, min(255, v - k)); return '#%02x%02x%02x' % (f(r), f(g), f(b))
+P, S, S2 = PIEL, sh(PIEL, 22), sh(PIEL, 40)
+LN = '#4b3260'
+L = f'stroke="{LN}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"'
+svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 660" width="800" height="1320">
+<defs>
+ <radialGradient id="mej" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#ff8fae" stop-opacity=".7"/><stop offset="1" stop-color="#ff8fae" stop-opacity="0"/></radialGradient>
+ <linearGradient id="iris" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a6e"/><stop offset=".55" stop-color="#6f5bd6"/><stop offset="1" stop-color="#b9a8ff"/></linearGradient>
+ <linearGradient id="cab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{P}"/><stop offset="1" stop-color="{S}"/></linearGradient>
+ <linearGradient id="tela" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e9e6f5"/><stop offset=".25" stop-color="#ffffff"/><stop offset=".75" stop-color="#ffffff"/><stop offset="1" stop-color="#e9e6f5"/></linearGradient>
+</defs>
+<!-- PIERNAS (cortas y gorditas) -->
+<g {L} fill="{P}">
+ <path d="M162 456 Q158 520 166 580 Q168 594 172 600 L198 600 Q201 560 200 520 Q200 480 200 456 Z"/>
+ <path d="M238 456 Q242 520 234 580 Q232 594 228 600 L202 600 Q199 560 200 520 Q200 480 200 456 Z"/>
+</g>
+<path d="M174 528 Q184 536 192 529 M208 529 Q216 536 226 528" stroke="{S2}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+<!-- PIES redondos -->
+<g {L} fill="{P}">
+ <path d="M170 596 Q160 612 166 624 Q174 634 192 632 Q202 630 201 618 L199 596 Z"/>
+ <path d="M230 596 Q240 612 234 624 Q226 634 208 632 Q198 630 199 618 L201 596 Z"/>
+</g>
+<path d="M174 628 Q177 624 180 628 M181 630 Q184 626 187 630 M188 630 Q191 626 194 630 M226 628 Q223 624 220 628 M219 630 Q216 626 213 630 M212 630 Q209 626 206 630" stroke="{S2}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<!-- BRAZOS -->
+<g {L} fill="{P}">
+ <path d="M160 316 Q138 320 132 342 Q120 390 110 430 Q108 442 120 444 Q130 446 132 436 Q144 396 160 364 Z"/>
+ <path d="M240 316 Q262 320 268 342 Q280 390 290 430 Q292 442 280 444 Q270 446 268 436 Q256 396 240 364 Z"/>
+</g>
+<!-- MANOS (palma + pulgar + dedos marcados) -->
+<g {L} fill="{P}">
+ <path d="M114 430 Q100 438 100 456 Q101 474 112 480 Q124 484 130 470 Q134 458 130 444 Q126 432 114 430 Z"/>
+ <path d="M128 446 Q138 444 138 454 Q137 462 129 462"/>
+ <path d="M286 430 Q300 438 300 456 Q299 474 288 480 Q276 484 270 470 Q266 458 270 444 Q274 432 286 430 Z"/>
+ <path d="M272 446 Q262 444 262 454 Q263 462 271 462"/>
+</g>
+<path d="M106 462 L108 474 M113 465 L115 478 M120 466 L121 478 M294 462 L292 474 M287 465 L285 478 M280 466 L279 478" stroke="{S2}" stroke-width="1.8" stroke-linecap="round"/>
+<!-- TORSO -->
+<path d="M160 312 Q200 302 240 312 Q246 330 244 360 Q240 400 238 420 Q244 440 246 460 L154 460 Q156 440 162 420 Q160 400 156 360 Q154 330 160 312 Z" fill="{P}" {L}/>
+<!-- ROPA INTERIOR (camiseta y short blancos) -->
+<path d="M170 318 Q176 340 200 342 Q224 340 230 318 Q240 320 242 334 Q240 380 238 418 L162 418 Q160 380 158 334 Q160 320 170 318 Z" fill="url(#tela)" {L}/>
+<path d="M162 416 L238 416 Q244 440 246 466 Q228 472 206 466 L200 448 L194 466 Q172 472 154 466 Q156 440 162 416 Z" fill="url(#tela)" {L}/>
+<path d="M200 448 L200 430" stroke="#c9c2e0" stroke-width="2" stroke-linecap="round"/>
+<!-- CUELLO -->
+<path d="M181 280 L181 314 Q200 324 219 314 L219 280 Z" fill="{P}" {L}/>
+<path d="M182 300 Q200 312 218 300 L218 286 L182 286 Z" fill="{S}" stroke="none"/>
+<path d="M178 326 Q188 330 194 328 M206 328 Q212 330 222 326" stroke="{S2}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+<!-- OREJAS -->
+<g {L} fill="{P}">
+ <path d="M92 190 Q74 186 76 210 Q80 232 102 230 Z"/><path d="M308 190 Q326 186 324 210 Q320 232 298 230 Z"/>
+</g>
+<path d="M86 200 Q84 212 94 220 M314 200 Q316 212 306 220" stroke="{S2}" stroke-width="2" fill="none" stroke-linecap="round"/>
+<!-- CABEZA (calva, grande y redonda) -->
+<path d="M200 66 Q306 66 312 178 Q316 236 284 262 Q248 292 200 294 Q152 292 116 262 Q84 236 88 178 Q94 66 200 66 Z" fill="url(#cab)" {L}/>
+<ellipse cx="166" cy="104" rx="38" ry="16" fill="#ffffff" opacity=".35" transform="rotate(-18 166 104)"/>
+<!-- CEJAS -->
+<path d="M138 168 Q156 158 174 164 M226 164 Q244 158 262 168" stroke="#7a5a6e" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+<!-- OJOS anime -->
+<g>
+ <ellipse cx="157" cy="210" rx="28" ry="34" fill="#fff" stroke="{LN}" stroke-width="2.4"/>
+ <ellipse cx="243" cy="210" rx="28" ry="34" fill="#fff" stroke="{LN}" stroke-width="2.4"/>
+ <ellipse cx="159" cy="214" rx="23" ry="29" fill="url(#iris)"/><ellipse cx="241" cy="214" rx="23" ry="29" fill="url(#iris)"/>
+ <ellipse cx="159" cy="216" rx="9" ry="12" fill="#22184a"/><ellipse cx="241" cy="216" rx="9" ry="12" fill="#22184a"/>
+ <ellipse cx="150" cy="198" rx="9" ry="11" fill="#fff"/><ellipse cx="232" cy="198" rx="9" ry="11" fill="#fff"/><path d="M146 226 Q159 236 172 226" stroke="#e7ddff" stroke-width="3" fill="none" opacity=".8"/><path d="M228 226 Q241 236 254 226" stroke="#e7ddff" stroke-width="3" fill="none" opacity=".8"/>
+ <circle cx="167" cy="228" r="4" fill="#fff"/><circle cx="249" cy="228" r="4" fill="#fff"/>
+ <path d="M128 192 Q140 176 160 176 Q178 176 186 190" stroke="#2b1d3c" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+ <path d="M272 192 Q260 176 240 176 Q222 176 214 190" stroke="#2b1d3c" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+ <path d="M130 190 L120 182 M134 185 L126 176 M270 190 L280 182 M266 185 L274 176" stroke="#2b1d3c" stroke-width="3" stroke-linecap="round"/>
+ <path d="M140 241 Q158 248 176 240 M224 240 Q242 248 260 241" stroke="{LN}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".5"/>
+</g>
+<!-- MEJILLAS, NARIZ, BOCA -->
+<ellipse cx="132" cy="250" rx="24" ry="13" fill="url(#mej)"/><ellipse cx="268" cy="250" rx="24" ry="13" fill="url(#mej)"/>
+<path d="M124 248 L128 252 M132 247 L136 251 M264 248 L268 252 M272 247 L276 251" stroke="#ff6f96" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+<path d="M199 240 Q201 243 203 240" stroke="#c98f86" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+<path d="M186 256 Q200 274 214 256 Q200 260 186 256 Z" fill="#ff7b95" stroke="{LN}" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M192 263 Q200 270 208 263" fill="#ffb3c1"/>
+</svg>'''
+open('base.svg', 'w').write(svg)
+subprocess.run(['rsvg-convert', '-w', '800', 'base.svg', '-o', 'base.png'], check=True)
