@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Viste a tu muñeca · Pixelia</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:linear-gradient(#fdf0f7,#eaf2ff);color:#3b2a4a;text-align:center}
+h1{font-size:22px;margin:14px 0 4px}
+.esc{position:relative;width:min(88vw,380px);aspect-ratio:488/670;margin:0 auto}
+.esc img{position:absolute;inset:0;width:100%;height:100%;transition:opacity .2s}
+.nom{font-weight:800;font-size:24px;color:#d0457f;min-height:30px;margin:2px 0 6px}
+.fila{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 10px}
+.fila b{width:100%;font-size:14px}
+button{border:2px solid #e9c6dc;background:#fff;border-radius:14px;padding:9px 14px;font-size:15px;cursor:pointer}
+button.on{background:#d0457f;color:#fff;border-color:#d0457f}
+input{border:2px solid #e9c6dc;border-radius:14px;padding:9px 12px;font-size:15px;width:200px}
+small{display:block;margin:14px;color:#8a7a96}
+</style></head><body>
+<h1>👗 Viste a tu muñeca</h1>
+<div class="nom" id="nom">Sofía</div>
+<div class="esc">
+  <img src="arte/base.png" alt="">
+  <img id="ropa" src="arte/vestido.png" alt="">
+  <img id="pelo" src="arte/pelo.png" alt="">
+</div>
+<div class="fila"><b>Ropa</b>
+  <button data-r="" >Básica</button>
+  <button data-r="vestido" class="on">🌼 Vestido</button>
+  <button data-r="casual">💗 Casual</button>
+</div>
+<div class="fila"><b>Peinado</b>
+  <button data-p="">Sin peinado</button>
+  <button data-p="pelo" class="on">Rizos con cintillo</button>
+</div>
+<div class="fila"><input id="inp" placeholder="Nombre de la niña" maxlength="14" value="Sofía"></div>
+<small>Demo de prueba · 2 conjuntos y 1 peinado</small>
+<script>
+const ropa=document.getElementById('ropa'),pelo=document.getElementById('pelo');
+function sel(attr,img){document.querySelectorAll('['+attr+']').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('['+attr+']').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  const v=b.getAttribute(attr);img.style.opacity=v?1:0;if(v)img.src='arte/'+v+'.png';});}
+sel('data-r',ropa);sel('data-p',pelo);
+document.getElementById('inp').oninput=e=>document.getElementById('nom').textContent=e.target.value;
+</script></body></html>
