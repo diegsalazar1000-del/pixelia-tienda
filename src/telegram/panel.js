@@ -63,6 +63,16 @@ async function bloqueCampana(c) {
   return l.join('\n');
 }
 
+// De dónde vinieron los correos de la semana (Diego 12-nov: "no sé de dónde vino")
+const ORIGEN = { 'regalo:reto': '🔥 Reto 30 días', 'regalo:jefa': '👑 demo La Jefa', 'mi-gran-aventura': '📚 Aventura', 'plan-financiero-2027': '📊 Plan', regalo: '🎁 regalo' };
+function origenCorreos() {
+  const filas = db.prepare(`SELECT COALESCE(NULLIF(source,''),'cupón') o, COUNT(*) n FROM subscribers WHERE created_at >= date('now','-6 day') GROUP BY o ORDER BY n DESC`).all();
+  if (!filas.length) return [];
+  const prod = (sl) => db.prepare('SELECT title FROM products WHERE slug = ?').get(sl)?.title;
+  const nom = (o) => ORIGEN[o] || (o.startsWith('regalo:') ? '🎁 ' + o.slice(7) : prod(o) ? '🏷️ cupón en ' + prod(o) : o === 'cupón' ? '🏷️ cupón 15%' : o);
+  return ['   ↳ ' + filas.map((f) => `${esc(nom(f.o))} ${f.n}`).join(' · ')];
+}
+
 // --- Vistas ---
 async function inicio() {
   const vis = one(`SELECT SUM(CASE WHEN day = date('now') THEN views ELSE 0 END) h, SUM(views) s FROM product_views WHERE day >= date('now','-6 day')`);
@@ -75,6 +85,7 @@ async function inicio() {
   return [`📊 <b>Cómo vamos</b> · ${hora()}`, '<i>hoy · últimos 7 días</i>', '',
     `👀 Visitas: <b>${vis.h || 0}</b> · ${vis.s || 0}`,
     `📩 Correos: <b>${cor.h || 0}</b> · ${cor.s || 0}`,
+    ...origenCorreos(),
     `🛒 Ventas: <b>${vh.n || 0}</b> (${usd(vh.c)}) · ${vs.n || 0} (${usd(vs.c)})`,
     `💸 Anuncios: <b>$${Number(mh?.spend || 0).toFixed(2)}</b> · $${gs.toFixed(2)}`,
     vs.n ? `🎯 Cada venta costó en anuncios: $${(gs / vs.n).toFixed(2)}` : '🎯 Aún sin ventas esta semana',
