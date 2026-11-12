@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Muñeca de Papel · demo Pixelia</title>
+<style>
+  :root{--lila:#7b4fd6;--rosa:#ff5fa2;--crema:#fff7ef;--tinta:#3b2a52}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#fde7f3,#efe6ff 60%,#fff7ef);color:var(--tinta)}
+  .wrap{max-width:980px;margin:0 auto;padding:18px 14px 60px}
+  h1{font-size:clamp(28px,6vw,46px);margin:6px 0 2px;text-align:center;line-height:1.05;color:var(--lila)}
+  h1 span{color:var(--rosa)}
+  .sub{text-align:center;margin:0 0 14px;font-weight:600}
+  .cinta{display:inline-block;background:var(--lila);color:#fff;border-radius:999px;padding:6px 14px;font-weight:700;font-size:14px}
+  .top{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .tabs{display:flex;gap:8px;justify-content:center;margin:10px 0 16px}
+  .tabs button{border:0;border-radius:999px;padding:10px 16px;font-weight:800;font-size:15px;background:#fff;color:var(--lila);box-shadow:0 2px 0 #d9c9ff;cursor:pointer}
+  .tabs button.on{background:var(--lila);color:#fff}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .panel{background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 20px rgba(123,79,214,.12);border:2px dashed #e3d6ff;position:relative}
+  .etq{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--rosa);color:#fff;font-weight:800;border-radius:999px;padding:4px 14px;font-size:13px;letter-spacing:.5px;white-space:nowrap}
+  .etq.l{background:var(--lila)}
+  .escena{display:flex;justify-content:center;align-items:flex-end;min-height:420px;background:radial-gradient(circle at 50% 40%,#fff 0,#fbf3ff 60%,#f4ebff 100%);border-radius:16px}
+  .escena svg{width:min(100%,300px);height:auto}
+  .grupo h3{margin:10px 2px 6px;font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:#8a72b8}
+  .piezas{display:flex;flex-wrap:wrap;gap:8px}
+  .pz{width:76px;height:76px;border-radius:14px;background:#fbf8ff;border:2px solid #eee4ff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:3px;position:relative}
+  .pz.on{border-color:var(--rosa);background:#fff0f7;box-shadow:0 0 0 3px #ffd3e7}
+  .pz svg{width:100%;height:100%}
+  .pz .x{font-size:26px}
+  .colores{display:flex;gap:8px;flex-wrap:wrap}
+  .c{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #e3d6ff;cursor:pointer}
+  .c.on{box-shadow:0 0 0 3px var(--rosa)}
+  .nombre{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .nombre input{flex:1;padding:10px 12px;border-radius:12px;border:2px solid #e3d6ff;font-size:16px}
+  .ventajas{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:18px 0 6px}
+  .ventajas div{background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;box-shadow:0 2px 0 #eadfff}
+  .nota{font-size:13px;color:#7d6c96;text-align:center;margin-top:10px}
+  /* hoja para imprimir */
+  #hoja{display:none}
+  .hoja{background:#fff;border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(0,0,0,.08);max-width:820px;margin:0 auto}
+  .hoja h2{margin:0 0 4px;color:var(--lila);font-size:22px}
+  .hoja p{margin:0 0 10px;font-size:13px}
+  .cortes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:640px){.cortes{grid-template-columns:repeat(2,1fr)}}
+  .corte{border:2px dashed #b9a6dc;border-radius:10px;padding:6px;text-align:center;font-size:11px;color:#8a72b8;position:relative}
+  .corte svg{width:100%;height:auto}
+  .corte.grande{grid-row:span 2}
+  .tijera{position:absolute;top:-11px;left:8px;background:#fff;padding:0 3px;font-size:14px}
+  @media print{body{background:#fff}.wrap>*:not(#hoja){display:none!important}#hoja{display:block!important}.hoja{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="cinta">👗 DEMO · Pixelia</span></div>
+  <h1>Mi Muñeca <span>de Papel</span></h1>
+  <p class="sub">Imprime, recorta, arma y juega 💜 · con el nombre de tu hija</p>
+
+  <div class="tabs"><button class="on" data-v="jugar">🎀 Vístela aquí</button><button data-v="hoja">✂️ Hoja para imprimir</button></div>
+
+  <div id="jugar">
+    <div class="grid">
+      <div class="panel">
+        <span class="etq">DESMONTADA · toca para ponerle</span>
+        <div class="grupo"><h3>👗 Ropa</h3><div class="piezas" id="g-ropa"></div></div>
+        <div class="grupo"><h3>💇 Peinado</h3><div class="piezas" id="g-pelo"></div></div>
+        <div class="grupo"><h3>👟 Zapatos</h3><div class="piezas" id="g-zap"></div></div>
+        <div class="grupo"><h3>✨ Accesorios</h3><div class="piezas" id="g-acc"></div></div>
+        <div class="grupo"><h3>🎨 Color de piel</h3><div class="colores" id="g-piel"></div></div>
+        <div class="grupo"><h3>🎨 Color de pelo</h3><div class="colores" id="g-cpelo"></div></div>
+        <div class="grupo"><h3>✍️ Su nombre en la base</h3><div class="nombre"><input id="nom" maxlength="14" value="Valentina"></div></div>
+      </div>
+      <div class="panel">
+        <span class="etq l">MONTADA</span>
+        <div class="escena" id="escena"></div>
+      </div>
+    </div>
+    <div class="ventajas"><div>📄 Archivo digital</div><div>⚡ Llega al instante</div><div>🖨️ Imprímela las veces que quieras</div><div>💜 Con su nombre</div></div>
+    <p class="nota">Demo con 1 muñeca, 4 conjuntos, 3 peinados, 3 zapatos y 4 accesorios. El producto completo traería muchas más.</p>
+  </div>
+
+  <div id="hoja">
+    <div class="hoja">
+      <h2>✂️ Hoja para imprimir · Muñeca de <span class="nomH">Valentina</span></h2>
+      <p>Imprime en hoja carta (mejor en cartulina). Recorta por la línea punteada y dobla las pestañas blancas hacia atrás para vestirla. Dobla la base para que se pare sola.</p>
+      <div class="cortes" id="cortes"></div>
+      <p class="nota">🖨️ Desde el teléfono: Compartir → Imprimir. En la computadora: Ctrl + P.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Muñeca 100% original de Pixelia (dibujada en SVG, sin personajes de nadie) =====
+const PIEL = ['#f8d7bd', '#e7b08a', '#c68a62', '#8d5a3b'];
+const CPELO = ['#5b3a29', '#2a1d1a', '#b4552a', '#c99a54', '#d9467c'];
+const S = { piel: PIEL[1], cpelo: CPELO[0], ropa: 'flores', pelo: 'rizos', zap: 'tenis', acc: new Set(['cintillo']), nom: 'Valentina' };
+
+const sh = (c, k) => { // oscurecer un color para sombras
+  const n = parseInt(c.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  r = Math.max(0, r - k); g = Math.max(0, g - k); b = Math.max(0, b - k);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+};
+const L = 'stroke="#4a3560" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"';
+
+function cuerpo(p) {
+  const s = sh(p, 25);
+  return `<g ${L}>
+    <rect x="52" y="122" width="15" height="90" rx="7.5" fill="${p}"/><rect x="133" y="122" width="15" height="90" rx="7.5" fill="${p}"/>
+    <circle cx="59.5" cy="214" r="8.5" fill="${p}"/><circle cx="140.5" cy="214" r="8.5" fill="${p}"/>
+    <rect x="76" y="190" width="21" height="126" rx="10" fill="${p}"/><rect x="103" y="190" width="21" height="126" rx="10" fill="${p}"/>
+    <ellipse cx="85" cy="318" rx="13" ry="7" fill="${p}"/><ellipse cx="115" cy="318" rx="13" ry="7" fill="${p}"/>
+    <path d="M70 120 Q100 112 130 120 L134 196 Q100 204 66 196 Z" fill="${p}"/>
+    <rect x="92" y="106" width="16" height="16" fill="${s}" stroke="none"/>
+    <circle cx="56" cy="80" r="8" fill="${p}"/><circle cx="144" cy="80" r="8" fill="${p}"/>
+    <circle cx="100" cy="72" r="45" fill="${p}"/>
+  </g>
+  <g>
+    <ellipse cx="82" cy="78" rx="8" ry="10" fill="#3b2a52"/><ellipse cx="118" cy="78" rx="8" ry="10" fill="#3b2a52"/>
+    <circle cx="85" cy="74" r="3" fill="#fff"/><circle cx="121" cy="74" r="3" fill="#fff"/><circle cx="80" cy="82" r="1.6" fill="#fff"/><circle cx="116" cy="82" r="1.6" fill="#fff"/>
+    <path d="M73 64 Q82 59 90 63 M110 63 Q118 59 127 64" stroke="#4a3560" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="72" cy="94" rx="8" ry="5" fill="#ff8fb0" opacity=".55"/><ellipse cx="128" cy="94" rx="8" ry="5" fill="#ff8fb0" opacity=".55"/>
+    <path d="M92 97 Q100 104 108 97" stroke="#4a3560" stroke-width="2.4" fill="#ff7a9a" stroke-linecap="round"/>
+  </g>`;
+}
+const interior = `<g ${L}><path d="M72 128 Q100 122 128 128 L130 168 Q100 174 70 168 Z" fill="#fff"/><rect x="74" y="184" width="52" height="24" rx="8" fill="#fff"/></g>`;
+
+const ROPA = {
+  flores: { n: 'Vestido de flores', d: (s) => `<g ${L}>
+      <circle cx="62" cy="128" r="12" fill="#ffd25c"/><circle cx="138" cy="128" r="12" fill="#ffd25c"/>
+      <path d="M66 118 Q100 108 134 118 L138 152 L160 250 Q100 266 40 250 L62 152 Z" fill="#ffd25c"/>
+      <path d="M86 116 Q100 128 114 116" fill="#fff"/>
+      <path d="M62 152 L138 152" stroke="#e7a92b" stroke-width="3"/></g>
+      ${[[70,180],[100,200],[128,182],[82,230],[118,232],[60,236],[140,238],[100,170]].map(([x,y])=>`<g transform="translate(${x} ${y})"><circle r="4.5" fill="#ff6fa8"/><circle cx="0" cy="-6" r="3.4" fill="#fff"/><circle cx="6" cy="0" r="3.4" fill="#fff"/><circle cx="0" cy="6" r="3.4" fill="#fff"/><circle cx="-6" cy="0" r="3.4" fill="#fff"/><circle r="2.6" fill="#ffb02e"/></g>`).join('')}` },
+  jean: { n: 'Jean y franela', d: () => `<g ${L}>
+      <path d="M72 184 L128 184 L130 314 L105 314 L100 214 L95 314 L70 314 Z" fill="#4c78cf"/>
+      <path d="M100 190 L100 214 M78 200 Q86 206 92 200 M108 200 Q114 206 122 200" stroke="#2d4f99" fill="none"/>
+      <rect x="49" y="120" width="21" height="30" rx="8" fill="#ff8fb8"/><rect x="130" y="120" width="21" height="30" rx="8" fill="#ff8fb8"/>
+      <path d="M64 118 Q100 110 136 118 L138 194 Q100 202 62 194 Z" fill="#ff8fb8"/>
+      <path d="M90 116 Q100 124 110 116" fill="#fff"/></g>
+      <path d="M100 168 C92 158 82 164 88 172 L100 182 L112 172 C118 164 108 158 100 168 Z" fill="#fff" stroke="#4a3560" stroke-width="1.5"/>` },
+  fiesta: { n: 'Vestido de fiesta', d: () => `<g ${L}>
+      <path d="M74 120 L82 112 M126 120 L118 112" stroke-width="4" stroke="#1fa39c"/>
+      <path d="M72 122 Q100 116 128 122 L132 170 Q100 176 68 170 Z" fill="#34c3bb"/>
+      <path d="M64 166 Q100 156 136 166 L166 238 Q100 258 34 238 Z" fill="#7fe0d8" opacity=".9"/>
+      <path d="M68 168 Q100 160 132 168 L154 232 Q100 248 46 232 Z" fill="#34c3bb"/>
+      <path d="M68 170 Q100 182 132 170" stroke="#fff" stroke-width="4" fill="none"/></g>
+      ${[[80,200],[120,206],[100,224],[62,226],[138,224],[100,190]].map(([x,y])=>`<path transform="translate(${x} ${y})" d="M0 -5 L1.5 -1.5 L5 0 L1.5 1.5 L0 5 L-1.5 1.5 L-5 0 L-1.5 -1.5 Z" fill="#fff"/>`).join('')}` },
+  pijama: { n: 'Pijama de estrellas', d: () => `<g ${L}>
+      <path d="M72 184 L128 184 L130 316 L105 316 L100 212 L95 316 L70 316 Z" fill="#6f80e6"/>
+      <rect x="49" y="120" width="21" height="96" rx="9" fill="#8e9cf0"/><rect x="130" y="120" width="21" height="96" rx="9" fill="#8e9cf0"/>
+      <path d="M64 118 Q100 110 136 118 L138 196 Q100 204 62 196 Z" fill="#8e9cf0"/>
+      <path d="M100 118 L100 196" stroke="#5b69c9"/></g>
+      ${[[82,140],[118,150],[90,172],[120,180],[84,240],[118,262],[86,290],[114,226],[60,170],[140,190]].map(([x,y])=>`<path transform="translate(${x} ${y})" d="M0 -6 L1.8 -1.8 L6 -1.6 L2.6 1.2 L3.8 5.6 L0 3 L-3.8 5.6 L-2.6 1.2 L-6 -1.6 L-1.8 -1.8 Z" fill="#ffe066"/>`).join('')}` },
+};
+
+const capa = (c) => `<path d="M54 80 Q52 22 100 22 Q148 22 146 80 Q134 46 100 42 Q66 46 54 80 Z" fill="${c}" ${L}/>`;
+const PELO = {
+  rizos: { n: 'Rizos', atras: (c) => `<g ${L} fill="${c}">${[[52,70],[48,100],[56,128],[148,70],[152,100],[144,128],[64,44],[136,44],[100,26],[78,30],[122,30]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="22"/>`).join('')}</g>`,
+    frente: (c) => `${capa(c)}<g ${L} fill="${c}">${[[66,52],[82,42],[100,40],[118,42],[134,52]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="13"/>`).join('')}</g>` },
+  cola: { n: 'Cola alta', atras: (c) => `<path d="M128 34 Q178 40 170 100 Q166 140 150 168 Q156 122 140 92 Q132 64 118 40 Z" fill="${c}" ${L}/>`,
+    frente: (c) => `${capa(c)}<path d="M56 74 Q70 34 120 34 Q96 48 86 70 Q74 60 56 74 Z" fill="${sh(c,-20)}" ${L}/><circle cx="128" cy="34" r="9" fill="#ff5fa2" ${L}/>` },
+  trenzas: { n: 'Trenzas', atras: (c) => `<g ${L} fill="${c}">${[0,1,2,3,4].map(i=>`<ellipse cx="${58 - i}" cy="${108 + i*20}" rx="12" ry="12"/><ellipse cx="${142 + i}" cy="${108 + i*20}" rx="12" ry="12"/>`).join('')}</g><circle cx="54" cy="208" r="7" fill="#ffd25c" ${L}/><circle cx="146" cy="208" r="7" fill="#ffd25c" ${L}/>`,
+    frente: (c) => `${capa(c)}<path d="M100 26 L100 46" stroke="${sh(c,30)}" stroke-width="2"/>` },
+};
+
+const ZAP = {
+  tenis: { n: 'Tenis', d: () => `<g ${L}><path d="M71 312 Q71 302 85 302 Q99 302 99 312 L99 322 L71 322 Z" fill="#fff"/><path d="M101 312 Q101 302 115 302 Q129 302 129 312 L129 322 L101 322 Z" fill="#fff"/><path d="M73 316 L97 316 M103 316 L127 316" stroke="#ff5fa2" stroke-width="3"/></g>` },
+  botas: { n: 'Botas', d: () => `<g ${L}><path d="M74 284 L97 284 L98 316 Q99 324 90 324 L70 324 Q68 316 74 312 Z" fill="#8a5a3b"/><path d="M103 284 L126 284 L126 312 Q132 316 130 324 L110 324 Q101 324 102 316 Z" fill="#8a5a3b"/><path d="M74 292 L97 292 M103 292 L126 292" stroke="#c99a54" stroke-width="3"/></g>` },
+  sandalias: { n: 'Sandalias', d: () => `<g ${L} fill="#ff8fb8"><rect x="72" y="320" width="26" height="5" rx="2.5"/><rect x="102" y="320" width="26" height="5" rx="2.5"/><path d="M76 316 Q85 306 94 316" fill="none" stroke="#ff5fa2" stroke-width="4"/><path d="M106 316 Q115 306 124 316" fill="none" stroke="#ff5fa2" stroke-width="4"/></g>` },
+};
+
+const ACC = {
+  cintillo: { n: 'Cintillo con lazo', d: () => `<g ${L}><path d="M58 60 Q100 18 142 60" fill="none" stroke="#ff5fa2" stroke-width="7"/><path d="M118 30 L136 20 L134 40 Z M118 30 L104 18 L102 38 Z" fill="#ff5fa2"/><circle cx="118" cy="30" r="5" fill="#ff8fb8"/></g>` },
+  lentes: { n: 'Lentes', d: () => `<g fill="rgba(255,255,255,.25)" stroke="#7b4fd6" stroke-width="3"><circle cx="82" cy="78" r="13"/><circle cx="118" cy="78" r="13"/><path d="M95 78 L105 78 M69 76 L58 72 M131 76 L142 72" fill="none"/></g>` },
+  bolso: { n: 'Bolsito', d: () => `<g ${L}><path d="M134 150 Q150 170 150 196" fill="none" stroke="#7b4fd6" stroke-width="3"/><rect x="138" y="196" width="26" height="22" rx="6" fill="#b48cff"/><circle cx="151" cy="207" r="3" fill="#ffd25c"/></g>` },
+  corona: { n: 'Corona de flores', d: () => `${[[62,52],[76,38],[92,32],[108,32],[124,38],[138,52]].map(([x,y],i)=>`<g transform="translate(${x} ${y})"><circle r="7" fill="${['#ff8fb8','#ffd25c','#b48cff'][i%3]}" stroke="#4a3560" stroke-width="1.5"/><circle r="2.6" fill="#fff"/></g>`).join('')}` },
+};
+
+function base(nom) {
+  return `<g ${L}><path d="M50 330 L150 330 L160 352 L40 352 Z" fill="#b48cff"/></g><text x="100" y="347" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="13" fill="#fff">${(nom || '').replace(/[<&>]/g, '')}</text>`;
+}
+function muneca(st = S) {
+  let s = PELO[st.pelo].atras(st.cpelo) + cuerpo(st.piel);
+  s += st.ropa ? '' : interior;
+  s += ZAP[st.zap]?.d() || '';
+  s += st.ropa ? ROPA[st.ropa].d() : '';
+  s += PELO[st.pelo].frente(st.cpelo);
+  for (const a of st.acc) s += ACC[a].d();
+  return s;
+}
+const svg = (inner, vb = '30 10 140 350') => `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+// ===== Vestir =====
+function pintar() {
+  document.getElementById('escena').innerHTML = svg(muneca() + base(S.nom), '20 0 160 360');
+  marcar();
+}
+function chip(cont, html, on, fn, titulo) {
+  const d = document.createElement('div'); d.className = 'pz' + (on ? ' on' : ''); d.innerHTML = html; d.title = titulo; d.onclick = fn; cont.appendChild(d); return d;
+}
+function armar() {
+  const g = (id) => { const e = document.getElementById(id); e.innerHTML = ''; return e; };
+  const ropa = g('g-ropa');
+  chip(ropa, '<span class="x">🚫</span>', !S.ropa, () => { S.ropa = null; pintar(); }, 'Sin ropa').dataset.k = 'ropa:';
+  for (const [k, v] of Object.entries(ROPA)) chip(ropa, svg(v.d(), '34 105 132 215'), S.ropa === k, () => { S.ropa = k; pintar(); }, v.n).dataset.k = 'ropa:' + k;
+  const pelo = g('g-pelo');
+  for (const [k, v] of Object.entries(PELO)) chip(pelo, svg(v.atras(S.cpelo) + v.frente(S.cpelo), '28 2 144 220'), S.pelo === k, () => { S.pelo = k; pintar(); }, v.n).dataset.k = 'pelo:' + k;
+  const zap = g('g-zap');
+  for (const [k, v] of Object.entries(ZAP)) chip(zap, svg(v.d(), '64 280 72 48'), S.zap === k, () => { S.zap = k; pintar(); }, v.n).dataset.k = 'zap:' + k;
+  const acc = g('g-acc');
+  for (const [k, v] of Object.entries(ACC)) chip(acc, svg(v.d(), k === 'bolso' ? '126 144 44 80' : '50 12 100 80'), S.acc.has(k), () => { S.acc.has(k) ? S.acc.delete(k) : S.acc.add(k); pintar(); }, v.n).dataset.k = 'acc:' + k;
+  const piel = g('g-piel');
+  PIEL.forEach((c) => { const d = document.createElement('div'); d.className = 'c' + (S.piel === c ? ' on' : ''); d.style.background = c; d.onclick = () => { S.piel = c; armar(); pintar(); }; piel.appendChild(d); });
+  const cp = g('g-cpelo');
+  CPELO.forEach((c) => { const d = document.createElement('div'); d.className = 'c' + (S.cpelo === c ? ' on' : ''); d.style.background = c; d.onclick = () => { S.cpelo = c; armar(); pintar(); }; cp.appendChild(d); });
+}
+function marcar() {
+  document.querySelectorAll('.pz').forEach((d) => {
+    const [t, k] = (d.dataset.k || '').split(':');
+    d.classList.toggle('on', t === 'ropa' ? (S.ropa || '') === k : t === 'pelo' ? S.pelo === k : t === 'zap' ? S.zap === k : S.acc.has(k));
+  });
+}
+document.getElementById('nom').oninput = (e) => { S.nom = e.target.value; pintar(); hoja(); };
+
+// ===== Hoja para imprimir: cada pieza con línea de corte y pestañas para doblar =====
+const pestanas = (xs, y) => xs.map((x) => `<rect x="${x - 7}" y="${y - 11}" width="14" height="12" rx="2" fill="#fff" stroke="#9a86c0" stroke-width="1.2" stroke-dasharray="3 2"/>`).join('');
+function hoja() {
+  document.querySelectorAll('.nomH').forEach((e) => (e.textContent = S.nom || 'tu hija'));
+  const c = document.getElementById('cortes'); c.innerHTML = '';
+  const add = (titulo, inner, vb, grande) => {
+    const d = document.createElement('div'); d.className = 'corte' + (grande ? ' grande' : '');
+    d.innerHTML = `<span class="tijera">✂️</span>${svg(inner, vb)}<div>${titulo}</div>`; c.appendChild(d);
+  };
+  const st = { ...S, ropa: null, zap: null, acc: new Set() };
+  add('La muñeca (con su base)', PELO[S.pelo].atras(S.cpelo) + cuerpo(S.piel) + interior + PELO[S.pelo].frente(S.cpelo) + base(S.nom) + '<path d="M40 330 L160 330" stroke="#9a86c0" stroke-dasharray="4 3"/>', '20 0 160 360', true);
+  for (const v of Object.values(ROPA)) add(v.n, pestanas([66, 134], 122) + v.d(), '30 100 140 222');
+  for (const [k, v] of Object.entries(PELO)) if (k !== S.pelo) add('Peinado: ' + v.n, v.atras(S.cpelo) + v.frente(S.cpelo), '28 2 144 220');
+  add('Zapatos', Object.values(ZAP).map((v, i) => `<g transform="translate(${(i - 1) * 78} 0)">${v.d()}</g>`).join(''), '-20 276 240 54');
+  add('Accesorios', ACC.cintillo.d() + `<g transform="translate(0 70)">${ACC.corona.d()}</g>` + `<g transform="translate(0 140)">${ACC.lentes.d()}</g>` + `<g transform="translate(-100 30)">${ACC.bolso.d()}</g>`, '30 10 140 230');
+}
+
+// ===== Pestañas =====
+document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  document.getElementById('jugar').style.display = b.dataset.v === 'jugar' ? '' : 'none';
+  document.getElementById('hoja').style.display = b.dataset.v === 'hoja' ? 'block' : 'none';
+  if (b.dataset.v === 'hoja') hoja();
+}));
+armar(); pintar(); hoja();
+</script>
+</body>
+</html>
