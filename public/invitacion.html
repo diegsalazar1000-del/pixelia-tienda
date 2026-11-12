@@ -77,7 +77,7 @@ $('crear').onclick = async () => {
     setTimeout(() => PX.pedirCorreo('💌 ¿Te gustó la app?'), 3000);
   } catch (e) { $('err').textContent = e.message; } finally { $('crear').disabled = false; }
 };
-$('wa').onclick = () => { PX.ev('wa'); const d = datos(); location.href = 'https://wa.me/?text=' + encodeURIComponent(`${INVITA.tema(d).e} ¡Estás invitado/a a ${d.titulo}! Mira los detalles aquí 👉 ${url}`); };
+$('wa').onclick = () => { PX.ev('wa'); PX.px('CompartioWhatsApp', { interes: 'interactivo-whatsapp', tipo: datos().tipo }); const d = datos(); location.href = 'https://wa.me/?text=' + encodeURIComponent(`${INVITA.tema(d).e} ¡Estás invitado/a a ${d.titulo}! Mira los detalles aquí 👉 ${url}`); };
 $('copiar').onclick = async () => { try { await navigator.clipboard.writeText(url); $('copiar').textContent = '✅ ¡Copiado!'; } catch { $('link').select(); } };
 $('abrir').onclick = () => window.open(url, '_blank');
 $('otra').onclick = (e) => { e.preventDefault(); $('s2').hidden = true; $('s1').hidden = false; };

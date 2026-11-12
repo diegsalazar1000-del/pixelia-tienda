@@ -178,7 +178,7 @@ function resultado(final) {
   if (final) tips.push('🔁 ¿Otro mes? Toca "Empezar de nuevo" y sube un nivel.');
   $('tips').innerHTML = tips.map((t) => `<div class="tip">${t}</div>`).join('');
   $('s1').hidden = true; $('s2').hidden = true; $('s3').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
-  PX.ev(final ? 'final' : 'ver'); if (final) PX.px('RachaCompleta', { pct: Math.round(total * 100) });
+  PX.ev(final ? 'final' : 'ver'); PX.px('VioResultado', { interes: 'habitos-planners', final: final ? 1 : 0 }); if (final) PX.px('RachaCompleta', { pct: Math.round(total * 100) });
 }
 $('verRes').onclick = () => resultado(false);
 $('volver').onclick = () => { $('s3').hidden = true; $('s2').hidden = false; };

@@ -81,7 +81,7 @@ function ver() {
     : ing && que / ing >= 0.2 ? `👏 ¡Bien! Te quedó el ${Math.round(que / ing * 100)}% de lo que entró.`
     : `👀 Lo que más se llevó tu plata: ${top[0][0]} ${top[0][1].toLowerCase()} (${Math.round(top[1] / gas * 100)}%).`;
   $('s1').hidden = true; $('s2').hidden = false; hist();
-  PX.ev('ver'); if (S.usos === 1) PX.px('UsoApp', { interes: 'finanzas' });
+  PX.ev('ver'); PX.px('VioResultado', { interes: 'finanzas' }); if (S.usos === 1) PX.px('UsoApp', { interes: 'finanzas' });
   setTimeout(() => PX.pedirCorreo('💸 ¿Te gustó la app?'), 1800);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

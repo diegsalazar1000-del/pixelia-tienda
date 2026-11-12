@@ -249,7 +249,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|msj|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|s120|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|msj|msjhost|sobre|crear|mapa|cal|mon|mes|hist|habito|resultado|(?:ir|otra)_(?:racha|dinero|invitacion)|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar

@@ -23,10 +23,36 @@ export const PRODUCTOS = [
     pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['p1', 'pusieron su ingreso'], ['p2', 'eligieron a qué se dedican'], ['p3', 'pusieron sus gastos'], ['plan', 'vieron su plan'], ['quiero', 'tocaron "Quiero mi plan"'], ['correo', 'dejaron el correo']] },
 ];
 
+// 🧰 Herramientas gratis (/apps): qué hizo la gente en cada app, paso a paso (Diego 12-nov)
+const APPS_PASOS = {
+  apps: ['🧰 Página /apps', [['vio', 'cargaron'], ['s5', '5 s'], ['s15', '15 s'], ['ir_racha', 'tocaron 🔥 Racha'], ['ir_dinero', 'tocaron 💸 Dinero'], ['ir_invitacion', 'tocaron 💌 Invitación']]],
+  racha: ['🔥 Racha', [['vio', 'cargaron'], ['s5', '5 s'], ['s15', '15 s'], ['s45', '45 s'], ['s120', '2 min'], ['empezo', 'eligieron hábitos'], ['marco', 'marcaron un hábito'], ['pidio', 'vieron la ventanita'], ['correo', 'dejaron el correo'], ['volvio', 'volvieron otro día'], ['dia3', 'llegaron al día 3'], ['dia7', 'día 7'], ['ver', 'vieron cómo van']]],
+  dinero: ['💸 Dinero', [['vio', 'cargaron'], ['s5', '5 s'], ['s15', '15 s'], ['s45', '45 s'], ['s120', '2 min'], ['ver', 'calcularon su mes'], ['pidio', 'vieron la ventanita'], ['correo', 'dejaron el correo'], ['volvio', 'volvieron otro día']]],
+  invitacion: ['💌 Invitación', [['vio', 'cargaron'], ['s5', '5 s'], ['s15', '15 s'], ['s45', '45 s'], ['s120', '2 min'], ['creo', 'crearon una invitación'], ['wa', 'la mandaron por WhatsApp'], ['pidio', 'vieron la ventanita'], ['correo', 'dejaron el correo']]],
+  'invitacion-vista': ['📩 Invitados (quien la recibe)', [['vio', 'abrieron el enlace'], ['sobre', 'abrieron el sobre'], ['s15', '15 s'], ['msj', 'escribieron mensaje'], ['msjhost', 'anfitrión respondió'], ['cal', 'al calendario'], ['mapa', 'abrieron el mapa'], ['crear', 'tocaron "Crea la tuya"']]],
+};
+function vistaApps() {
+  const l = ['🧰 <b>Apps gratis</b> · ' + hora(), '<i>personas (1 por día) · últimos 7 días · hoy entre ( )</i>'];
+  for (const [k, [t, pasos]] of Object.entries(APPS_PASOS)) {
+    const fil = (d) => Object.fromEntries(q(`SELECT evento, SUM(n) n FROM app_eventos WHERE app = ? AND day >= ${d} GROUP BY evento`, 'w:' + k).map((r) => [r.evento, r.n]));
+    const e = fil("date('now','-6 day')"), h = fil("date('now')"), base = e.vio || 0;
+    l.push('', `<b>${t}</b>`);
+    for (const [ev, et] of pasos) l.push(`▸ ${et}: <b>${e[ev] || 0}</b>${h[ev] ? ` (${h[ev]})` : ''}${ev === 'vio' ? '' : pct(e[ev], base)}`);
+    const otras = Object.entries(e).filter(([x]) => x.startsWith('otra_'));
+    if (otras.length) l.push('↪️ Saltaron a otra app: ' + otras.map(([x, n]) => `${x.slice(5)} ${n}`).join(' · '));
+  }
+  const cor = q(`SELECT source, COUNT(*) n FROM subscribers WHERE source LIKE 'regalo:racha%' OR source LIKE 'regalo:dinero%' OR source LIKE 'regalo:invitacion%' GROUP BY source ORDER BY n DESC`);
+  if (cor.length) l.push('', '📩 Correos por app (total): ' + cor.map((c) => `${esc(c.source.slice(7))} ${c.n}`).join(' · '));
+  const inv = one(`SELECT COUNT(*) n FROM invitaciones WHERE created_at >= date('now','-6 day')`), msj = one(`SELECT COUNT(*) n FROM inv_mensajes WHERE created_at >= date('now','-6 day')`);
+  l.push(`💌 Invitaciones creadas: <b>${inv.n || 0}</b> · mensajes: <b>${msj.n || 0}</b>`);
+  l.push('', '<i>Píxel (para públicos): AbrioApp, EligioApp, UsoApp, VioResultado, CompartioWhatsApp, TiempoApp, CorreoApp, AbrioInvitacion, MensajeInvitacion, QuiereCrearInvitacion</i>');
+  return l.join('\n');
+}
+
 export function teclado(v) {
   const b = (t, d) => ({ text: (v === d ? '• ' : '') + t, callback_data: 'pn:' + d });
   return [[b('🏠 Resumen', 'inicio'), b('🛒 Ventas', 'ventas')], PRODUCTOS.map((p) => b(p.b || p.t, p.k)),
-    [b('📣 Campañas', 'camps'), { text: '🔄 Actualizar', callback_data: 'pn:' + v + ':r' }]];
+    [b('🧰 Apps', 'apps'), b('📣 Campañas', 'camps'), { text: '🔄 Actualizar', callback_data: 'pn:' + v + ':r' }]];
 }
 
 // --- Meta (con caché de 3 min para que los botones respondan rápido) ---
@@ -156,6 +182,7 @@ export async function vistaPanel(v = 'inicio') {
   if (v === 'ventas') text = ventas();
   else if (v === 'camps') ({ text, extra } = await camps());
   else if (/^c\d+$/.test(v)) { const c = campanas()[Number(v.slice(1))]; text = (c && await bloqueCampana(c).catch(() => null)) || 'Esa campaña ya no está.'; extra = [[{ text: '⬅️ Campañas', callback_data: 'pn:camps' }]]; }
+  else if (v === 'apps') text = vistaApps();
   else if (PRODUCTOS.find((p) => p.k === v)) text = await producto(PRODUCTOS.find((p) => p.k === v));
   else { v = 'inicio'; text = await inicio(); }
   return { text: text.slice(0, 4000), reply_markup: { inline_keyboard: [...extra, ...teclado(v)] } };

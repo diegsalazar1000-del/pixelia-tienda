@@ -73,8 +73,10 @@ else {
   $('cuerpo').style.background = T.sobre; $('tapa').style.background = T.sobre; $('frente').style.background = T.sobre; $('sello').textContent = T.e; $('cartaE').textContent = T.e;
   $('inv').innerHTML = INVITA.html(D);
   let abierta = false;
+  const ev = (e, px, extra) => { fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ k: 'invitacion-vista', e }), keepalive: true }).catch(() => {}); if (px) try { fbq('trackCustom', px, Object.assign({ app: 'invitacion', interes: 'interactivo-whatsapp', tipo: D.tipo }, extra || {})); } catch {} };
+  window.EVI = ev;
   const abrir = () => {
-    if (abierta) return; abierta = true; $('sobre').classList.add('abierto');
+    if (abierta) return; abierta = true; $('sobre').classList.add('abierto'); ev('sobre', 'AbrioInvitacion');
     setTimeout(() => { $('sobreWrap').style.display = 'none'; $('todo').classList.add('ver'); INVITA.lluvia(D.tipo); window.scrollTo(0, 0); }, 1300);
   };
   $('sobreWrap').onclick = abrir;
@@ -103,14 +105,15 @@ if (D) {
       const r = await fetch('/api/invitacion/' + ID + '/mensaje', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre, texto, h: H }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo enviar');
       $('txt').value = ''; $('mmsg').textContent = '✅ ¡Enviado!'; try { localStorage.setItem('px_inv_nom', nombre); } catch {}
-      fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ k: 'invitacion-vista', e: 'msj' }) }).catch(() => {});
+      if (window.EVI) EVI(H ? 'msjhost' : 'msj', 'MensajeInvitacion', { anfitrion: H ? 1 : 0 });
       pintarMsgs();
     } catch (e) { $('mmsg').textContent = e.message; } finally { $('enviar').disabled = false; }
   };
   pintarMsgs(); setInterval(pintarMsgs, 20000);
 }
-$('mapa').onclick = () => { if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
-$('cal').onclick = () => {
+document.querySelector('.cta a').addEventListener('click', () => window.EVI && EVI('crear', 'QuiereCrearInvitacion'));
+$('mapa').onclick = () => { window.EVI && EVI('mapa'); if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
+$('cal').onclick = () => { window.EVI && EVI('cal');
   if (!D || !D.fecha) return; const f = D.fecha.replace(/-/g, '');
   window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(D.titulo) + '&dates=' + f + '/' + f + '&location=' + encodeURIComponent(D.lugar) + '&details=' + encodeURIComponent((D.hora ? 'Hora: ' + D.hora + '. ' : '') + location.href), '_blank');
 };

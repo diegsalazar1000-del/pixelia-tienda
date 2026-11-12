@@ -17,10 +17,19 @@
 <div class="top"><a href="/">✨ Pixelia</a><span>Gratis · sin registrarte</span></div>
 <h1>3 mini apps que puedes usar <span style="color:#ff6a3d">GRATIS</span></h1>
 <p class="sub">Toca una y úsala ya. Funcionan en tu teléfono y nada de lo que escribes sale de él.</p>
-<a class="app" href="/racha"><div class="ic" style="background:linear-gradient(135deg,#ff6a3d,#ff3d8b)">🔥</div><div><b>Mi Racha de 30 días</b><p>Elige un hábito, márcalo cada día y mira crecer tu racha.</p></div><span class="go">›</span></a>
-<a class="app" href="/dinero"><div class="ic" style="background:linear-gradient(135deg,#3dd6a0,#3db8ff)">💸</div><div><b>Mi mes en dinero</b><p>Cuánto entró, cuánto gastaste, cuánto te quedó y en qué se te fue.</p></div><span class="go">›</span></a>
-<a class="app" href="/invitacion"><div class="ic" style="background:linear-gradient(135deg,#ffb13d,#ff6a3d)">💌</div><div><b>Tu invitación bonita</b><p>Asado, cumpleaños o reunión: créala y mándala por WhatsApp a todos.</p></div><span class="go">›</span></a>
+<a class="app" data-a="racha" href="/racha?ref=apps"><div class="ic" style="background:linear-gradient(135deg,#ff6a3d,#ff3d8b)">🔥</div><div><b>Mi Racha de 30 días</b><p>Elige un hábito, márcalo cada día y mira crecer tu racha.</p></div><span class="go">›</span></a>
+<a class="app" data-a="dinero" href="/dinero?ref=apps"><div class="ic" style="background:linear-gradient(135deg,#3dd6a0,#3db8ff)">💸</div><div><b>Mi mes en dinero</b><p>Cuánto entró, cuánto gastaste, cuánto te quedó y en qué se te fue.</p></div><span class="go">›</span></a>
+<a class="app" data-a="invitacion" href="/invitacion?ref=apps"><div class="ic" style="background:linear-gradient(135deg,#ffb13d,#ff6a3d)">💌</div><div><b>Tu invitación bonita</b><p>Asado, cumpleaños o reunión: créala y mándala por WhatsApp a todos.</p></div><span class="go">›</span></a>
 <p class="mini" style="margin-top:22px">¿Te gustaron? Mira lo demás que tenemos en <a href="/">la tienda Pixelia</a>.</p>
 </div>
 <script src="/js/medir.js" data-k="apps" defer></script>
+<script>
+// Qué app eligen en el hub → panel (ir_<app>) + píxel EligioApp con su interés (públicos por interés)
+var INT = { racha: 'habitos-planners', dinero: 'finanzas', invitacion: 'interactivo-whatsapp' };
+document.querySelectorAll('a[data-a]').forEach(function (a) { a.addEventListener('click', function () {
+  var k = a.dataset.a;
+  try { var b = JSON.stringify({ k: 'apps', e: 'ir_' + k }); navigator.sendBeacon ? navigator.sendBeacon('/api/vista', new Blob([b], { type: 'application/json' })) : fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: b, keepalive: true }); } catch (x) {}
+  try { fbq('trackCustom', 'EligioApp', { desde: 'apps', a: k, interes: INT[k] }); } catch (x) {}
+}); });
+</script>
 </body></html>

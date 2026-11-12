@@ -14,7 +14,8 @@
     otras(el) {
       if (!el) return;
       el.innerHTML = '<p style="font-size:14px;color:#c9c2ee;margin:18px 0 8px;text-align:center">También te puede servir (gratis):</p>' +
-        Object.entries(PX.APPS).filter(([k]) => k !== K).map(([k, [e, n, u]]) => `<a href="${u}?ref=${K}" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px 14px;margin-top:8px"><span style="font-size:28px">${e}</span><b style="flex:1">${n}</b><span style="color:#ffb38a;font-size:20px">›</span></a>`).join('');
+        Object.entries(PX.APPS).filter(([k]) => k !== K).map(([k, [e, n, u]]) => `<a data-a="${k}" href="${u}?ref=${K}" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px 14px;margin-top:8px"><span style="font-size:28px">${e}</span><b style="flex:1">${n}</b><span style="color:#ffb38a;font-size:20px">›</span></a>`).join('');
+      el.querySelectorAll('a[data-a]').forEach((a) => a.addEventListener('click', () => { PX.ev('otra_' + a.dataset.a); PX.px('EligioApp', { desde: K, a: a.dataset.a, interes: PX.INTERES[a.dataset.a] }); }));
     },
     // interés de cada app → públicos separados en Meta (Diego 12-nov)
     INTERES: { racha: 'habitos-planners', dinero: 'finanzas', invitacion: 'interactivo-whatsapp' },
@@ -52,4 +53,7 @@
   };
   PX.ev(localStorage.getItem(ST) ? 'volvio' : 'abrio');
   setTimeout(() => PX.px('AbrioApp', { interes: PX.INTERES[K] }), 50);
+  // ⏱️ cuánto se quedan (solo con la página a la vista) → píxel: TiempoApp {seg: 15|45|120}
+  let seg = 0; const tt = setInterval(() => { if (document.visibilityState !== 'visible') return; seg++;
+    if (seg === 15 || seg === 45 || seg === 120) { PX.px('TiempoApp', { seg, interes: PX.INTERES[K] }); if (seg === 120) { PX.ev('s120'); clearInterval(tt); } } }, 1000);
 })();
