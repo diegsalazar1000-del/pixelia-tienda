@@ -7,22 +7,63 @@
 <meta name="theme-color" content="#140f26">
 <link rel="stylesheet" href="/css/apps.css">
 {{PIXEL}}
-<style>.prev{border-radius:22px;padding:34px 20px;text-align:center;margin-top:10px;color:#2a1d10;animation:pop .6s}.prev .e{font-size:72px}.prev h3{font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:.75;margin-top:6px}.prev h2{font-size:34px;line-height:1.1;margin:10px 0 14px;font-family:Georgia,serif}.prev p{margin:8px 0;font-size:17px}.prev .q{font-style:italic;opacity:.85;margin-top:14px}</style>
+<style>
+#sobreWrap{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.sobre{position:relative;width:300px;height:200px;margin:30px auto 0;perspective:900px;animation:bob 2.2s ease-in-out infinite}
+.sobre .cuerpo{position:absolute;inset:0;border-radius:14px;box-shadow:0 30px 60px rgba(0,0,0,.5)}
+.sobre .cuerpo::after{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,transparent 49.5%,rgba(0,0,0,.12) 50%) left/50% 100% no-repeat,linear-gradient(225deg,transparent 49.5%,rgba(0,0,0,.12) 50%) right/50% 100% no-repeat}
+.sobre .frente{position:absolute;inset:0;border-radius:0 0 14px 14px;clip-path:polygon(0 0,50% 58%,100% 0,100% 100%,0 100%);z-index:3;filter:brightness(1.08)}
+.sobre .tapa{position:absolute;left:0;right:0;top:0;height:120px;transform-origin:top;clip-path:polygon(0 0,100% 0,50% 100%);transition:transform .7s ease;z-index:4;filter:brightness(.92)}
+.sobre .sello{position:absolute;left:50%;top:92px;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:34px;z-index:5;box-shadow:0 6px 16px rgba(0,0,0,.3);transition:opacity .3s}
+.sobre .carta{position:absolute;left:18px;right:18px;top:16px;height:160px;border-radius:10px;background:#fffdf7;z-index:2;transition:transform .9s cubic-bezier(.2,.9,.3,1.2) .35s;display:grid;place-items:center;font-size:40px}
+.sobre.abierto{animation:none}
+.sobre.abierto .tapa{transform:rotateX(180deg);z-index:1}
+.sobre.abierto .sello{opacity:0}
+.sobre.abierto .carta{transform:translateY(-120px);z-index:3}
+.sobre.abierto .frente{z-index:4}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+.toca{margin-top:34px;font:700 18px Poppins,sans-serif;color:#ffd9a8;animation:lat 1.6s ease-in-out infinite}
+#todo{display:none}
+#todo.ver{display:block;animation:sube .8s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes sube{from{opacity:0;transform:translateY(60px) scale(.9)}}
+.btns{opacity:0;animation:fade .6s ease .9s forwards}@keyframes fade{to{opacity:1}}
+</style>
 </head>
 <body><div class="w">
-<div class="top"><span>💌 Tienes una invitación</span></div>
-<div id="inv"></div>
-<button class="btn sec" id="cal">📅 Guardar en mi calendario</button>
-<button class="btn sec" id="mapa">📍 Ver cómo llegar</button>
-<div class="cta">Hecha gratis con <b>Pixelia</b> ✨<br><a href="/invitacion?ref=inv">Crea tu propia invitación gratis 👉</a></div>
+<div id="sobreWrap">
+  <div class="sub" style="font:700 15px Poppins,sans-serif;letter-spacing:3px;text-transform:uppercase;color:#c9c2ee">💌 Tienes una invitación</div>
+  <div class="sobre" id="sobre"><div class="cuerpo" id="cuerpo"></div><div class="carta" id="cartaE"></div><div class="frente" id="frente"></div><div class="tapa" id="tapa"></div><div class="sello" id="sello"></div></div>
+  <div class="toca">👆 Toca para abrirla</div>
+</div>
+<div id="todo">
+  <div id="inv"></div>
+  <div class="btns">
+    <button class="btn sec" id="cal">📅 Guardar en mi calendario</button>
+    <button class="btn sec" id="mapa">📍 Ver cómo llegar</button>
+    <div class="cta">Hecha gratis con <b>Pixelia</b> ✨<br><a href="/invitacion?ref=inv">Crea tu propia invitación gratis 👉</a></div>
+  </div>
+</div>
 </div>
 <script src="/js/medir.js" data-k="invitacion-vista" defer></script>
 <script src="/js/invita.js"></script>
 <script>
 const D = {{DATA}};
-document.getElementById('inv').innerHTML = D ? INVITA.html(D) : '<div class="card">Esta invitación ya no existe 😕</div>';
-document.getElementById('mapa').onclick = () => { if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
-document.getElementById('cal').onclick = () => {
+const $ = (id) => document.getElementById(id);
+if (!D) { $('sobreWrap').innerHTML = '<div class="card">Esta invitación ya no existe 😕</div>'; }
+else {
+  const T = INVITA.TIPOS[D.tipo] || INVITA.TIPOS.fiesta;
+  $('cuerpo').style.background = T.sobre; $('tapa').style.background = T.sobre; $('frente').style.background = T.sobre; $('sello').textContent = T.e; $('cartaE').textContent = T.e;
+  $('inv').innerHTML = INVITA.html(D);
+  let abierta = false;
+  const abrir = () => {
+    if (abierta) return; abierta = true; $('sobre').classList.add('abierto');
+    setTimeout(() => { $('sobreWrap').style.display = 'none'; $('todo').classList.add('ver'); INVITA.lluvia(D.tipo); window.scrollTo(0, 0); }, 1300);
+  };
+  $('sobreWrap').onclick = abrir;
+  if (/[?&]abierta/.test(location.search)) { $('sobreWrap').style.display = 'none'; $('todo').classList.add('ver'); }
+}
+$('mapa').onclick = () => { if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
+$('cal').onclick = () => {
   if (!D || !D.fecha) return; const f = D.fecha.replace(/-/g, '');
   window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(D.titulo) + '&dates=' + f + '/' + f + '&location=' + encodeURIComponent(D.lugar) + '&details=' + encodeURIComponent((D.hora ? 'Hora: ' + D.hora + '. ' : '') + location.href), '_blank');
 };
