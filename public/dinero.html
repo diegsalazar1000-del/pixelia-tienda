@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mi mes en dinero · gratis · Pixelia</title>
+<meta name="description" content="¿Cuánto ganaste, cuánto gastaste y en qué se te fue? Gratis, en 1 minuto.">
+<meta property="og:title" content="Mi mes en dinero 💸 (gratis)"><meta property="og:image" content="{{BASE}}/img/apps/c2.jpg">
+<meta name="theme-color" content="#140f26">
+<link rel="stylesheet" href="/css/apps.css">
+{{PIXEL}}
+<style>
+.cat{display:flex;align-items:center;gap:10px;margin-top:8px}
+.cat span{width:118px;font-size:15px}
+.cat input{padding:10px;font-size:16px}
+.dona{width:210px;height:210px;border-radius:50%;margin:16px auto 6px;position:relative}
+.dona::after{content:'';position:absolute;inset:38px;border-radius:50%;background:#1b1435}
+.dona b{position:absolute;inset:0;display:grid;place-items:center;z-index:1;font-size:15px;text-align:center;line-height:1.2}
+.ley{margin-top:10px}
+.ley div{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:15px}
+.ley i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:8px}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;text-align:center}
+.tres div{background:#221a42;border-radius:14px;padding:10px 4px;font-size:12px;color:#c9c2ee}
+.tres b{display:block;font-size:16px;color:#fff;margin-top:4px}
+.hist div{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;color:#c9c2ee}
+</style></head>
+<body><div class="w">
+<div class="top"><a href="/apps">✨ Herramientas Pixelia</a><span>Gratis</span></div>
+<h1>💸 Mi mes en dinero</h1>
+<p class="sub">¿Cuánto entró, cuánto salió y <b>en qué se te fue</b>? Pon los números aproximados. Nada sale de tu teléfono.</p>
+
+<section id="s1" class="card">
+  <div class="row"><div><label class="f">Mes</label><select id="mes"></select></div><div><label class="f">Moneda</label><select id="mon"></select></div></div>
+  <label class="f">💵 ¿Cuánto te entró este mes? (todo junto)</label>
+  <input id="ing" type="number" inputmode="decimal" placeholder="Ej: 500">
+  <label class="f" style="margin-top:16px">🧾 ¿Cuánto gastaste en…? (deja vacío lo que no aplique)</label>
+  <div id="cats"></div>
+  <button class="btn" id="ver">Ver en qué se me fue 👀</button>
+</section>
+
+<section id="s2" class="card" hidden>
+  <div class="tres"><div>Entró<b id="rIng"></b></div><div>Gastaste<b id="rGas"></b></div><div id="rQL">Te quedó<b id="rQue"></b></div></div>
+  <div class="dona" id="dona"><b id="donaTxt"></b></div>
+  <div class="msg" id="frase"></div>
+  <div class="ley" id="ley"></div>
+  <button class="btn sec" id="editar">✏️ Cambiar números</button>
+  <div class="cta">¿Quieres saber cuánto ahorrar cada mes para cumplir una meta en 2027? <a href="/plan?ref=dinero">Haz tu plan del año 👉</a></div>
+</section>
+
+<section id="s3" class="card" hidden><b>📅 Mis meses</b><div class="hist" id="hist"></div></section>
+</div>
+<script src="/js/medir.js" data-k="dinero" defer></script>
+<script src="/js/apps.js" data-k="dinero"></script>
+<script>
+const $ = PX.$;
+const CATS = [['🏠', 'Casa / alquiler', '#ff6a3d'], ['🛒', 'Comida / mercado', '#ffb13d'], ['💡', 'Servicios / internet', '#ffd23d'], ['🚌', 'Transporte', '#3dd6a0'], ['💳', 'Deudas / cuotas', '#3db8ff'], ['🧒', 'Hijos / escuela', '#7c6bff'], ['💊', 'Salud', '#c86bff'], ['🎉', 'Gustos / salidas', '#ff3d8b'], ['📦', 'Otros', '#9a92c4']];
+const S = PX.load({ mon: PX.monAdivina(), meses: {}, usos: 0 });
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const d = new Date();
+for (let i = 0; i < 6; i++) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); const k = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); $('mes').add(new Option(MESES[x.getMonth()] + ' ' + x.getFullYear(), k)); }
+Object.keys(PX.MON).forEach((m) => $('mon').add(new Option(m + ' (' + PX.MON[m][0] + ')', m)));
+$('mon').value = S.mon;
+CATS.forEach(([e, n], i) => { const r = document.createElement('div'); r.className = 'cat'; r.innerHTML = `<span>${e} ${n}</span><input type="number" inputmode="decimal" id="c${i}" placeholder="0">`; $('cats').appendChild(r); });
+const f = (n) => PX.fmt(n, $('mon').value);
+function cargar() { const m = S.meses[$('mes').value]; $('ing').value = m ? m.ing || '' : ''; CATS.forEach((_, i) => { $('c' + i).value = m && m.g[i] ? m.g[i] : ''; }); }
+$('mes').onchange = cargar; $('mon').onchange = () => { S.mon = $('mon').value; PX.save(S); };
+function ver() {
+  const ing = +$('ing').value || 0, g = CATS.map((_, i) => +$('c' + i).value || 0), gas = g.reduce((a, b) => a + b, 0);
+  if (!ing && !gas) { $('ing').focus(); return; }
+  S.meses[$('mes').value] = { ing, g }; S.usos++; PX.save(S);
+  const que = ing - gas;
+  $('rIng').textContent = f(ing); $('rGas').textContent = f(gas); $('rQue').textContent = f(que);
+  $('rQL').firstChild.textContent = que >= 0 ? 'Te quedó' : 'Te faltó'; $('rQue').style.color = que >= 0 ? '#3dd6a0' : '#ff6a6a';
+  let acc = 0; const segs = [];
+  const orden = CATS.map((c, i) => [c, g[i]]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  orden.forEach(([c, v]) => { const p = v / gas * 100; segs.push(`${c[2]} ${acc}% ${acc + p}%`); acc += p; });
+  $('dona').style.background = gas ? `conic-gradient(${segs.join(',')})` : '#2a2050';
+  $('donaTxt').innerHTML = gas ? `Gastaste<br><span style="font-size:20px;font-weight:900">${f(gas)}</span>` : 'Sin gastos';
+  $('ley').innerHTML = orden.map(([c, v]) => `<div><span><i style="background:${c[2]}"></i>${c[0]} ${c[1]}</span><b>${f(v)} · ${Math.round(v / gas * 100)}%</b></div>`).join('');
+  const top = orden[0];
+  $('frase').textContent = !top ? '' : que < 0 ? `😬 Gastaste ${f(-que)} más de lo que entró. Lo que más pesó: ${top[0][1].toLowerCase()}.`
+    : ing && que / ing >= 0.2 ? `👏 ¡Bien! Te quedó el ${Math.round(que / ing * 100)}% de lo que entró.`
+    : `👀 Lo que más se llevó tu plata: ${top[0][0]} ${top[0][1].toLowerCase()} (${Math.round(top[1] / gas * 100)}%).`;
+  $('s1').hidden = true; $('s2').hidden = false; hist();
+  PX.ev('ver'); if (S.usos === 1) PX.px('UsoApp', { interes: 'finanzas' });
+  setTimeout(() => PX.pedirCorreo('💸 ¿Te gustó la app?'), 1800);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function hist() {
+  const ks = Object.keys(S.meses).sort().reverse(); $('s3').hidden = ks.length < 2;
+  $('hist').innerHTML = ks.map((k) => { const m = S.meses[k], gas = m.g.reduce((a, b) => a + b, 0), q = m.ing - gas, [y, mm] = k.split('-');
+    return `<div><span>${MESES[+mm - 1]} ${y}</span><span>Entró ${f(m.ing)} · <b style="color:${q >= 0 ? '#3dd6a0' : '#ff6a6a'}">${q >= 0 ? 'quedó' : 'faltó'} ${f(Math.abs(q))}</b></span></div>`; }).join('');
+}
+$('ver').onclick = ver;
+$('editar').onclick = () => { $('s2').hidden = true; $('s1').hidden = false; };
+cargar(); hist();
+</script>
+</body></html>

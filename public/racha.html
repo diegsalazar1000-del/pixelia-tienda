@@ -2,176 +2,163 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mi Racha de 30 días · gratis · Pixelia</title>
-<meta name="description" content="Marca cada día y mira crecer tu racha. Gratis, sin registrarte.">
-<meta property="og:title" content="Mi Racha de 30 días 🔥 (gratis)"><meta property="og:image" content="{{BASE}}/img/racha-og.jpg">
+<meta name="description" content="Elige tus hábitos, márcalos cada día y mira crecer tu racha. Gratis, sin registrarte.">
+<meta property="og:title" content="Mi Racha de 30 días 🔥 (gratis)"><meta property="og:image" content="{{BASE}}/img/apps/c2.jpg">
 <meta name="theme-color" content="#140f26">
+<link rel="stylesheet" href="/css/apps.css">
 {{PIXEL}}
 <style>
-*{box-sizing:border-box;margin:0}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(120% 80% at 50% 0%,#2a1d55 0%,#140f26 60%);color:#fff;min-height:100vh;padding:18px 16px 40px;-webkit-tap-highlight-color:transparent}
-.w{max-width:440px;margin:auto}
-.top{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#b9b0e0}
-.top a{color:#b9b0e0;text-decoration:none}
-h1{font-size:26px;line-height:1.15;margin:16px 0 6px}
-.sub{color:#c9c2ee;font-size:15px}
-.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:18px;margin-top:16px}
-input[type=text],input[type=email]{width:100%;font-size:17px;padding:14px;border-radius:14px;border:2px solid #4a3d85;background:#0e0a1d;color:#fff;outline:none}
-input:focus{border-color:#ff6a3d}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chip{background:#2a2050;border:0;color:#fff;padding:9px 12px;border-radius:999px;font-size:14px}
-.btn{display:block;width:100%;border:0;border-radius:16px;padding:16px;font-size:18px;font-weight:800;color:#fff;background:linear-gradient(90deg,#ff6a3d,#ff3d8b);margin-top:14px;box-shadow:0 8px 24px rgba(255,80,90,.35)}
-.btn:disabled{opacity:.45;box-shadow:none}
-.btn.ok{background:#2fbf71;box-shadow:none}
-.flame{font-size:64px;text-align:center;line-height:1;transition:transform .3s}
-.big{font-size:54px;font-weight:900;text-align:center;line-height:1}
-.lbl{text-align:center;color:#c9c2ee;margin-top:4px}
-.meta{text-align:center;font-weight:700;margin-top:8px;font-size:17px}
-.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:16px}
-.d{aspect-ratio:1;border-radius:11px;background:#221a42;display:grid;place-items:center;font-size:13px;color:#8f86bd;font-weight:700}
-.d.on{background:linear-gradient(135deg,#ff6a3d,#ff3d8b);color:#fff}
+.hab{display:flex;align-items:center;gap:12px;background:#221a42;border-radius:16px;padding:12px 14px;margin-top:10px;border:2px solid transparent;transition:.2s}
+.hab.on{border-color:#3dd6a0;background:#1d3a3a}
+.hab .e{font-size:28px}
+.hab .n{flex:1;font-size:16px;font-weight:700}
+.hab .n small{display:block;font-weight:400;color:#c9c2ee;font-size:13px;margin-top:2px}
+.tick{width:44px;height:44px;border-radius:14px;border:2px solid #4a3d85;display:grid;place-items:center;font-size:22px;background:#0e0a1d;flex:none}
+.hab.on .tick{background:#3dd6a0;border-color:#3dd6a0}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:14px}
+.d{aspect-ratio:1;border-radius:11px;background:#221a42;display:grid;place-items:center;font-size:12px;color:#8f86bd;font-weight:700}
 .d.hoy{outline:2px solid #ffd23d}
-.d.fallo{background:#3a2233;color:#a77}
-.stats{display:flex;justify-content:space-around;margin-top:14px;text-align:center;font-size:13px;color:#c9c2ee}
-.stats b{display:block;font-size:20px;color:#fff}
-.msg{text-align:center;margin-top:12px;color:#ffd9a8;min-height:22px}
-.mini{font-size:13px;color:#a79fd4;text-align:center;margin-top:14px}
-.mini a{color:#ffb38a}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:9}
-.sheet.on{display:flex}
-.box{background:#1d1638;width:100%;max-width:460px;border-radius:24px 24px 0 0;padding:22px 18px 28px;animation:up .3s}
-@keyframes up{from{transform:translateY(100%)}}
-.box h2{font-size:21px;margin-bottom:6px}
-.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#c9c2ee;margin-top:10px}
-.x{background:none;border:0;color:#a79fd4;font-size:15px;margin-top:12px;width:100%}
-.pop{animation:pop .5s}
-@keyframes pop{50%{transform:scale(1.35)}}
-.conf{position:fixed;top:-20px;font-size:22px;animation:fall 1.6s linear forwards;pointer-events:none}
-@keyframes fall{to{transform:translateY(105vh) rotate(360deg)}}
+.top3{display:flex;justify-content:space-around;text-align:center;font-size:13px;color:#c9c2ee;margin-top:10px}
+.top3 b{display:block;font-size:22px;color:#fff}
+.add{display:flex;gap:8px;margin-top:10px}.add input{flex:1}.add button{flex:none;width:56px;border:0;border-radius:14px;background:#2a2050;color:#fff;font-size:24px}
+.res div.r{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.bar{height:8px;border-radius:9px;background:#221a42;margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#ff6a3d,#3dd6a0)}
+.tip{background:#221a42;border-radius:14px;padding:12px 14px;margin-top:10px;font-size:15px;line-height:1.4}
+.conf{position:fixed;top:-20px;font-size:22px;animation:fall 1.6s linear forwards;pointer-events:none}@keyframes fall{to{transform:translateY(105vh) rotate(360deg)}}
 </style></head>
 <body><div class="w">
-<div class="top"><a href="/">✨ Pixelia</a><span>Herramienta gratis</span></div>
+<div class="top"><a href="/apps">✨ Herramientas Pixelia</a><span>Gratis</span></div>
 
-<!-- Paso 1: elegir el reto -->
 <section id="s1">
   <h1>🔥 Mi Racha de 30 días</h1>
-  <p class="sub">Elige UNA cosa, márcala cada día y mira crecer tu racha. Gratis, sin registrarte.</p>
+  <p class="sub">Elige tus hábitos (los que quieras), márcalos cada día y mira crecer tu racha. A los 30 días te damos tu resultado.</p>
   <div class="card">
-    <b>¿Qué vas a hacer los próximos 30 días?</b>
-    <input id="reto" type="text" maxlength="40" placeholder="Ej: tomar 2 litros de agua" style="margin-top:10px">
+    <b>¿Qué vas a hacer estos 30 días?</b> <span style="color:#a79fd4;font-size:13px">(toca varios)</span>
     <div class="chips" id="sug"></div>
+    <div class="add"><input id="otro" type="text" maxlength="30" placeholder="Otro: escribe el tuyo"><button id="addBtn">＋</button></div>
     <button class="btn" id="go" disabled>Empezar mi racha 🔥</button>
   </div>
 </section>
 
-<!-- Paso 2: la racha -->
 <section id="s2" hidden>
-  <h1 id="titulo"></h1>
+  <h1>🔥 Mi racha</h1>
   <div class="card">
-    <div class="flame" id="flame">🔥</div>
-    <div class="big" id="racha">0</div>
-    <div class="lbl">días seguidos</div>
-    <button class="btn" id="marcar">✅ Lo hice hoy</button>
+    <div class="top3"><div><b id="dia">1</b>día de 30</div><div><b id="hoyN">0/0</b>hechos hoy</div><div><b id="mejor">0</b>mejor racha</div></div>
+    <p class="mini" style="margin-top:12px">¿Cuáles hiciste hoy? Toca para marcar ✅</p>
+    <div id="lista"></div>
     <div class="msg" id="msg"></div>
     <div class="grid" id="grid"></div>
-    <div class="stats"><div><b id="hechos">0</b>de 30</div><div><b id="mejor">0</b>mejor racha</div><div><b id="pct">0%</b>cumplido</div></div>
+    <button class="btn sec" id="verRes">📊 Ver cómo voy</button>
   </div>
-  <p class="mini">Tu racha se guarda en este teléfono. <a href="#" id="reset">Empezar otro reto</a></p>
-  <p class="mini" id="masTxt" hidden>¿Quieres seguir TODOS tus hábitos del año así? <a href="/p/mi-2027-en-habitos?ref=racha">Mira Mi 2027 en Hábitos 👉</a></p>
+  <p class="mini">Se guarda en este teléfono. <a href="#" id="reset">Empezar de nuevo</a></p>
+</section>
+
+<section id="s3" hidden>
+  <h1 id="resT">📊 Tu resultado</h1>
+  <div class="card res">
+    <div class="big" id="resPct">0%</div><div class="lbl" id="resSub">de lo que te propusiste</div>
+    <div id="resLista" style="margin-top:14px"></div>
+    <div id="tips"></div>
+    <button class="btn" id="volver">Seguir marcando 🔥</button>
+  </div>
+  <div class="cta">¿Quieres llevar TODOS tus hábitos del año así, con niveles y tu resumen de 12 meses? <a href="/p/mi-2027-en-habitos?ref=racha">Mira Mi 2027 en Hábitos 👉</a></div>
 </section>
 </div>
-
-<!-- Ventanita del correo (al 3er día marcado) -->
-<div class="sheet" id="sheet"><div class="box">
-  <h2>🔥 ¡3 días seguidos! ¿Te está sirviendo?</h2>
-  <p class="sub">Déjanos tu correo y te avisamos cuando salgan más herramientas gratis como esta (y te llega un cupón de regalo 🎁).</p>
-  <input id="email" type="email" placeholder="tu@correo.com" style="margin-top:14px" autocomplete="email">
-  <label class="chk"><input type="checkbox" id="ok" checked> Acepto recibir novedades de Pixelia (puedes darte de baja cuando quieras).</label>
-  <button class="btn" id="enviar">Mantenerme informado 💌</button>
-  <div class="msg" id="emsg"></div>
-  <button class="x" id="cerrar">Ahora no</button>
-</div></div>
-
 <script src="/js/medir.js" data-k="racha" defer></script>
+<script src="/js/apps.js" data-k="racha"></script>
 <script>
-const $ = (id) => document.getElementById(id);
-const KEY = 'px_racha';
-const hoy = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-const dias = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
-const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; } };
-const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
-const ev = (e) => { try { fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ k: 'racha', e }), keepalive: true }); } catch {} };
-const px = (n, extra) => { try { fbq('trackCustom', n, Object.assign({ app: 'racha' }, extra || {})); } catch {} };
-let S = load();
+const $ = PX.$;
+const SUG = [['💧', 'Tomar 2 litros de agua'], ['🚶', 'Caminar 20 minutos'], ['📚', 'Leer 10 páginas'], ['😴', 'Dormir 7 horas'], ['✍️', 'Escribir / diario'], ['🏋️', 'Hacer ejercicio'], ['📵', 'Nada de celular al dormir'], ['💰', 'Ahorrar algo'], ['🥗', 'Comer sano'], ['🧘', '5 min de calma']];
+const pad = (n) => String(n).padStart(2, '0');
+const key = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const hoy = () => key(new Date());
+const masDias = (k, n) => { const d = new Date(k + 'T12:00'); d.setDate(d.getDate() + n); return key(d); };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+let S = PX.load({});
+let elegidos = [];
 
-// sugerencias
-['💧 tomar agua', '🚶 caminar 20 min', '📚 leer 10 páginas', '📵 nada de celular al dormir', '💰 ahorrar algo', '🧘 5 min de calma'].forEach((t) => {
-  const b = document.createElement('button'); b.className = 'chip'; b.textContent = t;
-  b.onclick = () => { $('reto').value = t.replace(/^\S+\s/, ''); $('go').disabled = false; };
+SUG.forEach(([e, n]) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = e + ' ' + n;
+  b.onclick = () => { const i = elegidos.findIndex((x) => x.n === n); if (i >= 0) { elegidos.splice(i, 1); b.classList.remove('on'); } else { elegidos.push({ e, n }); b.classList.add('on'); } $('go').disabled = !elegidos.length; };
   $('sug').appendChild(b);
 });
-$('reto').oninput = () => { $('go').disabled = $('reto').value.trim().length < 2; };
-$('go').onclick = () => {
-  S = { reto: $('reto').value.trim(), inicio: hoy(), hechos: [], correo: 0, pidio: 0 };
-  save(S); ev('empezo'); px('EmpezoRacha'); pintar();
+$('addBtn').onclick = () => {
+  const n = $('otro').value.trim(); if (n.length < 2 || elegidos.length >= 10) return;
+  elegidos.push({ e: '⭐', n }); const b = document.createElement('button'); b.className = 'chip on'; b.textContent = '⭐ ' + n;
+  b.onclick = () => { elegidos = elegidos.filter((x) => x.n !== n); b.remove(); $('go').disabled = !elegidos.length; };
+  $('sug').appendChild(b); $('otro').value = ''; $('go').disabled = false;
 };
-$('reset').onclick = (e) => { e.preventDefault(); if (confirm('¿Empezar un reto nuevo? Se borra la racha actual.')) { localStorage.removeItem(KEY); S = null; pintar(); } };
+$('go').onclick = () => { S = { hab: elegidos, inicio: hoy(), dias: {}, _correo: S._correo, _pidio: S._pidio }; PX.save(S); PX.ev('empezo'); PX.px('EmpezoRacha', { habitos: elegidos.length }); pintar(); };
+$('reset').onclick = (e) => { e.preventDefault(); if (confirm('¿Empezar de nuevo? Se borra lo marcado.')) { S = { _correo: S._correo, _pidio: S._pidio }; elegidos = []; document.querySelectorAll('#sug .chip').forEach((c) => c.classList.remove('on')); $('go').disabled = true; PX.save(S); pintar(); } };
 
-function racha() {   // días seguidos hasta hoy (o hasta ayer si hoy aún no marca)
-  const set = new Set(S.hechos); let d = new Date(hoy() + 'T12:00'), n = 0;
-  if (!set.has(hoy())) d.setDate(d.getDate() - 1);
-  while (set.has(d.toISOString().slice(0, 10))) { n++; d.setDate(d.getDate() - 1); }
+const hechos = (k) => (S.dias && S.dias[k]) || [];
+function rachaDe(i) {
+  let k = hoy(), n = 0; if (!hechos(k).includes(i)) k = masDias(k, -1);
+  while (k >= S.inicio && hechos(k).includes(i)) { n++; k = masDias(k, -1); }
   return n;
 }
-function mejor() {
-  const arr = [...S.hechos].sort(); let m = 0, c = 0, prev = null;
-  arr.forEach((x) => { c = prev && dias(prev, x) === 1 ? c + 1 : 1; m = Math.max(m, c); prev = x; });
-  return m;
-}
-const FRASES = ['¡Arrancaste! El día 1 es el más difícil 💪', '¡2 seguidos! Ya le estás agarrando el ritmo', '🔥 ¡3 días! Esto ya es una racha', 'Vas como un reloj ⏰', '¡Una semana completa! 🏆', 'Mitad del camino 🚀', '¡Ya casi! No la sueltes', '🏅 ¡30 días! Lo lograste'];
-function frase(n, total) {
-  if (total >= 30) return FRASES[7]; if (n >= 15) return FRASES[5]; if (n >= 7) return FRASES[4];
-  return FRASES[Math.min(n, 4) - 1] || FRASES[3];
-}
+function mejorDe(i) { let m = 0, c = 0; for (let d = 0; d < 30; d++) { const k = masDias(S.inicio, d); if (k > hoy()) break; c = hechos(k).includes(i) ? c + 1 : 0; m = Math.max(m, c); } return m; }
+const diaN = () => Math.min(30, Math.round((new Date(hoy() + 'T12:00') - new Date(S.inicio + 'T12:00')) / 864e5) + 1);
+
 function pintar() {
-  if (!S) { $('s1').hidden = false; $('s2').hidden = true; return; }
-  $('s1').hidden = true; $('s2').hidden = false;
-  $('titulo').textContent = '🔥 ' + S.reto.charAt(0).toUpperCase() + S.reto.slice(1);
-  const r = racha(), set = new Set(S.hechos), h = hoy(), hechoHoy = set.has(h);
-  $('racha').textContent = r; $('hechos').textContent = Math.min(S.hechos.length, 30);
-  $('mejor').textContent = mejor(); $('pct').textContent = Math.round(Math.min(S.hechos.length, 30) / 30 * 100) + '%';
-  $('flame').style.filter = r ? 'none' : 'grayscale(1)'; $('flame').style.fontSize = (54 + Math.min(r, 30)) + 'px';
-  $('marcar').textContent = hechoHoy ? '✅ ¡Listo por hoy! Vuelve mañana' : '✅ Lo hice hoy';
-  $('marcar').className = 'btn' + (hechoHoy ? ' ok' : ''); $('marcar').disabled = hechoHoy;
-  $('msg').textContent = hechoHoy ? frase(r, S.hechos.length) : (r ? 'No rompas tu racha de ' + r + ' 🔥' : 'Marca el día de hoy para empezar');
+  const empezado = S.hab && S.hab.length;
+  $('s1').hidden = !!empezado; $('s2').hidden = !empezado; $('s3').hidden = true;
+  if (!empezado) return;
+  if (diaN() >= 30 && !S.vioFinal) { S.vioFinal = 1; PX.save(S); return resultado(true); }
+  const h = hoy(), hh = hechos(h);
+  $('dia').textContent = diaN(); $('hoyN').textContent = hh.length + '/' + S.hab.length;
+  $('mejor').textContent = Math.max(0, ...S.hab.map((_, i) => mejorDe(i)));
+  $('lista').innerHTML = '';
+  S.hab.forEach((x, i) => {
+    const on = hh.includes(i), r = rachaDe(i), d = document.createElement('div');
+    d.className = 'hab' + (on ? ' on' : '');
+    d.innerHTML = `<span class="e">${x.e}</span><span class="n">${esc(x.n)}<small>${r ? '🔥 racha de ' + r + (r === 1 ? ' día' : ' días') : 'Sin racha todavía'}</small></span><span class="tick">${on ? '✓' : ''}</span>`;
+    d.onclick = () => marcar(i); $('lista').appendChild(d);
+  });
+  const t = hh.length, n = S.hab.length;
+  $('msg').textContent = t === n ? '🏆 ¡Día perfecto! Hiciste todo' : t ? `¡Vas bien! Te faltan ${n - t}` : 'Marca lo que hiciste hoy 👆';
   const g = $('grid'); g.innerHTML = '';
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(S.inicio + 'T12:00'); d.setDate(d.getDate() + i); const k = d.toISOString().slice(0, 10);
-    const c = document.createElement('div'); c.className = 'd' + (set.has(k) ? ' on' : (k < h ? ' fallo' : '')) + (k === h ? ' hoy' : '');
-    c.textContent = set.has(k) ? '🔥' : i + 1; g.appendChild(c);
+  for (let d = 0; d < 30; d++) {
+    const k = masDias(S.inicio, d), c = document.createElement('div'), p = hechos(k).length / n;
+    c.className = 'd' + (k === h ? ' hoy' : ''); c.textContent = p === 1 ? '🔥' : d + 1;
+    if (p > 0) { c.style.background = `rgba(255,${Math.round(106 + 100 * p)},61,${0.25 + 0.75 * p})`; c.style.color = '#fff'; }
+    g.appendChild(c);
   }
-  $('masTxt').hidden = S.hechos.length < 3;
 }
-$('marcar').onclick = () => {
-  const h = hoy(); if (S.hechos.includes(h)) return;
-  S.hechos.push(h); save(S);
-  const n = S.hechos.length; ev('dia' + Math.min(n, 30)); if ([1, 3, 7, 30].includes(n)) px('RachaDia' + n);
-  pintar(); $('flame').classList.remove('pop'); void $('flame').offsetWidth; $('flame').classList.add('pop');
-  for (let i = 0; i < 14; i++) { const c = document.createElement('div'); c.className = 'conf'; c.textContent = ['🔥', '✨', '🎉'][i % 3]; c.style.left = Math.random() * 100 + 'vw'; c.style.animationDelay = Math.random() * .4 + 's'; document.body.appendChild(c); setTimeout(() => c.remove(), 2200); }
-  if (n >= 3 && !S.correo && !S.pidio) setTimeout(abrirCorreo, 1200);
-};
-function abrirCorreo() { S.pidio = 1; save(S); $('sheet').classList.add('on'); ev('pidio'); }
-$('cerrar').onclick = () => { $('sheet').classList.remove('on'); ev('nocorreo'); };
-$('enviar').onclick = async () => {
-  if (!$('ok').checked) { $('emsg').textContent = 'Marca la casilla para poder escribirte 😊'; return; }
-  $('enviar').disabled = true; $('emsg').textContent = 'Enviando…';
-  try {
-    const r = await fetch('/api/regalo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('email').value, regalos: ['racha'], consent: true }) });
-    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Revisa tu correo');
-    S.correo = 1; save(S); ev('correo'); try { fbq('track', 'Lead', { content_name: 'racha' }); } catch {}
-    $('emsg').textContent = '💌 ¡Listo! Revisa tu correo' + (j.code ? ' (te mandamos un cupón de regalo)' : '') + '.';
-    setTimeout(() => $('sheet').classList.remove('on'), 2200);
-  } catch (e) { $('emsg').textContent = e.message; $('enviar').disabled = false; }
-};
-pintar(); ev(S ? 'volvio' : 'abrio');
+function marcar(i) {
+  const h = hoy(); const arr = S.dias[h] = hechos(h).slice(); const k = arr.indexOf(i);
+  if (k >= 0) arr.splice(k, 1); else arr.push(i);
+  PX.save(S); pintar();
+  if (k < 0) {
+    const total = Object.values(S.dias).reduce((a, v) => a + v.length, 0);
+    PX.ev('marco'); if (total === 1) PX.px('UsoApp', { interes: 'habitos-planners' });
+    const dn = diaN(); if ([3, 7, 30].includes(dn)) PX.ev('dia' + dn);
+    if (arr.length === S.hab.length) for (let j = 0; j < 14; j++) { const c = document.createElement('div'); c.className = 'conf'; c.textContent = ['🔥', '✨', '🎉'][j % 3]; c.style.left = Math.random() * 100 + 'vw'; c.style.animationDelay = Math.random() * .4 + 's'; document.body.appendChild(c); setTimeout(() => c.remove(), 2200); }
+    if (total === 1) setTimeout(() => PX.pedirCorreo('🔥 ¿Te gustó la app?'), 1600);
+  }
+}
+function resultado(final) {
+  const hasta = Math.min(diaN(), 30), n = S.hab.length;
+  const st = S.hab.map((x, i) => { let c = 0; for (let d = 0; d < hasta; d++) if (hechos(masDias(S.inicio, d)).includes(i)) c++; return { ...x, c, p: c / hasta, m: mejorDe(i) }; });
+  const total = st.reduce((a, x) => a + x.p, 0) / n;
+  $('resT').textContent = final ? '🏁 ¡Terminaste tus 30 días!' : `📊 Cómo vas (día ${hasta} de 30)`;
+  $('resPct').textContent = Math.round(total * 100) + '%';
+  $('resSub').textContent = final ? 'de lo que te propusiste en el mes' : 'de lo que te propusiste hasta hoy';
+  st.sort((a, b) => b.p - a.p);
+  $('resLista').innerHTML = st.map((x) => `<div class="r"><div style="flex:1"><b>${x.e} ${esc(x.n)}</b><div class="bar"><i style="width:${Math.round(x.p * 100)}%"></i></div></div><span style="margin-left:12px;font-weight:800">${x.c}/${hasta}</span></div>`).join('');
+  const mejor = st[0], peor = st[st.length - 1], tips = [];
+  if (total >= 0.8) tips.push('🏆 <b>¡Eres constante!</b> Ya es un hábito de verdad. Siguiente paso: súbele un poquito (más minutos, más páginas) o agrega un hábito nuevo.');
+  else if (total >= 0.5) tips.push('💪 <b>Vas bien, pero hay días que se te escapan.</b> Ponles una hora fija a tus hábitos (ej: "después del café") y será más fácil no olvidarlos.');
+  else tips.push('🌱 <b>Arrancar cuesta, y es normal.</b> Mejor pocos hábitos bien hechos que muchos a medias: quédate con 1 o 2 y hazlos más fáciles (5 minutos cuentan).');
+  if (n > 1 && mejor.p - peor.p >= 0.3) tips.push(`✅ Lo que mejor te sale: <b>${mejor.e} ${esc(mejor.n)}</b>.<br>⚠️ Lo que más te cuesta: <b>${peor.e} ${esc(peor.n)}</b>.<br>Truco: hazlo justo después de "${esc(mejor.n.toLowerCase())}", así uno arrastra al otro.`);
+  if (Math.max(...st.map((x) => x.m)) >= 7) tips.push('🔥 Lograste una racha de una semana o más: ya sabes hacerlo. Si fallas un día no pasa nada; lo importante es <b>no fallar dos seguidos</b>.');
+  if (final) tips.push('🔁 ¿Otro mes? Toca "Empezar de nuevo" y sube un nivel.');
+  $('tips').innerHTML = tips.map((t) => `<div class="tip">${t}</div>`).join('');
+  $('s1').hidden = true; $('s2').hidden = true; $('s3').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
+  PX.ev(final ? 'final' : 'ver'); if (final) PX.px('RachaCompleta', { pct: Math.round(total * 100) });
+}
+$('verRes').onclick = () => resultado(false);
+$('volver').onclick = () => { $('s3').hidden = true; $('s2').hidden = false; };
+pintar();
 </script>
 </body></html>

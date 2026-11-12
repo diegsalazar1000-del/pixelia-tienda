@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu invitación gratis · Pixelia</title>
+<meta name="description" content="Una invitación bonita para tu asado, cumpleaños o reunión. Gratis, lista en 1 minuto para mandar por WhatsApp.">
+<meta property="og:title" content="Crea tu invitación gratis 💌"><meta property="og:image" content="{{BASE}}/img/apps/c4.jpg">
+<meta name="theme-color" content="#140f26">
+<link rel="stylesheet" href="/css/apps.css">
+{{PIXEL}}
+<style>
+.prev{border-radius:22px;padding:26px 20px;text-align:center;margin-top:16px;color:#2a1d10;position:relative;overflow:hidden}
+.prev .e{font-size:56px}
+.prev h3{font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:.75;margin-top:6px}
+.prev h2{font-size:30px;line-height:1.1;margin:8px 0 10px;font-family:Georgia,serif}
+.prev p{margin:6px 0;font-size:16px}
+.prev .q{font-style:italic;opacity:.85;margin-top:12px}
+</style></head>
+<body><div class="w">
+<div class="top"><a href="/apps">✨ Herramientas Pixelia</a><span>Gratis</span></div>
+<h1>💌 Crea tu invitación</h1>
+<p class="sub">Para tu asado, cumpleaños, reunión o lo que sea. Lista en 1 minuto para mandarla por WhatsApp.</p>
+
+<section id="s1" class="card">
+  <label class="f">¿Qué celebras?</label>
+  <div class="chips" id="tipos"></div>
+  <label class="f">Nombre del evento</label>
+  <input id="titulo" type="text" maxlength="50" placeholder="Ej: Parrilla en casa de Diego">
+  <div class="row"><div><label class="f">Fecha</label><input id="fecha" type="date"></div><div><label class="f">Hora</label><input id="hora" type="text" maxlength="12" placeholder="Ej: 4:00 pm"></div></div>
+  <label class="f">Lugar</label>
+  <input id="lugar" type="text" maxlength="80" placeholder="Ej: Casa de Diego, Los Palos Grandes">
+  <label class="f">Mensaje (opcional)</label>
+  <input id="msj" type="text" maxlength="120" placeholder="Ej: ¡Trae tu mejor humor y hambre!">
+  <label class="f">Lo organiza</label>
+  <input id="host" type="text" maxlength="40" placeholder="Tu nombre">
+  <div id="prev"></div>
+  <button class="btn" id="crear">Crear y compartir 💌</button>
+  <div class="msg" id="err"></div>
+</section>
+
+<section id="s2" class="card" hidden>
+  <div class="big">🎉</div><div class="lbl" style="font-size:18px;color:#fff;font-weight:700">¡Tu invitación está lista!</div>
+  <input id="link" type="text" readonly style="margin-top:14px;font-size:14px">
+  <button class="btn" id="wa">Enviar por WhatsApp 💬</button>
+  <button class="btn sec" id="copiar">📋 Copiar enlace</button>
+  <button class="btn sec" id="abrir">👀 Ver cómo la reciben</button>
+  <div class="cta">✨ <b>Muy pronto: Invitación Plus</b> — quién confirma, quién lleva qué (carne, hielo, refrescos…), dividir gastos y temas para bodas, 15 años y baby shower.</div>
+  <p class="mini"><a href="#" id="otra">Crear otra invitación</a></p>
+</section>
+</div>
+<script src="/js/medir.js" data-k="invitacion" defer></script>
+<script src="/js/apps.js" data-k="invitacion"></script>
+<script src="/js/invita.js"></script>
+<script>
+const $ = PX.$;
+const S = PX.load({ creadas: 0 });
+let tipo = 'asado';
+Object.entries(INVITA.TIPOS).forEach(([k, t]) => {
+  const b = document.createElement('button'); b.className = 'chip' + (k === tipo ? ' on' : ''); b.textContent = t.e + ' ' + t.n;
+  b.onclick = () => { tipo = k; document.querySelectorAll('#tipos .chip').forEach((x) => x.classList.remove('on')); b.classList.add('on'); prev(); };
+  $('tipos').appendChild(b);
+});
+const datos = () => ({ tipo, titulo: $('titulo').value.trim(), fecha: $('fecha').value, hora: $('hora').value.trim(), lugar: $('lugar').value.trim(), msj: $('msj').value.trim(), host: $('host').value.trim() });
+function prev() { $('prev').innerHTML = INVITA.html(datos(), true); }
+['titulo', 'fecha', 'hora', 'lugar', 'msj', 'host'].forEach((id) => { $(id).oninput = prev; });
+prev();
+let url = '';
+$('crear').onclick = async () => {
+  const d = datos();
+  if (!d.titulo || !d.fecha || !d.lugar) { $('err').textContent = 'Falta el nombre, la fecha o el lugar 😊'; return; }
+  $('crear').disabled = true; $('err').textContent = 'Creando…';
+  try {
+    const r = await fetch('/api/invitacion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo crear');
+    url = location.origin + '/i/' + j.id; $('link').value = url;
+    S.creadas++; PX.save(S); PX.ev('creo'); if (S.creadas === 1) PX.px('UsoApp', { interes: 'interactivo-whatsapp', tipo });
+    $('s1').hidden = true; $('s2').hidden = false; $('err').textContent = ''; window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => PX.pedirCorreo('💌 ¿Te gustó la app?'), 3000);
+  } catch (e) { $('err').textContent = e.message; } finally { $('crear').disabled = false; }
+};
+$('wa').onclick = () => { PX.ev('wa'); const d = datos(); location.href = 'https://wa.me/?text=' + encodeURIComponent(`${INVITA.TIPOS[d.tipo].e} ¡Estás invitado/a a ${d.titulo}! Mira los detalles aquí 👉 ${url}`); };
+$('copiar').onclick = async () => { try { await navigator.clipboard.writeText(url); $('copiar').textContent = '✅ ¡Copiado!'; } catch { $('link').select(); } };
+$('abrir').onclick = () => window.open(url, '_blank');
+$('otra').onclick = (e) => { e.preventDefault(); $('s2').hidden = true; $('s1').hidden = false; };
+</script>
+</body></html>

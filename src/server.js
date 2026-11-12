@@ -194,6 +194,9 @@ const REGALOS = {
   navidad: { title: 'Planificador Navideño', file: '/regalos/Planificador-Navideno-Pixelia.zip' },
   racha: { title: 'Mi Racha de 30 días (app gratis)', file: '/racha', app: true,
     next: { slug: 'mi-2027-en-habitos', text: '¿Te gusta llevar tu racha? Imagina TODOS tus hábitos del año así: 12 meses, niveles y tu resumen del año.' } },
+  dinero: { title: 'Mi mes en dinero (app gratis)', file: '/dinero', app: true,
+    next: { slug: 'plan-financiero-2027', text: '¿Quieres saber cuánto ahorrar cada mes para cumplir tu meta de 2027? Arma tu plan del año:' } },
+  invitacion: { title: 'Crea tu invitación gratis', file: '/invitacion', app: true },
   reto: { title: 'Reto 30 Días (Google Sheets / Excel)', file: '/regalos/Reto-30-Dias-Pixelia.xlsx',
     next: { slug: 'mi-2027-en-habitos', text: '¿Te gustó? Imagina TODO tu 2027 así: 12 meses, niveles, ánimo diario y tu resumen del año.' } },
 };
@@ -246,7 +249,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -315,6 +318,32 @@ on('GET', '/reto', (req, res) => {   // las visitas cuentan en el regalo oculto 
   if (p && visitaReal(req, p.id)) Products.view(p.id);
   res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(renderPage('reto.html'));
 });  // página corta del Reto 30 Días (reel → bio)
+// 🧰 Herramientas gratis de Pixelia (12-nov): /apps, /racha, /dinero, /invitacion y las invitaciones /i/<id>
+for (const [ruta, archivo] of [['/apps', 'apps.html'], ['/dinero', 'dinero.html'], ['/invitacion', 'invitacion.html']])
+  on('GET', ruta, (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(renderPage(archivo)); });
+db.exec(`CREATE TABLE IF NOT EXISTS app_comentarios (id INTEGER PRIMARY KEY, email TEXT, app TEXT, texto TEXT, created_at TEXT DEFAULT (datetime('now')))`);
+db.exec(`CREATE TABLE IF NOT EXISTS invitaciones (id TEXT PRIMARY KEY, datos TEXT, ip TEXT, vistas INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`);
+const INV_TIPOS = ['asado', 'cumple', 'reunion', 'baby', 'quince', 'boda', 'grado', 'fiesta'], invHits = new Map();
+on('POST', '/api/invitacion', async (req, res) => {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
+  const n = (invHits.get(ip) || 0) + 1; invHits.set(ip, n); if (invHits.size > 5000) invHits.clear();
+  if (n > 15) return fail(res, 429, 'Demasiadas invitaciones por hoy, prueba más tarde');
+  const b = await body(req, 4e3).catch(() => ({}));
+  const t = (k, max) => String(b[k] || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
+  const d = { tipo: INV_TIPOS.includes(b.tipo) ? b.tipo : 'fiesta', titulo: t('titulo', 50), fecha: /^\d{4}-\d{2}-\d{2}$/.test(b.fecha) ? b.fecha : '', hora: t('hora', 12), lugar: t('lugar', 80), msj: t('msj', 120), host: t('host', 40) };
+  if (!d.titulo || !d.fecha || !d.lugar) return fail(res, 400, 'Falta el nombre, la fecha o el lugar');
+  let id; do { id = crypto.randomBytes(5).toString('base64url').replace(/[-_]/g, '').slice(0, 7); } while (id.length < 6 || db.prepare('SELECT 1 FROM invitaciones WHERE id = ?').get(id));
+  db.prepare('INSERT INTO invitaciones (id, datos, ip) VALUES (?, ?, ?)').run(id, JSON.stringify(d), ip);
+  if (!esDueno(req)) appEvento('w:invitacion', 'creada');
+  json(res, 200, { id });
+});
+on('GET', '/i/:id', (req, res, { id }) => {
+  const r = db.prepare('SELECT datos FROM invitaciones WHERE id = ?').get(String(id).slice(0, 12));
+  const d = r ? JSON.parse(r.datos) : null;
+  if (r && visitaReal(req, 'inv:' + id)) db.prepare('UPDATE invitaciones SET vistas = vistas + 1 WHERE id = ?').run(String(id));
+  res.writeHead(r ? 200 : 404, { 'content-type': MIME['.html'] });
+  res.end(renderPage('i.html', { TITLE: d ? esc(`💌 Invitación: ${d.titulo}`) : 'Invitación', DESC: d ? esc(`${d.lugar}${d.hora ? ' · ' + d.hora : ''} — toca para ver los detalles`) : '', DATA: JSON.stringify(d).replace(/</g, '\\u003c') }));
+});
 on('GET', '/racha', (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(renderPage('racha.html')); });   // 🧰 herramienta gratis (12-nov)
 on('POST', '/api/regalo', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
@@ -326,6 +355,8 @@ on('POST', '/api/regalo', async (req, res) => {
   const ids = [...new Set((Array.isArray(b.regalos) ? b.regalos : []).filter((x) => REGALOS[x]))];
   if (!ids.length) return fail(res, 400, 'Elige al menos un regalo');
   const s = Subscribers.add(email, 'regalo:' + ids.join('+'));
+  const com = String(b.comentario || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
+  if (com) { db.prepare('INSERT INTO app_comentarios (email, app, texto) VALUES (?, ?, ?)').run(email, ids.join('+'), com); notifyAdmin(`💬 Comentario en <b>${esc(ids.join('+'))}</b>: “${esc(com)}”`).catch(() => {}); }
   const links = ids.map((id) => ({ title: REGALOS[id].title, url: config.baseUrl + REGALOS[id].file, app: !!REGALOS[id].app }));
   const code = s.used_order ? null : s.code, off = Math.round((ids.includes('jefa') ? offPara('la-jefa', s) : COUPON_OFF) * 100);
   if (config.email.resendKey) {

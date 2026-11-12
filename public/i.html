@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<meta property="og:title" content="{{TITLE}}"><meta property="og:description" content="{{DESC}}"><meta property="og:image" content="{{BASE}}/img/apps/c4.jpg">
+<meta name="theme-color" content="#140f26">
+<link rel="stylesheet" href="/css/apps.css">
+{{PIXEL}}
+<style>.prev{border-radius:22px;padding:34px 20px;text-align:center;margin-top:10px;color:#2a1d10;animation:pop .6s}.prev .e{font-size:72px}.prev h3{font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:.75;margin-top:6px}.prev h2{font-size:34px;line-height:1.1;margin:10px 0 14px;font-family:Georgia,serif}.prev p{margin:8px 0;font-size:17px}.prev .q{font-style:italic;opacity:.85;margin-top:14px}</style>
+</head>
+<body><div class="w">
+<div class="top"><span>💌 Tienes una invitación</span></div>
+<div id="inv"></div>
+<button class="btn sec" id="cal">📅 Guardar en mi calendario</button>
+<button class="btn sec" id="mapa">📍 Ver cómo llegar</button>
+<div class="cta">Hecha gratis con <b>Pixelia</b> ✨<br><a href="/invitacion?ref=inv">Crea tu propia invitación gratis 👉</a></div>
+</div>
+<script src="/js/medir.js" data-k="invitacion-vista" defer></script>
+<script src="/js/invita.js"></script>
+<script>
+const D = {{DATA}};
+document.getElementById('inv').innerHTML = D ? INVITA.html(D) : '<div class="card">Esta invitación ya no existe 😕</div>';
+document.getElementById('mapa').onclick = () => { if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
+document.getElementById('cal').onclick = () => {
+  if (!D || !D.fecha) return; const f = D.fecha.replace(/-/g, '');
+  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(D.titulo) + '&dates=' + f + '/' + f + '&location=' + encodeURIComponent(D.lugar) + '&details=' + encodeURIComponent((D.hora ? 'Hora: ' + D.hora + '. ' : '') + location.href), '_blank');
+};
+</script>
+</body></html>
