@@ -89,25 +89,27 @@ table.t td.n{text-align:right;white-space:nowrap}
 <div class="wrap">
   <h1>Que el nuevo año <b>no te agarre desprevenido</b></h1>
   <p class="sub">Crea tu plan financiero 2027, mes a mes, en 1 minuto 👇</p>
+  <p class="sub" style="font-size:13px;opacity:.95;margin-top:-4px;cursor:pointer" onclick="verPlan(true)">💡 Ejemplo: María cobra $500, ahorra $61 al mes y cumple su meta en octubre. <u>Ver su plan</u></p>
   <div class="prog"><i id="pg"></i></div>
 
-  <!-- 1 -->
+  <!-- 1: el dolor del anuncio primero (Diego 11-nov: interactivo, rápido, de uno) -->
   <div class="step on" data-n="1">
-    <h2>👋 ¿A qué te dedicas?</h2>
-    <p class="h">Así armamos tu plan a tu medida</p>
-    <div class="chips" id="prof"></div>
-    <input id="profOtro" placeholder="Escribe a qué te dedicas" style="display:none;width:100%;padding:11px;border:2px solid #d9efe5;border-radius:12px;font-size:15px;margin-top:10px">
+    <h2>💵 ¿Cuánto cobras al mes, más o menos?</h2>
+    <p class="h" id="ingH">Un estimado está bien · nadie más lo ve</p>
+    <div class="chips" id="mon"></div>
+    <div class="in"><label id="ingL">Un mes normal</label><span class="cs">$</span><input id="ing" type="number" inputmode="decimal" placeholder="Ej: 500"></div>
+    <div class="chips" id="vari" style="margin-top:10px"><span class="chip on" data-v="0">🔒 Cobro fijo</span><span class="chip" data-v="1">🔄 Cambia cada mes</span></div>
+    <div class="in" id="malo" style="display:none"><label>Un mes flojo</label><span class="cs">$</span><input id="ingMalo" type="number" inputmode="decimal" placeholder="Ej: 300"></div>
     <div class="nav"><button class="btn" onclick="ir(2)">Siguiente →</button></div>
     <p style="text-align:center;margin-top:12px"><a href="#" onclick="verPlan(true);return false" style="color:#1f7a5a;font-size:13px;font-weight:700">👀 Ver un plan completo de ejemplo</a></p>
   </div>
 
-  <!-- 2 -->
+  <!-- 2: un toque y avanza solo -->
   <div class="step" data-n="2">
-    <h2>💵 ¿Cuánto ganas al mes, más o menos?</h2>
-    <p class="h" id="ingH">Un estimado está bien</p>
-    <div class="chips" id="mon"></div>
-    <div class="in"><label id="ingL">Un mes normal</label><span class="cs">$</span><input id="ing" type="number" inputmode="decimal" placeholder="Ej: 500"></div>
-    <div class="in" id="malo" style="display:none"><label>Un mes flojo</label><span class="cs">$</span><input id="ingMalo" type="number" inputmode="decimal" placeholder="Ej: 300"></div>
+    <h2>👋 ¿A qué te dedicas?</h2>
+    <p class="h">Toca una opción y seguimos</p>
+    <div class="chips" id="prof"></div>
+    <input id="profOtro" placeholder="Escribe a qué te dedicas" style="display:none;width:100%;padding:11px;border:2px solid #d9efe5;border-radius:12px;font-size:15px;margin-top:10px">
     <div class="nav"><button class="btn back" onclick="ir(1)">←</button><button class="btn" onclick="ir(3)">Siguiente →</button></div>
   </div>
 
@@ -178,23 +180,24 @@ const PROF=[['empleado','💼 Empleado',0],['negocio','🛍️ Tengo un negocio'
 const MON=[['$','🇺🇸 USD'],['$','🇲🇽 MXN'],['$','🇨🇴 COP'],['S/','🇵🇪 PEN'],['$','🇨🇱 CLP'],['$','🇦🇷 ARS'],['Bs','🇻🇪 Bs']];
 const GAS=[['renta','🏠 Renta / casa',.25],['comida','🛒 Comida',.25],['servicios','💡 Luz, agua, internet',.08],['transporte','🚌 Transporte',.07],['colegio','🎒 Colegio / estudios',.06],['deudas','💳 Deudas / tarjeta',.08],['negocio','📦 Gastos del negocio',.1]];
 const META=[['emergencia','🛟 Fondo de emergencia'],['deudas','💳 Salir de deudas'],['viaje','✈️ Un viaje'],['estudio','🎓 Estudiar algo'],['negocio','🚀 Montar o crecer mi negocio'],['cosa','📱 Comprarme algo'],['diciembre','🎄 Un diciembre sin deudas']];
-let S={prof:'empleado',var:0,cs:'$',gas:{renta:1,comida:1,servicios:1,transporte:1},meta:'emergencia'};
+let S={prof:'',var:0,cs:'$',gas:{renta:1,comida:1,servicios:1,transporte:1},meta:'emergencia'};
 const chips=(id,arr,key,multi)=>{$(id).innerHTML=arr.map(a=>`<span class="chip" data-v="${a[0]}">${a[1]}</span>`).join('');mark(id,key,multi);
   $(id).onclick=e=>{const c=e.target.closest('.chip');if(!c)return;const v=c.dataset.v;
-    if(multi){S[key][v]=S[key][v]?0:1}else{S[key]=v} if(key=='prof'){const p=PROF.find(x=>x[0]==v);S.var=p[2];$('profOtro').style.display=v=='otro'?'block':'none'} if(key=='cs')S.cs=c.dataset.s;
+    if(multi){S[key][v]=S[key][v]?0:1}else{S[key]=v} if(key=='prof'){$('profOtro').style.display=v=='otro'?'block':'none';if(v=='otro')setTimeout(()=>$('profOtro').focus(),100);else setTimeout(()=>ir(3),250)} if(key=='cs')S.cs=c.dataset.s;
     mark(id,key,multi);if(key=='gas')gasIn();}};
 const mark=(id,key,multi)=>[...$(id).children].forEach(c=>c.classList.toggle('on',multi?!!S[key][c.dataset.v]:S[key]==c.dataset.v));
 chips('prof',PROF,'prof');chips('gas',GAS,'gas',1);chips('meta',META,'meta');
 $('mon').innerHTML=MON.map((m,i)=>`<span class="chip${i?'':' on'}" data-s="${m[0]}">${m[1]}</span>`).join('');
 $('mon').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;[...$('mon').children].forEach(x=>x.classList.remove('on'));c.classList.add('on');S.cs=c.dataset.s;document.querySelectorAll('.cs').forEach(x=>x.textContent=S.cs);gasIn()};
+$('vari').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;S.var=+c.dataset.v;[...$('vari').children].forEach(x=>x.classList.toggle('on',x===c));$('malo').style.display=S.var?'flex':'none';$('ingL').textContent=S.var?'Un mes normal':'Un mes normal';if(S.var)setTimeout(()=>$('ingMalo').focus(),100)};
 const V={};const v=id=>Math.max(0,parseFloat(($(id)||{}).value)||0);
 const f=n=>S.cs+' '+Math.round(n).toLocaleString('es');
 function gasIn(){const ing=v('ing')||500;$('gasIn').innerHTML=GAS.filter(g=>S.gas[g[0]]).map(g=>`<div class="in"><label>${g[1]}</label><span class="cs">${S.cs}</span><input data-g="${g[0]}" type="number" inputmode="decimal" value="${V[g[0]]??Math.round(ing*g[2])}"></div>`).join('');
   $('gasIn').querySelectorAll('input').forEach(i=>i.oninput=()=>V[i.dataset.g]=parseFloat(i.value)||0)}
 function ir(n){
-  if(n==3&&!v('ing')){$('ing').focus();$('ing').style.borderColor='#dc2626';return}
+  if(n>=2&&!v('ing')){ir(1);$('ing').focus();$('ing').style.borderColor='#dc2626';return}
+  if(n==3&&!S.prof){return}
   document.querySelectorAll('.step').forEach(s=>s.classList.toggle('on',s.dataset.n==n));$('pg').style.width=(n-1)*25+'%';
-  if(n==2){$('malo').style.display=S.var?'flex':'none';$('ingH').textContent=S.var?'Como tu ingreso cambia, dinos un mes normal y uno flojo':'Un estimado está bien';}
   if(n==3)gasIn(); if(n==5)plan(); ev(n==5?'plan':'p'+(n-1)); scrollTo({top:0,behavior:'smooth'});
 }
 function plan(){

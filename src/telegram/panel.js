@@ -20,7 +20,7 @@ export const PRODUCTOS = [
   { k: 'aventura', b: '📚 Aventura', t: '📚 Mi Gran Aventura', slug: 'mi-gran-aventura', w: 'aventura', camp: /aventura/i,
     pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['nombre', 'escribieron el nombre'], ['comp', 'eligieron compañero'], ['quiero', 'tocaron "Quiero su libro"'], ['correo', 'dejaron el correo']] },
   { k: 'plan', b: '📊 Plan', t: '📊 Plan 2027', slug: 'plan-financiero-2027', w: 'plan', camp: /plan financiero/i,
-    pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['p1', 'eligieron a qué se dedican'], ['p2', 'pusieron su ingreso'], ['p3', 'pusieron sus gastos'], ['plan', 'vieron su plan'], ['quiero', 'tocaron "Quiero mi plan"'], ['correo', 'dejaron el correo']] },
+    pasos: [['vio', 'cargaron la página'], ['s5', 'se quedaron 5 s'], ['p1', 'pusieron su ingreso'], ['p2', 'eligieron a qué se dedican'], ['p3', 'pusieron sus gastos'], ['plan', 'vieron su plan'], ['quiero', 'tocaron "Quiero mi plan"'], ['correo', 'dejaron el correo']] },
 ];
 
 export function teclado(v) {
