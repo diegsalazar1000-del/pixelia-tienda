@@ -106,7 +106,9 @@ async function producto(P) {
     l.push(`▸ Eligieron oficio: <b>${of}</b>${pct(of, ab)}`, `▸ La usaron 1 vez: <b>${e.uso1 || 0}</b>${pct(e.uso1, ab)}`, `▸ Llegaron a 3 usos: <b>${e.uso3 || 0}</b>${pct(e.uso3, ab)}`,
       `▸ Tocaron comprar: <b>${e.compra || 0}</b>${pct(e.compra, ab)}`, `▸ Dejaron correo: <b>${e.correo || 0}</b>${pct(e.correo, ab)}`);
     const ofs = Object.entries(e).filter(([k]) => k.startsWith('of_')).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    if (ofs.length) l.push('', '💼 Oficios: ' + ofs.map(([k, n]) => `${k.slice(3)} ${n}`).join(' · '));
+    if (ofs.length) l.push('', '💼 Oficios (demo): ' + ofs.map(([k, n]) => `${k.slice(3)} ${n}`).join(' · '));
+    const cof = Object.entries(e).filter(([k]) => k.startsWith('c_of_')).sort((a, b) => b[1] - a[1]);
+    if (cof.length) l.push('🛍️ Clientes la usan para: ' + cof.map(([k, n]) => `${k.slice(5)} ${n}`).join(' · '));
     const NOM = { caro: '💸 cara', pago: '💳 no sabe pagar', nosirve: '🤷 no le sirve', dificil: '😵 difícil', luego: '⏳ después' };
     const no = Object.entries(e).filter(([k]) => k.startsWith('no_')).sort((a, b) => b[1] - a[1]);
     if (no.length) l.push('🚧 Qué las frenó: ' + no.map(([k, n]) => `${NOM[k.slice(3)] || k} ${n}`).join(' · '));

@@ -306,7 +306,7 @@ function mostrarOficio() {
   $('#ofis').querySelectorAll('[data-of]').forEach((b) => b.onclick = () => elegirOficio(b.dataset.of));
 }
 function elegirOficio(k) {
-  try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: 'of_' + k }), keepalive: true }).catch(() => {}); } catch (e) {}
+  try { fetch('/api/app-evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'jefa', e: (window.APP_DEMO ? '' : 'c_') + 'of_' + k }), keepalive: true }).catch(() => {}); } catch (e) {}
   if (k === 'otro') { $('#ofotro').style.display = 'block'; $('#ofotxt').focus(); return; }
   guardar('oficio', k); if (typeof of !== 'undefined') { of = MSG_OF[k]; try { pintarMsg(); } catch (e) {} }
   const [, , nom, , md, cs, horas] = OFICIOS[k];

@@ -230,6 +230,7 @@ on('GET', '/app/:app/', (req, res, { app }, url) => {
   const k = url.searchParams.get('k') || '';
   if (!licOk(req, k)) { res.writeHead(302, { location: `/p/${A.slug}` }); return res.end(); }   // sin licencia → a la página de venta
   let html = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'apps', A.dir, 'index.html'), 'utf8');
+  html = html.replace(/<script src="\/js\/medir\.js"[^>]*><\/script>/, '');   // clientes: no cuentan en el embudo de la demo
   res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' });
   res.end(html.replaceAll('{{LIC}}', encodeURIComponent(k)));
 });
@@ -238,7 +239,7 @@ try { db.exec('CREATE TABLE IF NOT EXISTS app_eventos (day TEXT, app TEXT, event
 const appEvento = (app, evento) => { try { db.prepare("INSERT INTO app_eventos (day, app, evento, n) VALUES (date('now'), ?, ?, 1) ON CONFLICT(day, app, evento) DO UPDATE SET n = n + 1").run(app, evento); } catch {} };
 on('POST', '/api/app-evento', async (req, res) => {
   const b = await body(req, 500).catch(() => ({})); const app = String(b.app || ''), e = String(b.e || '');
-  if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10}|of_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
+  if (APPS[app] && /^(uso[1-9]|muro|correo|compra|tab_[a-z]{3,10}|no_[a-z]{3,10}|(c_)?of_[a-z]{3,10})$/.test(e) && !esDueno(req)) appEvento(app, e);
   json(res, 200, { ok: true });
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
