@@ -11,7 +11,7 @@ const q = (sql, ...a) => { try { return db.prepare(sql).all(...a); } catch { ret
 const one = (sql, ...a) => q(sql, ...a)[0] || {};
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const usd = (c) => '$' + (Number(c || 0) / 100).toFixed(2);
-const pct = (n, d) => (d ? ` <i>(${Math.round(n / d * 100)}%)</i>` : '');
+const pct = (n, d) => (d ? ` <i>(${Math.round((n || 0) / d * 100)}%)</i>` : '');
 const hora = () => new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
 
 // Productos con landing/demo medida. Para agregar uno nuevo: una línea aquí.
@@ -99,8 +99,9 @@ async function producto(P) {
   const l = [`${P.t} · ${hora()}`, `<i>7 días</i>`, '', `👀 Visitas: hoy <b>${vis.h || 0}</b> · semana ${vis.s || 0}`, ''];
   const ev = (app) => Object.fromEntries(q(`SELECT evento, SUM(n) n FROM app_eventos WHERE app = ? AND day >= date('now','-6 day') GROUP BY evento`, app).map((r) => [r.evento, r.n]));
   if (P.demo) {
-    const e = ev(P.demo), ab = e.abrio || 0;
-    l.push('🧭 <b>Qué hacen en la demo</b>', `▸ Abrieron: <b>${ab}</b>`);
+    const e = ev(P.demo), w = ev('w:' + P.demo), ab = e.abrio || 0;
+    // medir.js dentro de la demo: "abrio" cuenta el toque (el servidor recibe el pedido); "vio" = la página de verdad cargó en el celular
+    l.push('🧭 <b>Qué hacen en la demo</b>', `▸ Tocaron el enlace: <b>${ab}</b>`, `▸ Cargó la página: <b>${w.vio || 0}</b>${pct(w.vio, ab)}`, `▸ Se quedaron 5 s: <b>${w.s5 || 0}</b>${pct(w.s5, ab)}`, `▸ Se quedaron 15 s: <b>${w.s15 || 0}</b>${pct(w.s15, ab)}`);
     const of = Object.entries(e).filter(([k]) => k.startsWith('of_')).reduce((a, [, n]) => a + n, 0);
     l.push(`▸ Eligieron oficio: <b>${of}</b>${pct(of, ab)}`, `▸ La usaron 1 vez: <b>${e.uso1 || 0}</b>${pct(e.uso1, ab)}`, `▸ Llegaron a 3 usos: <b>${e.uso3 || 0}</b>${pct(e.uso3, ab)}`,
       `▸ Tocaron comprar: <b>${e.compra || 0}</b>${pct(e.compra, ab)}`, `▸ Dejaron correo: <b>${e.correo || 0}</b>${pct(e.correo, ab)}`);
