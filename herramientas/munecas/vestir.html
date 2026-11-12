@@ -18,8 +18,8 @@ small{display:block;margin:14px;color:#8a7a96}
 <div class="nom" id="nom">Sofía</div>
 <div class="esc">
   <img src="arte/base.png" alt="">
-  <img id="ropa" src="arte/vestido.png" alt="">
-  <img id="pelo" src="arte/pelo.png" alt="">
+  <img id="ropa" style="z-index:1" src="arte/vestido.png" alt="">
+  <img id="pelo" style="z-index:2" src="arte/pelo.png" alt="">
 </div>
 <div class="fila"><b>Ropa</b>
   <button data-r="" >Básica</button>
@@ -45,7 +45,7 @@ small{display:block;margin:14px;color:#8a7a96}
 const ropa=document.getElementById('ropa'),pelo=document.getElementById('pelo');
 function sel(attr,img){document.querySelectorAll('['+attr+']').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('['+attr+']').forEach(x=>x.classList.remove('on'));b.classList.add('on');
-  const v=b.getAttribute(attr);img.style.opacity=v?1:0;if(v)img.src='arte/'+v+'.png';});}
+  const v=b.getAttribute(attr);img.style.opacity=v?1:0;if(v)img.src='arte/'+v+'.png';if(img===ropa)ropa.style.zIndex=(v==='lluvia'||v==='fiesta')?3:1;});}
 sel('data-r',ropa);sel('data-p',pelo);
 document.getElementById('inp').oninput=e=>document.getElementById('nom').textContent=e.target.value;
 </script></body></html>
