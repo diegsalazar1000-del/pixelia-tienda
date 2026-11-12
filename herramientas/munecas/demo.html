@@ -84,7 +84,7 @@
   <div id="hoja">
     <div class="hoja">
       <h2>✂️ Hoja para imprimir · Muñeca de <span class="nomH">Valentina</span></h2>
-      <p>Imprime en hoja carta (mejor en cartulina). Recorta por la línea punteada y dobla las pestañas blancas hacia atrás para vestirla. Dobla la base para que se pare sola.</p>
+      <p>Imprime en hoja carta (mejor en cartulina). La muñeca va SIN pelo: cada peinado es una pieza aparte con el hueco de la cara (recórtalo) y se coloca encima de la cabeza. Recorta por la línea punteada y dobla las pestañas blancas hacia atrás para vestirla. Dobla la base para que se pare sola.</p>
       <div class="cortes" id="cortes"></div>
       <p class="nota">🖨️ Desde el teléfono: Compartir → Imprimir. En la computadora: Ctrl + P.</p>
     </div>
@@ -182,11 +182,11 @@ function base(nom) {
   return `<g ${L}><path d="M50 330 L150 330 L160 352 L40 352 Z" fill="#b48cff"/></g><text x="100" y="347" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="13" fill="#fff">${(nom || '').replace(/[<&>]/g, '')}</text>`;
 }
 function muneca(st = S) {
-  let s = PELO[st.pelo].atras(st.cpelo) + cuerpo(st.piel);
+  let s = (st.pelo ? PELO[st.pelo].atras(st.cpelo) : '') + cuerpo(st.piel);
   s += st.ropa ? '' : interior;
   s += ZAP[st.zap]?.d() || '';
   s += st.ropa ? ROPA[st.ropa].d() : '';
-  s += PELO[st.pelo].frente(st.cpelo);
+  s += st.pelo ? PELO[st.pelo].frente(st.cpelo) : '';
   for (const a of st.acc) s += ACC[a].d();
   return s;
 }
@@ -206,6 +206,7 @@ function armar() {
   chip(ropa, '<span class="x">🚫</span>', !S.ropa, () => { S.ropa = null; pintar(); }, 'Sin ropa').dataset.k = 'ropa:';
   for (const [k, v] of Object.entries(ROPA)) chip(ropa, svg(v.d(), '34 105 132 215'), S.ropa === k, () => { S.ropa = k; pintar(); }, v.n).dataset.k = 'ropa:' + k;
   const pelo = g('g-pelo');
+  chip(pelo, '<span class="x">🚫</span>', !S.pelo, () => { S.pelo = null; pintar(); }, 'Sin peinado (así se imprime)').dataset.k = 'pelo:';
   for (const [k, v] of Object.entries(PELO)) chip(pelo, svg(v.atras(S.cpelo) + v.frente(S.cpelo), '28 2 144 220'), S.pelo === k, () => { S.pelo = k; pintar(); }, v.n).dataset.k = 'pelo:' + k;
   const zap = g('g-zap');
   for (const [k, v] of Object.entries(ZAP)) chip(zap, svg(v.d(), '64 280 72 48'), S.zap === k, () => { S.zap = k; pintar(); }, v.n).dataset.k = 'zap:' + k;
@@ -219,12 +220,20 @@ function armar() {
 function marcar() {
   document.querySelectorAll('.pz').forEach((d) => {
     const [t, k] = (d.dataset.k || '').split(':');
-    d.classList.toggle('on', t === 'ropa' ? (S.ropa || '') === k : t === 'pelo' ? S.pelo === k : t === 'zap' ? S.zap === k : S.acc.has(k));
+    d.classList.toggle('on', t === 'ropa' ? (S.ropa || '') === k : t === 'pelo' ? (S.pelo || '') === k : t === 'zap' ? S.zap === k : S.acc.has(k));
   });
 }
 document.getElementById('nom').oninput = (e) => { S.nom = e.target.value; pintar(); hoja(); };
 
 // ===== Hoja para imprimir: cada pieza con línea de corte y pestañas para doblar =====
+let _m = 0;
+function peloPieza(k, c) {
+  const id = 'cara' + (++_m);
+  return `<defs><mask id="${id}"><rect x="0" y="0" width="200" height="360" fill="#fff"/><ellipse cx="100" cy="84" rx="37" ry="33" fill="#000"/></mask></defs>`
+    + `<g mask="url(#${id})">${PELO[k].atras(c)}${capa(c)}<circle cx="100" cy="72" r="45" fill="${c}"/></g>${PELO[k].frente(c)}`
+    + `<ellipse cx="100" cy="84" rx="37" ry="33" fill="#fff" stroke="#9a86c0" stroke-width="1.6" stroke-dasharray="4 3"/>`
+    + `<text x="100" y="88" text-anchor="middle" font-size="9" fill="#9a86c0" font-family="system-ui">✂️ recorta</text>`;
+}
 const pestanas = (xs, y) => xs.map((x) => `<rect x="${x - 7}" y="${y - 11}" width="14" height="12" rx="2" fill="#fff" stroke="#9a86c0" stroke-width="1.2" stroke-dasharray="3 2"/>`).join('');
 function hoja() {
   document.querySelectorAll('.nomH').forEach((e) => (e.textContent = S.nom || 'tu hija'));
@@ -234,11 +243,11 @@ function hoja() {
     d.innerHTML = `<span class="tijera">✂️</span>${svg(inner, vb)}<div>${titulo}</div>`; c.appendChild(d);
   };
   const st = { ...S, ropa: null, zap: null, acc: new Set() };
-  add('La muñeca (con su base)', PELO[S.pelo].atras(S.cpelo) + cuerpo(S.piel) + interior + PELO[S.pelo].frente(S.cpelo) + base(S.nom) + '<path d="M40 330 L160 330" stroke="#9a86c0" stroke-dasharray="4 3"/>', '20 0 160 360', true);
+  add('La muñeca (sin pelo: los peinados van aparte)', cuerpo(S.piel) + interior + base(S.nom) + '<path d="M40 330 L160 330" stroke="#9a86c0" stroke-dasharray="4 3"/>', '20 0 160 360', true);
   for (const v of Object.values(ROPA)) add(v.n, pestanas([66, 134], 122) + v.d(), '30 100 140 222');
-  for (const [k, v] of Object.entries(PELO)) if (k !== S.pelo) add('Peinado: ' + v.n, v.atras(S.cpelo) + v.frente(S.cpelo), '28 2 144 220');
+  for (const [k, v] of Object.entries(PELO)) add('Peinado: ' + v.n, peloPieza(k, S.cpelo), '28 2 144 220');
   add('Zapatos', Object.values(ZAP).map((v, i) => `<g transform="translate(${(i - 1) * 78} 0)">${v.d()}</g>`).join(''), '-20 276 240 54');
-  add('Accesorios', ACC.cintillo.d() + `<g transform="translate(0 70)">${ACC.corona.d()}</g>` + `<g transform="translate(0 140)">${ACC.lentes.d()}</g>` + `<g transform="translate(-100 30)">${ACC.bolso.d()}</g>`, '30 10 140 230');
+  add('Accesorios', ACC.cintillo.d() + `<g transform="translate(0 70)">${ACC.corona.d()}</g>` + `<g transform="translate(0 140)">${ACC.lentes.d()}</g>` + `<g transform="translate(-82 10)">${ACC.bolso.d()}</g>`, '30 10 140 230');
 }
 
 // ===== Pestañas =====
