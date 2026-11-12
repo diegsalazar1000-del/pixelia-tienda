@@ -1,7 +1,7 @@
 // Diseño de la invitación gratis (lo usan el creador /invitacion y la página que reciben /i/<id>)
 window.INVITA = {
   TIPOS: {
-    asado:   { e: '🔥', n: 'Asado / parrilla', t: 'Nos vamos de parrilla', bg: 'linear-gradient(160deg,#ffe6c9,#ffb07a)', ink: '#3a1d0a', acc: '#d9480f', sobre: '#c2410c', lluvia: ['🔥', '🥩', '🌭', '🍺', '🌽'], font: "'Poppins',sans-serif" },
+    asado:   { e: '🔥', n: 'Parrilla', t: 'Nos vamos de parrilla', bg: 'linear-gradient(160deg,#ffe6c9,#ffb07a)', ink: '#3a1d0a', acc: '#d9480f', sobre: '#c2410c', lluvia: ['🔥', '🥩', '🌭', '🍺', '🌽'], font: "'Poppins',sans-serif" },
     cumple:  { e: '🎂', n: 'Cumpleaños', t: 'Celebremos un año más', bg: 'linear-gradient(160deg,#ffe3f1,#ffb3d6)', ink: '#3d0f2b', acc: '#d6336c', sobre: '#e64980', lluvia: ['🎈', '🎂', '🎉', '🎁', '✨'], font: "'Poppins',sans-serif" },
     reunion: { e: '🥂', n: 'Reunión', t: 'Nos reunimos', bg: 'linear-gradient(160deg,#ece8ff,#b9adff)', ink: '#1f1546', acc: '#5f3dc4', sobre: '#6741d9', lluvia: ['🥂', '✨', '🍕', '🎶'], font: "'Poppins',sans-serif" },
     baby:    { e: '🍼', n: 'Baby shower', t: 'Viene en camino', bg: 'linear-gradient(160deg,#e3f4ff,#ffe3ef)', ink: '#203047', acc: '#1c7ed6', sobre: '#74c0fc', lluvia: ['🍼', '🧸', '👶', '☁️', '💙', '💗'], font: "Georgia,serif" },
@@ -9,6 +9,22 @@ window.INVITA = {
     boda:    { e: '💍', n: 'Boda', t: 'Nos casamos', bg: 'linear-gradient(160deg,#fffbf3,#efe0c4)', ink: '#3a2e1f', acc: '#a67c37', sobre: '#c9a96e', lluvia: ['🤍', '💍', '🌿', '✨', '🕊️'], font: "Georgia,serif" },
     grado:   { e: '🎓', n: 'Graduación', t: '¡Me gradúo!', bg: 'linear-gradient(160deg,#e5edff,#c3d3ff)', ink: '#14244a', acc: '#364fc7', sobre: '#4263eb', lluvia: ['🎓', '⭐', '🎉', '📜'], font: "'Poppins',sans-serif" },
     fiesta:  { e: '🎉', n: 'Fiesta', t: 'Hay fiesta', bg: 'linear-gradient(160deg,#fff6c9,#ffc9a8)', ink: '#3a240a', acc: '#e8590c', sobre: '#f76707', lluvia: ['🎉', '🎊', '✨', '🎶', '🪩'], font: "'Poppins',sans-serif" },
+  },
+  // cómo se le dice a la parrilla en cada país (Diego 12-nov)
+  ASADO: { VE: ['Parrilla', 'Nos vamos de parrilla'], AR: ['Asado', 'Nos vamos de asado'], UY: ['Asado', 'Nos vamos de asado'], PY: ['Asado', 'Nos vamos de asado'], CL: ['Asado', 'Nos vamos de asado'],
+    CO: ['Asado', 'Hay asado'], BO: ['Churrasco', 'Hay churrasco'], MX: ['Carne asada', 'Hay carne asada'], PE: ['Parrillada', 'Hay parrillada'], EC: ['Parrillada', 'Hay parrillada'],
+    ES: ['Barbacoa', 'Nos vamos de barbacoa'], DO: ['Barbacoa', 'Hay barbacoa'], PR: ['BBQ', 'Hay BBQ'], CR: ['Carne asada', 'Hay carne asada'], GT: ['Churrasco', 'Hay churrasco'],
+    SV: ['Carne asada', 'Hay carne asada'], HN: ['Carne asada', 'Hay carne asada'], NI: ['Carne asada', 'Hay carne asada'], PA: ['Parrillada', 'Hay parrillada'], US: ['BBQ / parrilla', 'Hay parrillada'] },
+  pais() {
+    const z = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const m = { Caracas: 'VE', Buenos_Aires: 'AR', Argentina: 'AR', Montevideo: 'UY', Asuncion: 'PY', Santiago: 'CL', Bogota: 'CO', La_Paz: 'BO', Mexico: 'MX', Monterrey: 'MX', Tijuana: 'MX', Cancun: 'MX', Merida: 'MX', Chihuahua: 'MX', Hermosillo: 'MX', Lima: 'PE', Guayaquil: 'EC', Madrid: 'ES', Canary: 'ES', Santo_Domingo: 'DO', Puerto_Rico: 'PR', Costa_Rica: 'CR', Guatemala: 'GT', El_Salvador: 'SV', Tegucigalpa: 'HN', Managua: 'NI', Panama: 'PA', New_York: 'US', Chicago: 'US', Los_Angeles: 'US', Denver: 'US', Phoenix: 'US' };
+    for (const k in m) if (z.includes(k)) return m[k];
+    return 'VE';
+  },
+  tema(d) {   // tema del tipo + palabra del país para el asado
+    const T = { ...(INVITA.TIPOS[d.tipo] || INVITA.TIPOS.fiesta) };
+    if (d.tipo === 'asado') { const w = INVITA.ASADO[d.pais] || INVITA.ASADO.VE; T.n = w[0]; T.t = w[1]; }
+    return T;
   },
   esc: (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]),
   fecha(f) {
@@ -18,7 +34,7 @@ window.INVITA = {
   },
   faltan(f) { if (!f) return ''; const n = Math.round((new Date(f + 'T12:00') - new Date(new Date().toDateString() + ' 12:00')) / 864e5); return n > 1 ? `⏳ Faltan ${n} días` : n === 1 ? '⏳ ¡Es mañana!' : n === 0 ? '🎉 ¡Es hoy!' : ''; },
   html(d, demo) {
-    const T = INVITA.TIPOS[d.tipo] || INVITA.TIPOS.fiesta, e = INVITA.esc;
+    const T = INVITA.tema(d), e = INVITA.esc;
     return `<div class="prev inv" style="background:${T.bg};color:${T.ink};--acc:${T.acc}">
       <div class="deco d1">${T.lluvia[0]}</div><div class="deco d2">${T.lluvia[1]}</div><div class="deco d3">${T.lluvia[2] || T.e}</div>
       <div class="e">${T.e}</div><h3 style="color:${T.acc}">${T.t}</h3>

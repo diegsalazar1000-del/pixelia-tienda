@@ -23,6 +23,12 @@
 .sobre.abierto .frente{z-index:4}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
 .toca{margin-top:34px;font:700 18px Poppins,sans-serif;color:#ffd9a8;animation:lat 1.6s ease-in-out infinite}
+.msgs{margin-top:16px}
+.m{background:#221a42;border-radius:16px;padding:10px 14px;margin-top:8px;font-size:15px;line-height:1.35}
+.m b{display:block;font-size:13px;color:#c9c2ee;margin-bottom:2px}
+.m.host{background:linear-gradient(135deg,#3a2560,#4a2a5c);border:1px solid #ffd23d55}
+.m.host b{color:#ffd23d}
+textarea{width:100%;font:16px system-ui;padding:12px;border-radius:14px;border:2px solid #4a3d85;background:#0e0a1d;color:#fff;outline:none;resize:none;margin-top:8px}
 #todo{display:none}
 #todo.ver{display:block;animation:sube .8s cubic-bezier(.2,.9,.3,1.1)}
 @keyframes sube{from{opacity:0;transform:translateY(60px) scale(.9)}}
@@ -38,6 +44,18 @@
 <div id="todo">
   <div id="inv"></div>
   <div class="btns">
+    <div class="card msgs" id="msgsCard">
+      <b id="msgsT">💬 Mensajes para el anfitrión</b>
+      <p class="mini" id="msgsSub" style="text-align:left;margin-top:4px">¿Vas? ¿Qué llevas? ¿Qué hace falta? Escríbelo aquí y te responden 👇</p>
+      <div id="lista"></div>
+      <div id="form">
+        <input id="nom" type="text" maxlength="30" placeholder="Tu nombre" style="margin-top:12px">
+        <div class="chips" id="rapidos"></div>
+        <textarea id="txt" rows="2" maxlength="200" placeholder="Escribe tu mensaje…"></textarea>
+        <button class="btn" id="enviar">Enviar 💬</button>
+        <div class="msg" id="mmsg"></div>
+      </div>
+    </div>
     <button class="btn sec" id="cal">📅 Guardar en mi calendario</button>
     <button class="btn sec" id="mapa">📍 Ver cómo llegar</button>
     <div class="cta">Hecha gratis con <b>Pixelia</b> ✨<br><a href="/invitacion?ref=inv">Crea tu propia invitación gratis 👉</a></div>
@@ -51,7 +69,7 @@ const D = {{DATA}};
 const $ = (id) => document.getElementById(id);
 if (!D) { $('sobreWrap').innerHTML = '<div class="card">Esta invitación ya no existe 😕</div>'; }
 else {
-  const T = INVITA.TIPOS[D.tipo] || INVITA.TIPOS.fiesta;
+  const T = INVITA.tema(D);
   $('cuerpo').style.background = T.sobre; $('tapa').style.background = T.sobre; $('frente').style.background = T.sobre; $('sello').textContent = T.e; $('cartaE').textContent = T.e;
   $('inv').innerHTML = INVITA.html(D);
   let abierta = false;
@@ -61,6 +79,35 @@ else {
   };
   $('sobreWrap').onclick = abrir;
   if (/[?&]abierta/.test(location.search)) { $('sobreWrap').style.display = 'none'; $('todo').classList.add('ver'); }
+}
+// 💬 Mensajes: invitados escriben, el anfitrión (con ?h=) responde
+const H = new URLSearchParams(location.search).get('h') || '';
+const ID = location.pathname.split('/').pop();
+const RAPIDOS = H ? ['✅ ¡Listo, anotado!', '🙏 ¡Gracias!', '🧊 Falta hielo', '🥤 Faltan refrescos', '🍞 Falta pan'] : ['🙋 ¡Voy!', '😢 No puedo ir', '🧊 Llevo hielo', '🥤 Llevo refrescos', '❓ ¿Qué hace falta?'];
+if (D) {
+  if (H) { $('msgsT').textContent = '👑 Eres el anfitrión'; $('msgsSub').textContent = 'Aquí ves lo que te escriben tus invitados. Respóndeles y todos lo verán.'; $('nom').style.display = 'none'; $('todo').classList.add('ver'); $('sobreWrap').style.display = 'none'; }
+  else { try { $('nom').value = localStorage.getItem('px_inv_nom') || ''; } catch {} }
+  RAPIDOS.forEach((r) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = r; b.onclick = () => { $('txt').value = r; $('txt').focus(); }; $('rapidos').appendChild(b); });
+  const pintarMsgs = async () => {
+    try {
+      const j = await (await fetch('/api/invitacion/' + ID + '/mensajes')).json();
+      $('lista').innerHTML = j.mensajes.length ? j.mensajes.map((m) => `<div class="m${m.host ? ' host' : ''}"><b>${m.host ? '👑 ' + INVITA.esc(D.host || 'Anfitrión') : INVITA.esc(m.nombre)}</b>${INVITA.esc(m.texto)}</div>`).join('') : '<p class="mini" style="text-align:left">Todavía no hay mensajes. ¡Sé el primero!</p>';
+    } catch {}
+  };
+  $('enviar').onclick = async () => {
+    const nombre = $('nom').value.trim(), texto = $('txt').value.trim();
+    if (!H && !nombre) { $('mmsg').textContent = 'Escribe tu nombre 😊'; $('nom').focus(); return; }
+    if (!texto) { $('mmsg').textContent = 'Escribe tu mensaje 😊'; return; }
+    $('enviar').disabled = true;
+    try {
+      const r = await fetch('/api/invitacion/' + ID + '/mensaje', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre, texto, h: H }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo enviar');
+      $('txt').value = ''; $('mmsg').textContent = '✅ ¡Enviado!'; try { localStorage.setItem('px_inv_nom', nombre); } catch {}
+      fetch('/api/vista', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ k: 'invitacion-vista', e: 'msj' }) }).catch(() => {});
+      pintarMsgs();
+    } catch (e) { $('mmsg').textContent = e.message; } finally { $('enviar').disabled = false; }
+  };
+  pintarMsgs(); setInterval(pintarMsgs, 20000);
 }
 $('mapa').onclick = () => { if (D) window.open('https://www.google.com/maps/search/' + encodeURIComponent(D.lugar), '_blank'); };
 $('cal').onclick = () => {

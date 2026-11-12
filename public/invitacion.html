@@ -13,6 +13,7 @@
 <h1>💌 Crea tu invitación</h1>
 <p class="sub">Para tu asado, cumpleaños, reunión o lo que sea. Lista en 1 minuto para mandarla por WhatsApp.</p>
 
+<div id="misInv"></div>
 <section id="s1" class="card">
   <label class="f">¿Qué celebras?</label>
   <div class="chips" id="tipos"></div>
@@ -36,6 +37,7 @@
   <button class="btn" id="wa">Enviar por WhatsApp 💬</button>
   <button class="btn sec" id="copiar">📋 Copiar enlace</button>
   <button class="btn sec" id="abrir">👀 Ver cómo la reciben</button>
+  <div class="cta" style="text-align:left">💬 <b>Tus invitados te pueden escribir</b> ("llevo el hielo", "¿qué hace falta?"). Para leer y responder, abre <b>tu enlace de anfitrión</b> (no lo compartas):<br><a id="hostLink" href="#" target="_blank">👑 Abrir mi invitación como anfitrión</a><br><span style="font-size:12px;color:#a79fd4">Queda guardado en este teléfono, en "Mis invitaciones".</span></div>
   <div class="cta">✨ <b>Muy pronto: Invitación Plus</b> — quién confirma, quién lleva qué (carne, hielo, refrescos…), dividir gastos y temas para bodas, 15 años y baby shower.</div>
   <div id="otras"></div>
 <p class="mini"><a href="#" id="otra">Crear otra invitación</a></p>
@@ -47,17 +49,20 @@
 <script>
 const $ = PX.$;
 const S = PX.load({ creadas: 0 });
-let tipo = 'asado';
-Object.entries(INVITA.TIPOS).forEach(([k, t]) => {
+let tipo = 'asado'; const PAIS = INVITA.pais();
+Object.entries(INVITA.TIPOS).forEach(([k, t0]) => {
+  const t = INVITA.tema({ tipo: k, pais: PAIS });
   const b = document.createElement('button'); b.className = 'chip' + (k === tipo ? ' on' : ''); b.textContent = t.e + ' ' + t.n;
   b.onclick = () => { tipo = k; document.querySelectorAll('#tipos .chip').forEach((x) => x.classList.remove('on')); b.classList.add('on'); prev(); };
   $('tipos').appendChild(b);
 });
-const datos = () => ({ tipo, titulo: $('titulo').value.trim(), fecha: $('fecha').value, hora: $('hora').value.trim(), lugar: $('lugar').value.trim(), msj: $('msj').value.trim(), host: $('host').value.trim() });
+const datos = () => ({ tipo, pais: PAIS, titulo: $('titulo').value.trim(), fecha: $('fecha').value, hora: $('hora').value.trim(), lugar: $('lugar').value.trim(), msj: $('msj').value.trim(), host: $('host').value.trim() });
 function prev() { $('prev').innerHTML = INVITA.html(datos(), true); }
 ['titulo', 'fecha', 'hora', 'lugar', 'msj', 'host'].forEach((id) => { $(id).oninput = prev; });
+$('titulo').placeholder = 'Ej: ' + INVITA.tema({ tipo: 'asado', pais: PAIS }).n + ' en casa de Diego';
 prev();
-let url = '';
+try { const L = JSON.parse(localStorage.getItem('px_mis_inv') || '[]'); if (L.length) $('misInv').innerHTML = '<div class="card"><b>👑 Mis invitaciones</b>' + L.slice(0, 5).map((x) => `<a href="${x.u}" style="display:block;color:#ffb38a;margin-top:8px">${INVITA.esc(x.t)} · ver mensajes ›</a>`).join('') + '</div>'; } catch {}
+let url = '', hostUrl = '';
 $('crear').onclick = async () => {
   const d = datos();
   if (!d.titulo || !d.fecha || !d.lugar) { $('err').textContent = 'Falta el nombre, la fecha o el lugar 😊'; return; }
@@ -65,13 +70,14 @@ $('crear').onclick = async () => {
   try {
     const r = await fetch('/api/invitacion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || 'No se pudo crear');
-    url = location.origin + '/i/' + j.id; $('link').value = url;
+    url = location.origin + '/i/' + j.id; $('link').value = url; hostUrl = url + '?h=' + j.h; $('hostLink').href = hostUrl;
+    try { const L = JSON.parse(localStorage.getItem('px_mis_inv') || '[]'); L.unshift({ t: datos().titulo, u: hostUrl }); localStorage.setItem('px_mis_inv', JSON.stringify(L.slice(0, 20))); } catch {}
     S.creadas++; PX.save(S); PX.extra = tipo; PX.ev('creo'); if (S.creadas === 1) PX.px('UsoApp', { interes: 'interactivo-whatsapp', tipo });
     $('s1').hidden = true; $('s2').hidden = false; $('err').textContent = ''; window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => PX.pedirCorreo('💌 ¿Te gustó la app?'), 3000);
   } catch (e) { $('err').textContent = e.message; } finally { $('crear').disabled = false; }
 };
-$('wa').onclick = () => { PX.ev('wa'); const d = datos(); location.href = 'https://wa.me/?text=' + encodeURIComponent(`${INVITA.TIPOS[d.tipo].e} ¡Estás invitado/a a ${d.titulo}! Mira los detalles aquí 👉 ${url}`); };
+$('wa').onclick = () => { PX.ev('wa'); const d = datos(); location.href = 'https://wa.me/?text=' + encodeURIComponent(`${INVITA.tema(d).e} ¡Estás invitado/a a ${d.titulo}! Mira los detalles aquí 👉 ${url}`); };
 $('copiar').onclick = async () => { try { await navigator.clipboard.writeText(url); $('copiar').textContent = '✅ ¡Copiado!'; } catch { $('link').select(); } };
 $('abrir').onclick = () => window.open(url, '_blank');
 $('otra').onclick = (e) => { e.preventDefault(); $('s2').hidden = true; $('s1').hidden = false; };

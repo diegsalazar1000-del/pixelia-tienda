@@ -249,7 +249,7 @@ on('POST', '/api/app-evento', async (req, res) => {
 });
 on('POST', '/api/vista', async (req, res) => {   // public/js/medir.js: qué hacen al llegar (1 por persona/día/evento; sin dueño ni robots)
   const b = await body(req, 300).catch(() => ({})); const k = String(b.k || ''), e = String(b.e || '');
-  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
+  if (/^[a-z0-9-]{2,40}$/.test(k) && /^(vio|s5|s15|s45|mitad|boton|nombre|edad|comp|otro|quiero|correo|pagar|p1|p2|p3|p4|plan|ejemplo|empezo|abrio|volvio|pidio|nocorreo|ver|creo|wa|marco|final|msj|dia\d{1,2})$/.test(e) && visitaReal(req, `ev:${k}:${e}`)) appEvento('w:' + k, e);
   json(res, 200, { ok: true });
 });
 on('GET', '/app/:app/demo', (req, res, { app }) => {   // DEMO gratis: la app completa con 3 usos (los cuenta la propia app); sin instalar
@@ -323,6 +323,8 @@ for (const [ruta, archivo] of [['/apps', 'apps.html'], ['/dinero', 'dinero.html'
   on('GET', ruta, (req, res) => { res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' }); res.end(renderPage(archivo)); });
 db.exec(`CREATE TABLE IF NOT EXISTS app_comentarios (id INTEGER PRIMARY KEY, email TEXT, app TEXT, texto TEXT, created_at TEXT DEFAULT (datetime('now')))`);
 db.exec(`CREATE TABLE IF NOT EXISTS invitaciones (id TEXT PRIMARY KEY, datos TEXT, ip TEXT, vistas INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`);
+try { db.exec("ALTER TABLE invitaciones ADD COLUMN host_key TEXT DEFAULT ''"); } catch {}
+db.exec(`CREATE TABLE IF NOT EXISTS inv_mensajes (id INTEGER PRIMARY KEY, inv TEXT, nombre TEXT, texto TEXT, host INTEGER DEFAULT 0, ip TEXT, created_at TEXT DEFAULT (datetime('now')))`);
 const INV_TIPOS = ['asado', 'cumple', 'reunion', 'baby', 'quince', 'boda', 'grado', 'fiesta'], invHits = new Map();
 on('POST', '/api/invitacion', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
@@ -330,12 +332,34 @@ on('POST', '/api/invitacion', async (req, res) => {
   if (n > 15) return fail(res, 429, 'Demasiadas invitaciones por hoy, prueba más tarde');
   const b = await body(req, 4e3).catch(() => ({}));
   const t = (k, max) => String(b[k] || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
-  const d = { tipo: INV_TIPOS.includes(b.tipo) ? b.tipo : 'fiesta', titulo: t('titulo', 50), fecha: /^\d{4}-\d{2}-\d{2}$/.test(b.fecha) ? b.fecha : '', hora: t('hora', 12), lugar: t('lugar', 80), msj: t('msj', 120), host: t('host', 40) };
+  const d = { tipo: INV_TIPOS.includes(b.tipo) ? b.tipo : 'fiesta', titulo: t('titulo', 50), fecha: /^\d{4}-\d{2}-\d{2}$/.test(b.fecha) ? b.fecha : '', hora: t('hora', 12), lugar: t('lugar', 80), msj: t('msj', 120), host: t('host', 40), pais: /^[A-Z]{2}$/.test(b.pais) ? b.pais : '' };
   if (!d.titulo || !d.fecha || !d.lugar) return fail(res, 400, 'Falta el nombre, la fecha o el lugar');
   let id; do { id = crypto.randomBytes(5).toString('base64url').replace(/[-_]/g, '').slice(0, 7); } while (id.length < 6 || db.prepare('SELECT 1 FROM invitaciones WHERE id = ?').get(id));
-  db.prepare('INSERT INTO invitaciones (id, datos, ip) VALUES (?, ?, ?)').run(id, JSON.stringify(d), ip);
+  const h = crypto.randomBytes(9).toString('base64url');   // llave del anfitrión para responder mensajes
+  db.prepare('INSERT INTO invitaciones (id, datos, ip, host_key) VALUES (?, ?, ?, ?)').run(id, JSON.stringify(d), ip, h);
   if (!esDueno(req)) appEvento('w:invitacion', 'creada');
-  json(res, 200, { id });
+  json(res, 200, { id, h });
+});
+// 💬 Mensajes de la invitación: los invitados escriben ("llevo el hielo", "¿qué hace falta?") y el anfitrión responde con su llave
+on('GET', '/api/invitacion/:id/mensajes', (req, res, { id }) => {
+  const r = db.prepare('SELECT nombre, texto, host, created_at FROM inv_mensajes WHERE inv = ? ORDER BY id LIMIT 200').all(String(id).slice(0, 12));
+  json(res, 200, { mensajes: r });
+});
+on('POST', '/api/invitacion/:id/mensaje', async (req, res, { id }) => {
+  const inv = db.prepare('SELECT id, host_key FROM invitaciones WHERE id = ?').get(String(id).slice(0, 12));
+  if (!inv) return fail(res, 404, 'Esta invitación ya no existe');
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0];
+  const k = 'm:' + ip, n = (invHits.get(k) || 0) + 1; invHits.set(k, n); if (n > 40) return fail(res, 429, 'Demasiados mensajes, prueba más tarde');
+  const b = await body(req, 2e3).catch(() => ({}));
+  const limpio = (x, m) => String(x || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, m);
+  const texto = limpio(b.texto, 200), host = !!(b.h && inv.host_key && b.h === inv.host_key);
+  const nombre = host ? '' : limpio(b.nombre, 30);
+  if (!texto) return fail(res, 400, 'Escribe tu mensaje');
+  if (!host && !nombre) return fail(res, 400, 'Escribe tu nombre');
+  if (db.prepare('SELECT COUNT(*) n FROM inv_mensajes WHERE inv = ?').get(inv.id).n >= 300) return fail(res, 400, 'Esta invitación ya tiene muchos mensajes');
+  db.prepare('INSERT INTO inv_mensajes (inv, nombre, texto, host, ip) VALUES (?, ?, ?, ?, ?)').run(inv.id, nombre, texto, host ? 1 : 0, ip);
+  if (!esDueno(req)) appEvento('w:invitacion', host ? 'respuesta' : 'mensaje');
+  json(res, 200, { ok: true });
 });
 on('GET', '/i/:id', (req, res, { id }) => {
   const r = db.prepare('SELECT datos FROM invitaciones WHERE id = ?').get(String(id).slice(0, 12));
