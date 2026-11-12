@@ -177,7 +177,8 @@ table.t td.n{text-align:right;white-space:nowrap}
 <script>
 const $=id=>document.getElementById(id);
 const PROF=[['empleado','💼 Empleado',0],['negocio','🛍️ Tengo un negocio',1],['indep','💻 Independiente',1],['ventas','📦 Vendo por redes',1],['delivery','🛵 Delivery / taxi',1],['oficio','🔧 Oficio (mecánica, uñas…)',1],['estudio','🎓 Estudiante',0],['casa','🏠 Ama de casa',0],['otro','✍️ Otro',1]];
-const MON=[['$','🇺🇸 USD'],['$','🇲🇽 MXN'],['$','🇨🇴 COP'],['S/','🇵🇪 PEN'],['$','🇨🇱 CLP'],['$','🇦🇷 ARS'],['Bs','🇻🇪 Bs']];
+const MON=[['$','🇺🇸 USD'],['$','🇲🇽 México'],['$','🇨🇴 Colombia'],['S/','🇵🇪 Perú'],['$','🇨🇱 Chile'],['$','🇦🇷 Argentina'],['$','🇪🇨 Ecuador'],['Bs','🇻🇪 Bolívares'],['Q','🇬🇹 Guatemala'],['RD$','🇩🇴 Rep. Dominicana'],['Bs','🇧🇴 Bolivia'],['$','🇺🇾 Uruguay'],['₲','🇵🇾 Paraguay'],['₡','🇨🇷 Costa Rica'],['$','🇵🇦 Panamá'],['L','🇭🇳 Honduras'],['C$','🇳🇮 Nicaragua'],['$','🇸🇻 El Salvador'],['€','🇪🇸 España']];
+const MON_VISIBLES=8;   // los primeros (países de las campañas) siempre a la vista; el resto con "🌎 Más países"
 const GAS=[['renta','🏠 Renta / casa',.25],['comida','🛒 Comida',.25],['servicios','💡 Luz, agua, internet',.08],['transporte','🚌 Transporte',.07],['colegio','🎒 Colegio / estudios',.06],['deudas','💳 Deudas / tarjeta',.08],['negocio','📦 Gastos del negocio',.1]];
 const META=[['emergencia','🛟 Fondo de emergencia'],['deudas','💳 Salir de deudas'],['viaje','✈️ Un viaje'],['estudio','🎓 Estudiar algo'],['negocio','🚀 Montar o crecer mi negocio'],['cosa','📱 Comprarme algo'],['diciembre','🎄 Un diciembre sin deudas']];
 let S={prof:'',var:0,cs:'$',gas:{renta:1,comida:1,servicios:1,transporte:1},meta:'emergencia'};
@@ -187,8 +188,8 @@ const chips=(id,arr,key,multi)=>{$(id).innerHTML=arr.map(a=>`<span class="chip" 
     mark(id,key,multi);if(key=='gas')gasIn();}};
 const mark=(id,key,multi)=>[...$(id).children].forEach(c=>c.classList.toggle('on',multi?!!S[key][c.dataset.v]:S[key]==c.dataset.v));
 chips('prof',PROF,'prof');chips('gas',GAS,'gas',1);chips('meta',META,'meta');
-$('mon').innerHTML=MON.map((m,i)=>`<span class="chip${i?'':' on'}" data-s="${m[0]}">${m[1]}</span>`).join('');
-$('mon').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;[...$('mon').children].forEach(x=>x.classList.remove('on'));c.classList.add('on');S.cs=c.dataset.s;document.querySelectorAll('.cs').forEach(x=>x.textContent=S.cs);gasIn()};
+$('mon').innerHTML=MON.map((m,i)=>`<span class="chip${i?'':' on'}" data-s="${m[0]}"${i>=MON_VISIBLES?' style="display:none" data-mas="1"':''}>${m[1]}</span>`).join('')+'<span class="chip" id="monMas">🌎 Más países</span>';
+$('mon').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;if(c.id=='monMas'){$('mon').querySelectorAll('[data-mas]').forEach(x=>x.style.display='');c.remove();return}[...$('mon').children].forEach(x=>x.classList.remove('on'));c.classList.add('on');S.cs=c.dataset.s;document.querySelectorAll('.cs').forEach(x=>x.textContent=S.cs);gasIn()};
 $('vari').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;S.var=+c.dataset.v;[...$('vari').children].forEach(x=>x.classList.toggle('on',x===c));$('malo').style.display=S.var?'flex':'none';$('ingL').textContent=S.var?'Un mes normal':'Un mes normal';if(S.var)setTimeout(()=>$('ingMalo').focus(),100)};
 const V={};const v=id=>Math.max(0,parseFloat(($(id)||{}).value)||0);
 const f=n=>S.cs+' '+Math.round(n).toLocaleString('es');
